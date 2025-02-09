@@ -14,11 +14,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+interface QuizWithTeacher extends Quiz {
+  teacherName: string;
+}
+
 export default function QuizBrowse() {
   const [search, setSearch] = useState("");
   const [difficulty, setDifficulty] = useState<string>("all");
+  const [teacherFilter, setTeacherFilter] = useState<string>("");
 
-  const { data: quizzes, isLoading } = useQuery<Quiz[]>({
+  const { data: quizzes, isLoading } = useQuery<QuizWithTeacher[]>({
     queryKey: ["/api/quizzes/public"],
   });
 
@@ -34,12 +39,19 @@ export default function QuizBrowse() {
     const matchesSearch = 
       quiz.title.toLowerCase().includes(search.toLowerCase()) ||
       quiz.description.toLowerCase().includes(search.toLowerCase());
-    
+
     const matchesDifficulty = 
       difficulty === "all" || quiz.difficulty === difficulty;
 
-    return matchesSearch && matchesDifficulty;
+    const matchesTeacher = 
+      !teacherFilter || 
+      quiz.teacherName.toLowerCase().includes(teacherFilter.toLowerCase());
+
+    return matchesSearch && matchesDifficulty && matchesTeacher;
   });
+
+  // Get unique teacher names for the filter dropdown
+  const teachers = [...new Set(quizzes?.map(quiz => quiz.teacherName) || [])].sort();
 
   return (
     <div>
@@ -52,8 +64,8 @@ export default function QuizBrowse() {
           className="mb-8"
         >
           <h1 className="text-3xl font-bold mb-6">Browse Quizzes</h1>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -63,7 +75,7 @@ export default function QuizBrowse() {
                 className="pl-9"
               />
             </div>
-            
+
             <Select
               value={difficulty}
               onValueChange={setDifficulty}
@@ -78,6 +90,20 @@ export default function QuizBrowse() {
                 <SelectItem value="hard">Hard</SelectItem>
               </SelectContent>
             </Select>
+
+            <div className="relative">
+              <Input
+                placeholder="Search by teacher..."
+                value={teacherFilter}
+                onChange={(e) => setTeacherFilter(e.target.value)}
+                list="teachers"
+              />
+              <datalist id="teachers">
+                {teachers.map((teacher) => (
+                  <option key={teacher} value={teacher} />
+                ))}
+              </datalist>
+            </div>
           </div>
         </motion.div>
 
@@ -88,6 +114,7 @@ export default function QuizBrowse() {
               quiz={quiz}
               actionLabel="Take Quiz"
               actionPath={`/student/quiz/${quiz.id}`}
+              teacherName={quiz.teacherName}
             />
           ))}
         </div>

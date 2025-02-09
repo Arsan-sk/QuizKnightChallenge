@@ -16,6 +16,7 @@ export interface IStorage {
   getQuiz(id: number): Promise<Quiz | undefined>;
   getQuizzesByTeacher(teacherId: number): Promise<Quiz[]>;
   getPublicQuizzes(): Promise<Quiz[]>;
+  getPublicQuizzesWithTeachers(): Promise<(Quiz & { teacherName: string })[]>;
 
   createQuestion(question: Omit<Question, "id">): Promise<Question>;
   getQuestionsByQuiz(quizId: number): Promise<Question[]>;
@@ -84,6 +85,23 @@ export class DatabaseStorage implements IStorage {
       return await db.select().from(quizzes).where(eq(quizzes.isPublic, true));
     } catch (error) {
       console.error("Error in getPublicQuizzes:", error);
+      return [];
+    }
+  }
+
+  async getPublicQuizzesWithTeachers(): Promise<(Quiz & { teacherName: string })[]> {
+    try {
+      const quizzesWithTeachers = await db
+        .select({
+          ...quizzes,
+          teacherName: users.username,
+        })
+        .from(quizzes)
+        .leftJoin(users, eq(quizzes.createdBy, users.id))
+        .where(eq(quizzes.isPublic, true));
+      return quizzesWithTeachers;
+    } catch (error) {
+      console.error("Error in getPublicQuizzesWithTeachers:", error);
       return [];
     }
   }

@@ -38,7 +38,7 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/quizzes/public", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
     try {
-      const quizzes = await storage.getPublicQuizzes();
+      const quizzes = await storage.getPublicQuizzesWithTeachers();
       res.json(quizzes || []);
     } catch (error) {
       console.error("Error fetching public quizzes:", error);

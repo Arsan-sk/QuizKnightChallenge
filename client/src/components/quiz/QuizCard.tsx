@@ -4,14 +4,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Quiz } from "@shared/schema";
 import { Link } from "wouter";
+import { User } from "lucide-react";
 
 interface QuizCardProps {
   quiz: Quiz;
   actionLabel: string;
   actionPath: string;
+  teacherName?: string;
 }
 
-export function QuizCard({ quiz, actionLabel, actionPath }: QuizCardProps) {
+export function QuizCard({ quiz, actionLabel, actionPath, teacherName }: QuizCardProps) {
   const difficultyColors = {
     easy: "bg-green-500",
     medium: "bg-yellow-500",
@@ -40,9 +42,18 @@ export function QuizCard({ quiz, actionLabel, actionPath }: QuizCardProps) {
         </div>
         <p className="text-muted-foreground mb-4">{quiz.description}</p>
         <div className="flex justify-between items-center">
-          <span className="text-sm text-muted-foreground">
-            Created: {quiz.createdAt ? new Date(quiz.createdAt).toLocaleDateString() : 'Recently'}
-          </span>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            {teacherName && (
+              <div className="flex items-center gap-1">
+                <User className="h-4 w-4" />
+                <span>{teacherName}</span>
+              </div>
+            )}
+            <span>·</span>
+            <span>
+              {quiz.createdAt ? new Date(quiz.createdAt).toLocaleDateString() : 'Recently'}
+            </span>
+          </div>
           <Link href={actionPath}>
             <Button>{actionLabel}</Button>
           </Link>
