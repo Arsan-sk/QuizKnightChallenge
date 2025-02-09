@@ -8,6 +8,7 @@ import { Loader2, Plus } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function TeacherDashboard() {
+  const { logoutMutation } = useAuth();
   const { user } = useAuth();
   const { data: quizzes, isLoading } = useQuery<Quiz[]>({
     queryKey: ["/api/quizzes/teacher"],
@@ -22,7 +23,15 @@ export default function TeacherDashboard() {
   }
 
   return (
-    <div className="container mx-auto p-8">
+    <div className="relative">
+      <Button 
+        className="absolute top-4 right-4" 
+        variant="outline" 
+        onClick={() => logoutMutation.mutate()}
+      >
+        Logout
+      </Button>
+      <div className="container mx-auto p-8">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
