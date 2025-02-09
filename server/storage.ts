@@ -71,11 +71,21 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getQuizzesByTeacher(teacherId: number): Promise<Quiz[]> {
-    return db.select().from(quizzes).where(eq(quizzes.createdBy, teacherId));
+    try {
+      return await db.select().from(quizzes).where(eq(quizzes.createdBy, teacherId));
+    } catch (error) {
+      console.error("Error in getQuizzesByTeacher:", error);
+      return [];
+    }
   }
 
   async getPublicQuizzes(): Promise<Quiz[]> {
-    return db.select().from(quizzes).where(eq(quizzes.isPublic, true));
+    try {
+      return await db.select().from(quizzes).where(eq(quizzes.isPublic, true));
+    } catch (error) {
+      console.error("Error in getPublicQuizzes:", error);
+      return [];
+    }
   }
 
   async createQuestion(question: Omit<Question, "id">): Promise<Question> {
