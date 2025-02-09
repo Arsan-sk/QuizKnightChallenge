@@ -1,0 +1,129 @@
+### Project Title: QuizKtc - An Interactive and Gamified Quiz Website
+
+#### Overview:
+QuizKtc is an interactive and gamified web platform for teachers and students to create, share, and take quizzes with advanced features for security, analysis, and engagement. The project emphasizes user-friendliness, modern design, and robust functionality, using Django as the backend framework and PostgreSQL as the database.
+
+---
+
+#### Features:
+
+1. **Landing Page**:
+   - A fabulous, attractive, and visually stunning landing page to make a strong first impression (to be developed last).
+   - Includes project introduction, key features, and options to register or log in.
+
+2. **Authentication System**:
+   - Users can register as either a Teacher or a Student.
+   - Custom login and sign-up forms with 3D designs and placeholders for images.
+   - Role-based redirection: Teachers and Students are redirected to their respective dashboards after login.
+   - Email notifications for quiz updates, results, and reminders for incomplete quizzes.
+
+3. **Teacher Features**:
+   - Create quizzes with support for:
+     - Multiple choice questions (MCQ).
+     - True/False questions.
+     - Fill in the blanks.
+     - Short answer questions.
+   - Categorize quizzes by difficulty level.
+   - View detailed analysis of student performance.
+   - Opt-in or opt-out of email notifications for specific quizzes.
+
+4. **Student Features**:
+   - Take quizzes assigned by teachers.
+   - Attempt public quizzes to earn points.
+   - Gain achievements for performance, with prizes or titles such as “Student of the Month.”
+   - View monthly reset leaderboards for global and class rankings.
+   - Receive reminder notifications for incomplete quizzes.
+
+5. **Gamification**:
+   - Points system for students to encourage participation.
+   - Real-time leaderboards with progress tracking.
+   - Fun animations for quizzes to enhance engagement.
+
+6. **Security Features**:
+   - Tab-switching detection to prevent cheating.
+   - Blocking of copy/paste functionality.
+   - Eye-tracking to monitor user behavior during quizzes.
+   - Automatic submission of quizzes after two warnings for violations.
+
+7. **Future Enhancements**:
+   - AI-powered chatbot to provide feedback on quizzes.
+   - Advanced data visualization for teachers to analyze performance trends.
+   - Real-time processing of quiz submissions and scoring.
+
+---
+
+#### Technical Requirements:
+
+1. **Backend**:
+   - Framework: Django.
+   - Database: PostgreSQL, managed via pgAdmin.
+
+2. **Frontend**:
+   - Modern, responsive design with custom CSS for unique, user-friendly interfaces.
+   - Placeholder support for images during development.
+   - Interactive UI with animations for quiz pages and leaderboards.
+
+3. **Template Management**:
+   - Single shared directory for templates, rather than app-specific `templates` folders.
+   - Integration of Django templating for dynamic content rendering.
+
+4. **Development Steps**:
+   - Start with basic HTML structures for functionality testing (e.g., login, sign-up, quiz creation).
+   - Gradually enhance the UI/UX with CSS and animations.
+   - Add advanced features like gamification and security mechanisms incrementally.
+
+5. **Testing**:
+   - Focus on error-free performance at every stage.
+   - Unit testing for views, forms, and models.
+
+---
+
+#### Database Models:
+
+1. **User (Abstract Base)**:
+   - Common fields: Username, email, password.
+   - Roles: Teacher, Student.
+
+2. **Quiz**:
+   - Title, description, created_by (Teacher).
+   - Difficulty level, creation date.
+
+3. **Question**:
+   - Associated quiz (ForeignKey).
+   - Question text, question type (MCQ, TF, etc.).
+   - Options for MCQs (e.g., option_a, option_b, etc.).
+   - Correct answer.
+
+4. **Result**:
+   - Associated quiz and student (ForeignKey).
+   - Score, time taken, submission timestamp.
+
+5. **Leaderboard**:
+   - Global and class-based rankings.
+   - Monthly reset for fairness.
+
+---
+
+#### Key Considerations:
+
+1. **Code Quality**:
+   - Follow Django’s best practices for project structure.
+   - Use Django’s built-in functionality (e.g., authentication) wherever applicable.
+
+2. **Design**:
+   - Focus on making the UI engaging, with gamified elements and smooth animations.
+
+3. **Step-by-Step Development**:
+   - Confirm each development stage before proceeding to the next.
+   - Test each feature for both functionality and security.
+
+4. **Documentation**:
+   - Maintain detailed comments in code and external documentation for future scalability.
+
+---
+
+#### Additional Notes:
+
+- Ensure the project aligns with the user’s preference for a simple, understandable development process.
+- Provide explanations for every implementation step to support learning and debugging.
+- Use placeholder assets (e.g., text and images) where necessary to streamline development.
