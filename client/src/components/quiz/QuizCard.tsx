@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Card } from "@/components/ui/three-card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Quiz } from "@shared/schema";
@@ -23,9 +23,15 @@ export function QuizCard({ quiz, actionLabel, actionPath }: QuizCardProps) {
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.3 }}
-      whileHover={{ scale: 1.02 }}
+      whileHover={{ 
+        scale: 1.05,
+        rotateX: 5,
+        rotateY: 5,
+        transition: { duration: 0.2 }
+      }}
+      style={{ transformStyle: "preserve-3d" }}
     >
-      <Card className="p-6">
+      <Card className="p-6 relative bg-card/50 backdrop-blur-sm border border-primary/10">
         <div className="flex justify-between items-start mb-4">
           <h3 className="text-xl font-bold">{quiz.title}</h3>
           <Badge className={difficultyColors[quiz.difficulty]}>
@@ -35,7 +41,7 @@ export function QuizCard({ quiz, actionLabel, actionPath }: QuizCardProps) {
         <p className="text-muted-foreground mb-4">{quiz.description}</p>
         <div className="flex justify-between items-center">
           <span className="text-sm text-muted-foreground">
-            Created: {new Date(quiz.createdAt).toLocaleDateString()}
+            Created: {quiz.createdAt ? new Date(quiz.createdAt).toLocaleDateString() : 'Recently'}
           </span>
           <Link href={actionPath}>
             <Button>{actionLabel}</Button>

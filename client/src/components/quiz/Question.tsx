@@ -8,7 +8,7 @@ import { X } from "lucide-react";
 
 interface QuestionProps {
   question?: QuestionType;
-  onChange: (question: any) => void;
+  onChange: (question: Partial<QuestionType>) => void;
   onRemove?: () => void;
   answer?: string;
   mode: "edit" | "take";
@@ -31,7 +31,7 @@ export function Question({
   };
 
   const handleOptionChange = (index: number, value: string) => {
-    if (!question) return;
+    if (!question?.options) return;
     const newOptions = [...question.options];
     newOptions[index] = value;
     onChange({ ...question, options: newOptions });
@@ -88,7 +88,7 @@ export function Question({
 
           <div className="space-y-2">
             <Label>Options</Label>
-            {question?.options.map((option, index) => (
+            {question?.options?.map((option, index) => (
               <Input
                 key={index}
                 value={option}
@@ -126,7 +126,7 @@ export function Question({
         onValueChange={onChange}
         className="space-y-2"
       >
-        {question?.options.map((option, index) => (
+        {question?.options?.map((option, index) => (
           <div key={index} className="flex items-center space-x-2">
             <RadioGroupItem value={option} id={`option-${index}`} />
             <Label htmlFor={`option-${index}`}>{option}</Label>
