@@ -11,6 +11,7 @@ import TeacherDashboard from "@/pages/teacher-dashboard";
 import StudentDashboard from "@/pages/student-dashboard";
 import QuizCreate from "@/pages/quiz-create";
 import QuizTake from "@/pages/quiz-take";
+import QuizBrowse from "@/pages/quiz-browse";
 
 function Router() {
   return (
@@ -32,6 +33,11 @@ function Router() {
       <ProtectedRoute 
         path="/student" 
         component={StudentDashboard}
+        role="student"
+      />
+      <ProtectedRoute 
+        path="/student/quizzes" 
+        component={QuizBrowse}
         role="student"
       />
       <ProtectedRoute 

@@ -1,10 +1,11 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { Quiz, Result } from "@shared/schema";
-import { QuizCard } from "@/components/quiz/QuizCard";
-import { Loader2, Trophy } from "lucide-react";
+import { Result } from "@shared/schema";
+import { Button } from "@/components/ui/button";
+import { Loader2, Trophy, BookOpen, Target } from "lucide-react";
 import { motion } from "framer-motion";
 import { NavBar } from "@/components/layout/nav-bar";
+import { Link } from "wouter";
 import {
   Card,
   CardContent,
@@ -14,15 +15,11 @@ import {
 
 export default function StudentDashboard() {
   const { user } = useAuth();
-  const { data: quizzes, isLoading: loadingQuizzes } = useQuery<Quiz[]>({
-    queryKey: ["/api/quizzes/public"],
-  });
-
   const { data: results, isLoading: loadingResults } = useQuery<Result[]>({
     queryKey: ["/api/results/user"],
   });
 
-  if (loadingQuizzes || loadingResults) {
+  if (loadingResults) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -102,29 +99,19 @@ export default function StudentDashboard() {
           </motion.div>
         </div>
 
-        <h2 className="text-2xl font-bold mb-6">Available Quizzes</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {quizzes?.map((quiz) => (
-            <QuizCard
-              key={quiz.id}
-              quiz={quiz}
-              actionLabel="Take Quiz"
-              actionPath={`/student/quiz/${quiz.id}`}
-            />
-          ))}
-        </div>
-
-        {quizzes?.length === 0 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-12"
-          >
-            <p className="text-muted-foreground">
-              No quizzes are available right now. Check back later!
-            </p>
-          </motion.div>
-        )}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="text-center"
+        >
+          <Link href="/student/quizzes">
+            <Button size="lg" className="gap-2">
+              <BookOpen className="h-5 w-5" />
+              Browse Available Quizzes
+            </Button>
+          </Link>
+        </motion.div>
       </div>
     </div>
   );
