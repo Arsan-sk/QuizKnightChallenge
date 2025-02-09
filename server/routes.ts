@@ -22,6 +22,30 @@ export function registerRoutes(app: Express): Server {
     res.status(201).json(quiz);
   });
 
+  app.get("/api/quizzes/teacher", async (req, res) => {
+    if (!req.isAuthenticated() || req.user.role !== "teacher") {
+      return res.sendStatus(403);
+    }
+    try {
+      const quizzes = await storage.getQuizzesByTeacher(req.user.id);
+      res.json(quizzes || []);
+    } catch (error) {
+      console.error("Error fetching teacher quizzes:", error);
+      res.status(500).json({ error: "Failed to fetch teacher quizzes" });
+    }
+  });
+
+  app.get("/api/quizzes/public", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+    try {
+      const quizzes = await storage.getPublicQuizzes();
+      res.json(quizzes || []);
+    } catch (error) {
+      console.error("Error fetching public quizzes:", error);
+      res.status(500).json({ error: "Failed to fetch public quizzes" });
+    }
+  });
+
   app.get("/api/quizzes/:id", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
@@ -40,39 +64,25 @@ export function registerRoutes(app: Express): Server {
     res.json(quiz);
   });
 
-  app.get("/api/quizzes/teacher", async (req, res) => {
-    if (!req.isAuthenticated() || req.user.role !== "teacher") {
-      return res.sendStatus(403);
-    }
-    const quizzes = await storage.getQuizzesByTeacher(req.user.id);
-    res.json(quizzes);
-  });
-
-  app.get("/api/quizzes/public", async (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
-    try {
-      const quizzes = await storage.getPublicQuizzes();
-      res.json(quizzes || []);
-    } catch (error) {
-      console.error("Error fetching public quizzes:", error);
-      res.status(500).json({ error: "Failed to fetch public quizzes" });
-    }
-  });
-
   // Question routes
   app.post("/api/quizzes/:quizId/questions", async (req, res) => {
     if (!req.isAuthenticated() || req.user.role !== "teacher") {
       return res.sendStatus(403);
     }
 
-    const quiz = await storage.getQuiz(parseInt(req.params.quizId));
+    const quizId = parseInt(req.params.quizId);
+    if (isNaN(quizId)) {
+      return res.status(400).json({ error: "Invalid quiz ID" });
+    }
+
+    const quiz = await storage.getQuiz(quizId);
     if (!quiz || quiz.createdBy !== req.user.id) {
       return res.sendStatus(403);
     }
 
     const validatedData = insertQuestionSchema.parse({
       ...req.body,
-      quizId: parseInt(req.params.quizId)
+      quizId: quizId
     });
     const question = await storage.createQuestion(validatedData);
     res.status(201).json(question);
@@ -81,7 +91,12 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/quizzes/:quizId/questions", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
-    const quiz = await storage.getQuiz(parseInt(req.params.quizId));
+    const quizId = parseInt(req.params.quizId);
+    if (isNaN(quizId)) {
+      return res.status(400).json({ error: "Invalid quiz ID" });
+    }
+
+    const quiz = await storage.getQuiz(quizId);
     if (!quiz) return res.sendStatus(404);
 
     // Check if user has access to this quiz
@@ -89,7 +104,7 @@ export function registerRoutes(app: Express): Server {
       return res.sendStatus(403);
     }
 
-    const questions = await storage.getQuestionsByQuiz(parseInt(req.params.quizId));
+    const questions = await storage.getQuestionsByQuiz(quizId);
     res.json(questions);
   });
 

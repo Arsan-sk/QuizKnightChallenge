@@ -10,7 +10,7 @@ import { NavBar } from "@/components/layout/nav-bar";
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
-  const { data: quizzes, isLoading } = useQuery<Quiz[]>({
+  const { data: quizzes, isLoading, error } = useQuery<Quiz[]>({
     queryKey: ["/api/quizzes/teacher"],
   });
 
@@ -20,6 +20,10 @@ export default function TeacherDashboard() {
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
+  }
+
+  if (error) {
+    console.error("Error loading quizzes:", error);
   }
 
   return (
@@ -57,7 +61,7 @@ export default function TeacherDashboard() {
           ))}
         </div>
 
-        {quizzes?.length === 0 && (
+        {(!quizzes || quizzes.length === 0) && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
