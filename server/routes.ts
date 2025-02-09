@@ -12,13 +12,28 @@ export function registerRoutes(app: Express): Server {
     if (!req.isAuthenticated() || req.user.role !== "teacher") {
       return res.sendStatus(403);
     }
-    
+
     const validatedData = insertQuizSchema.parse(req.body);
     const quiz = await storage.createQuiz({
       ...validatedData,
       createdBy: req.user.id,
+      isPublic: validatedData.isPublic ?? false,
     });
     res.status(201).json(quiz);
+  });
+
+  app.get("/api/quizzes/:id", async (req, res) => {
+    if (!req.isAuthenticated()) return res.sendStatus(401);
+
+    const quiz = await storage.getQuiz(parseInt(req.params.id));
+    if (!quiz) return res.sendStatus(404);
+
+    // Check if user has access to this quiz
+    if (!quiz.isPublic && quiz.createdBy !== req.user.id) {
+      return res.sendStatus(403);
+    }
+
+    res.json(quiz);
   });
 
   app.get("/api/quizzes/teacher", async (req, res) => {
@@ -40,7 +55,7 @@ export function registerRoutes(app: Express): Server {
     if (!req.isAuthenticated() || req.user.role !== "teacher") {
       return res.sendStatus(403);
     }
-    
+
     const quiz = await storage.getQuiz(parseInt(req.params.quizId));
     if (!quiz || quiz.createdBy !== req.user.id) {
       return res.sendStatus(403);
@@ -56,7 +71,15 @@ export function registerRoutes(app: Express): Server {
 
   app.get("/api/quizzes/:quizId/questions", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    
+
+    const quiz = await storage.getQuiz(parseInt(req.params.quizId));
+    if (!quiz) return res.sendStatus(404);
+
+    // Check if user has access to this quiz
+    if (!quiz.isPublic && quiz.createdBy !== req.user.id) {
+      return res.sendStatus(403);
+    }
+
     const questions = await storage.getQuestionsByQuiz(parseInt(req.params.quizId));
     res.json(questions);
   });

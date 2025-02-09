@@ -8,7 +8,7 @@ import { X } from "lucide-react";
 
 interface QuestionProps {
   question?: QuestionType;
-  onChange: (question: Partial<QuestionType>) => void;
+  onChange: mode extends "edit" ? (question: Partial<QuestionType>) => void : (answer: string) => void;
   onRemove?: () => void;
   answer?: string;
   mode: "edit" | "take";
@@ -22,6 +22,7 @@ export function Question({
   mode,
 }: QuestionProps) {
   const handleQuestionTypeChange = (type: "mcq" | "true_false") => {
+    if (mode !== "edit") return;
     onChange({
       ...question,
       questionType: type,
@@ -31,7 +32,7 @@ export function Question({
   };
 
   const handleOptionChange = (index: number, value: string) => {
-    if (!question?.options) return;
+    if (mode !== "edit" || !question?.options) return;
     const newOptions = [...question.options];
     newOptions[index] = value;
     onChange({ ...question, options: newOptions });
@@ -123,7 +124,7 @@ export function Question({
       <h3 className="text-xl font-medium mb-4">{question?.questionText}</h3>
       <RadioGroup
         value={answer}
-        onValueChange={onChange}
+        onValueChange={(value: string) => onChange(value)}
         className="space-y-2"
       >
         {question?.options?.map((option, index) => (

@@ -9,21 +9,37 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { NavBar } from "@/components/layout/nav-bar";
+import { useToast } from "@/hooks/use-toast";
 
 export default function QuizTake() {
   const { id } = useParams();
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
   const [timeStarted, setTimeStarted] = useState<Date>();
   const [warnings, setWarnings] = useState(0);
 
-  const { data: quiz } = useQuery<Quiz>({
+  const { data: quiz, isError: quizError } = useQuery<Quiz>({
     queryKey: [`/api/quizzes/${id}`],
+    onError: (error) => {
+      toast({
+        title: "Error loading quiz",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
-  const { data: questions } = useQuery<QuestionType[]>({
+  const { data: questions, isError: questionsError } = useQuery<QuestionType[]>({
     queryKey: [`/api/quizzes/${id}/questions`],
+    onError: (error) => {
+      toast({
+        title: "Error loading questions",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const submitMutation = useMutation({
@@ -43,8 +59,19 @@ export default function QuizTake() {
       return res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQuery(["/api/results/user"]);
+      queryClient.invalidateQueries({ queryKey: ["/api/results/user"] });
+      toast({
+        title: "Quiz submitted",
+        description: "Your results have been recorded!",
+      });
       setLocation("/student");
+    },
+    onError: (error) => {
+      toast({
+        title: "Error submitting quiz",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -54,8 +81,16 @@ export default function QuizTake() {
     const handleVisibilityChange = () => {
       if (document.hidden) {
         setWarnings((w) => {
-          if (w + 1 >= 2) submitMutation.mutate();
-          return w + 1;
+          const newWarnings = w + 1;
+          if (newWarnings >= 2) {
+            toast({
+              title: "Quiz terminated",
+              description: "Too many tab switches detected.",
+              variant: "destructive",
+            });
+            submitMutation.mutate();
+          }
+          return newWarnings;
         });
       }
     };
@@ -64,6 +99,23 @@ export default function QuizTake() {
     return () =>
       document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
+
+  if (quizError || questionsError) {
+    return (
+      <div>
+        <NavBar />
+        <div className="container mx-auto p-8 text-center">
+          <h1 className="text-2xl font-bold text-red-500 mb-4">Error Loading Quiz</h1>
+          <p className="text-muted-foreground">
+            There was a problem loading the quiz. Please try again later.
+          </p>
+          <Button className="mt-4" onClick={() => setLocation("/student")}>
+            Return to Dashboard
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (!quiz || !questions) {
     return (
@@ -133,7 +185,7 @@ export default function QuizTake() {
             >
               <Question
                 question={questions[currentQuestion]}
-                onChange={handleAnswer}
+                onChange={(value: string) => handleAnswer(value)}
                 answer={answers[currentQuestion]}
                 mode="take"
               />
