@@ -46,8 +46,13 @@ export function registerRoutes(app: Express): Server {
 
   app.get("/api/quizzes/public", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
-    const quizzes = await storage.getPublicQuizzes();
-    res.json(quizzes);
+    try {
+      const quizzes = await storage.getPublicQuizzes();
+      res.json(quizzes || []);
+    } catch (error) {
+      console.error("Error fetching public quizzes:", error);
+      res.status(500).json({ error: "Failed to fetch public quizzes" });
+    }
   });
 
   // Question routes
