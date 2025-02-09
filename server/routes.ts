@@ -25,7 +25,12 @@ export function registerRoutes(app: Express): Server {
   app.get("/api/quizzes/:id", async (req, res) => {
     if (!req.isAuthenticated()) return res.sendStatus(401);
 
-    const quiz = await storage.getQuiz(parseInt(req.params.id));
+    const quizId = Number(req.params.id);
+    if (isNaN(quizId)) {
+      return res.status(400).json({ error: "Invalid quiz ID" });
+    }
+
+    const quiz = await storage.getQuiz(quizId);
     if (!quiz) return res.sendStatus(404);
 
     // Check if user has access to this quiz
