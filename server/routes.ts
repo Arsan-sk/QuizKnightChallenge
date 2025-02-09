@@ -46,10 +46,10 @@ export function registerRoutes(app: Express): Server {
       return res.sendStatus(403);
     }
 
-    const validatedData = {
+    const validatedData = insertQuestionSchema.parse({
       ...req.body,
       quizId: parseInt(req.params.quizId)
-    };
+    });
     const question = await storage.createQuestion(validatedData);
     res.status(201).json(question);
   });
