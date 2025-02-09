@@ -5,9 +5,10 @@ import { Quiz, Question as QuestionType } from "@shared/schema";
 import { Question } from "@/components/quiz/Question";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { NavBar } from "@/components/layout/nav-bar";
 
 export default function QuizTake() {
   const { id } = useParams();
@@ -17,30 +18,32 @@ export default function QuizTake() {
   const [timeStarted, setTimeStarted] = useState<Date>();
   const [warnings, setWarnings] = useState(0);
 
-  const { data: quiz, isLoading: loadingQuiz } = useQuery<Quiz>({
+  const { data: quiz } = useQuery<Quiz>({
     queryKey: [`/api/quizzes/${id}`],
   });
 
-  const { data: questions, isLoading: loadingQuestions } = useQuery<
-    QuestionType[]
-  >({
+  const { data: questions } = useQuery<QuestionType[]>({
     queryKey: [`/api/quizzes/${id}/questions`],
   });
 
   const submitMutation = useMutation({
     mutationFn: async () => {
+      if (!id) throw new Error("Quiz ID is required");
+
       const timeTaken = timeStarted
         ? Math.floor((new Date().getTime() - timeStarted.getTime()) / 1000)
         : 0;
       const score = calculateScore();
-      
+
       const res = await apiRequest("POST", `/api/quizzes/${id}/results`, {
+        quizId: parseInt(id),
         score,
         timeTaken,
       });
       return res.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQuery(["/api/results/user"]);
       setLocation("/student");
     },
   });
@@ -62,7 +65,7 @@ export default function QuizTake() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, []);
 
-  if (loadingQuiz || loadingQuestions) {
+  if (!quiz || !questions) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -86,7 +89,7 @@ export default function QuizTake() {
   };
 
   const next = () => {
-    if (questions && currentQuestion < questions.length - 1) {
+    if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
     }
   };
@@ -98,68 +101,67 @@ export default function QuizTake() {
   };
 
   return (
-    <div className="container mx-auto p-8 max-w-3xl">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">{quiz?.title}</h1>
-          <p className="text-muted-foreground mb-4">{quiz?.description}</p>
-          {warnings > 0 && (
-            <p className="text-red-500 mb-2">
-              Warning: Tab switching detected! ({warnings}/2)
-            </p>
-          )}
-          <Progress
-            value={
-              questions
-                ? ((currentQuestion + 1) / questions.length) * 100
-                : 0
-            }
-            className="h-2"
-          />
-        </div>
-
-        {questions && questions[currentQuestion] && (
-          <motion.div
-            key={currentQuestion}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Question
-              question={questions[currentQuestion]}
-              answer={answers[currentQuestion]}
-              onChange={handleAnswer}
-              mode="take"
+    <div>
+      <NavBar />
+      <div className="container mx-auto p-8 max-w-3xl">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold mb-2">{quiz.title}</h1>
+            <p className="text-muted-foreground mb-4">{quiz.description}</p>
+            {warnings > 0 && (
+              <p className="text-red-500 mb-2">
+                Warning: Tab switching detected! ({warnings}/2)
+              </p>
+            )}
+            <Progress
+              value={((currentQuestion + 1) / questions.length) * 100}
+              className="h-2"
             />
-          </motion.div>
-        )}
+          </div>
 
-        <div className="flex justify-between mt-8">
-          <Button onClick={previous} disabled={currentQuestion === 0}>
-            Previous
-          </Button>
-          {questions && currentQuestion === questions.length - 1 ? (
-            <Button
-              onClick={() => submitMutation.mutate()}
-              disabled={submitMutation.isPending}
+          {questions[currentQuestion] && (
+            <motion.div
+              key={currentQuestion}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
             >
-              {submitMutation.isPending ? "Submitting..." : "Submit Quiz"}
-            </Button>
-          ) : (
-            <Button
-              onClick={next}
-              disabled={!answers[currentQuestion]}
-            >
-              Next
-            </Button>
+              <Question
+                question={questions[currentQuestion]}
+                onChange={handleAnswer}
+                answer={answers[currentQuestion]}
+                mode="take"
+              />
+            </motion.div>
           )}
-        </div>
-      </motion.div>
+
+          <div className="flex justify-between mt-8">
+            <Button onClick={previous} disabled={currentQuestion === 0}>
+              Previous
+            </Button>
+            {currentQuestion === questions.length - 1 ? (
+              <Button
+                onClick={() => submitMutation.mutate()}
+                disabled={submitMutation.isPending}
+              >
+                {submitMutation.isPending ? "Submitting..." : "Submit Quiz"}
+              </Button>
+            ) : (
+              <Button
+                onClick={next}
+                disabled={!answers[currentQuestion]}
+              >
+                Next
+              </Button>
+            )}
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 }
