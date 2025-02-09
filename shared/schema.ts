@@ -56,6 +56,7 @@ export const insertQuestionSchema = createInsertSchema(questions).pick({
   questionType: true,
   options: true,
   correctAnswer: true,
+  quizId: true,
 });
 
 export const insertResultSchema = createInsertSchema(results).pick({
