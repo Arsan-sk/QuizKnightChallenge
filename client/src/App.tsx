@@ -1,5 +1,5 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { AuthProvider } from "./hooks/use-auth";
 import { Toaster } from "@/components/ui/toaster";
 import { queryClient } from "./lib/queryClient";
@@ -15,11 +15,30 @@ import QuizTake from "@/pages/quiz-take";
 function Router() {
   return (
     <Switch>
+      <Route path="/">
+        <Redirect to="/auth" />
+      </Route>
       <Route path="/auth" component={AuthPage} />
-      <ProtectedRoute path="/teacher" component={TeacherDashboard} />
-      <ProtectedRoute path="/teacher/quiz/create" component={QuizCreate} />
-      <ProtectedRoute path="/student" component={StudentDashboard} />
-      <ProtectedRoute path="/student/quiz/:id" component={QuizTake} />
+      <ProtectedRoute 
+        path="/teacher" 
+        component={TeacherDashboard}
+        role="teacher"
+      />
+      <ProtectedRoute 
+        path="/teacher/quiz/create" 
+        component={QuizCreate}
+        role="teacher"
+      />
+      <ProtectedRoute 
+        path="/student" 
+        component={StudentDashboard}
+        role="student"
+      />
+      <ProtectedRoute 
+        path="/student/quiz/:id" 
+        component={QuizTake}
+        role="student"
+      />
       <Route component={NotFound} />
     </Switch>
   );

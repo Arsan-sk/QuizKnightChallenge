@@ -1,127 +1,117 @@
-import { InsertUser, User, Quiz, Question, Result } from "@shared/schema";
+import { users, quizzes, questions, results, type User, type Quiz, type Question, type Result } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 import session from "express-session";
-import createMemoryStore from "memorystore";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 
-const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 export interface IStorage {
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
-  
+  createUser(user: Omit<User, "id" | "points">): Promise<User>;
+
   createQuiz(quiz: Omit<Quiz, "id" | "createdAt">): Promise<Quiz>;
   getQuiz(id: number): Promise<Quiz | undefined>;
   getQuizzesByTeacher(teacherId: number): Promise<Quiz[]>;
   getPublicQuizzes(): Promise<Quiz[]>;
-  
+
   createQuestion(question: Omit<Question, "id">): Promise<Question>;
   getQuestionsByQuiz(quizId: number): Promise<Question[]>;
-  
+
   createResult(result: Omit<Result, "id" | "completedAt">): Promise<Result>;
   getResultsByQuiz(quizId: number): Promise<Result[]>;
   getResultsByUser(userId: number): Promise<Result[]>;
-  
+
   updateUserPoints(userId: number, points: number): Promise<void>;
-  
-  sessionStore: session.SessionStore;
+
+  sessionStore: session.Store;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private quizzes: Map<number, Quiz>;
-  private questions: Map<number, Question>;
-  private results: Map<number, Result>;
-  private currentId: { [key: string]: number };
-  sessionStore: session.SessionStore;
+export class DatabaseStorage implements IStorage {
+  sessionStore: session.Store;
 
   constructor() {
-    this.users = new Map();
-    this.quizzes = new Map();
-    this.questions = new Map();
-    this.results = new Map();
-    this.currentId = { users: 1, quizzes: 1, questions: 1, results: 1 };
-    this.sessionStore = new MemoryStore({
-      checkPeriod: 86400000,
+    this.sessionStore = new PostgresSessionStore({
+      pool,
+      createTableIfMissing: true,
     });
   }
 
   async getUser(id: number): Promise<User | undefined> {
-    return this.users.get(id);
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = this.currentId.users++;
-    const user: User = { ...insertUser, id, points: 0 };
-    this.users.set(id, user);
+  async createUser(insertUser: Omit<User, "id" | "points">): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values({ ...insertUser, points: 0 })
+      .returning();
     return user;
   }
 
   async createQuiz(quiz: Omit<Quiz, "id" | "createdAt">): Promise<Quiz> {
-    const id = this.currentId.quizzes++;
-    const newQuiz: Quiz = { ...quiz, id, createdAt: new Date() };
-    this.quizzes.set(id, newQuiz);
+    const [newQuiz] = await db
+      .insert(quizzes)
+      .values({ ...quiz, createdAt: new Date() })
+      .returning();
     return newQuiz;
   }
 
   async getQuiz(id: number): Promise<Quiz | undefined> {
-    return this.quizzes.get(id);
+    const [quiz] = await db.select().from(quizzes).where(eq(quizzes.id, id));
+    return quiz;
   }
 
   async getQuizzesByTeacher(teacherId: number): Promise<Quiz[]> {
-    return Array.from(this.quizzes.values()).filter(
-      (quiz) => quiz.createdBy === teacherId,
-    );
+    return db.select().from(quizzes).where(eq(quizzes.createdBy, teacherId));
   }
 
   async getPublicQuizzes(): Promise<Quiz[]> {
-    return Array.from(this.quizzes.values()).filter((quiz) => quiz.isPublic);
+    return db.select().from(quizzes).where(eq(quizzes.isPublic, true));
   }
 
   async createQuestion(question: Omit<Question, "id">): Promise<Question> {
-    const id = this.currentId.questions++;
-    const newQuestion: Question = { ...question, id };
-    this.questions.set(id, newQuestion);
+    const [newQuestion] = await db.insert(questions).values(question).returning();
     return newQuestion;
   }
 
   async getQuestionsByQuiz(quizId: number): Promise<Question[]> {
-    return Array.from(this.questions.values()).filter(
-      (question) => question.quizId === quizId,
-    );
+    return db.select().from(questions).where(eq(questions.quizId, quizId));
   }
 
   async createResult(result: Omit<Result, "id" | "completedAt">): Promise<Result> {
-    const id = this.currentId.results++;
-    const newResult: Result = { ...result, id, completedAt: new Date() };
-    this.results.set(id, newResult);
+    const [newResult] = await db
+      .insert(results)
+      .values({ ...result, completedAt: new Date() })
+      .returning();
     return newResult;
   }
 
   async getResultsByQuiz(quizId: number): Promise<Result[]> {
-    return Array.from(this.results.values()).filter(
-      (result) => result.quizId === quizId,
-    );
+    return db.select().from(results).where(eq(results.quizId, quizId));
   }
 
   async getResultsByUser(userId: number): Promise<Result[]> {
-    return Array.from(this.results.values()).filter(
-      (result) => result.userId === userId,
-    );
+    return db.select().from(results).where(eq(results.userId, userId));
   }
 
   async updateUserPoints(userId: number, points: number): Promise<void> {
     const user = await this.getUser(userId);
     if (user) {
-      user.points += points;
-      this.users.set(userId, user);
+      await db
+        .update(users)
+        .set({ points: (user.points || 0) + points })
+        .where(eq(users.id, userId));
     }
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
