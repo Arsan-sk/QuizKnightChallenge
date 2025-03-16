@@ -5,6 +5,13 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
 import { X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface QuestionProps {
   question?: QuestionType;
@@ -38,7 +45,16 @@ export function Question({
     onChange({ ...question, options: newOptions });
   };
 
+  const handleCorrectAnswerChange = (value: string) => {
+    if (mode !== "edit") return;
+    onChange({ ...question, correctAnswer: value });
+  };
+
   if (mode === "edit") {
+    // Filter non-empty options here to avoid issues in the Select component
+    const nonEmptyOptions = question?.options?.filter(option => option.trim() !== "") || [];
+    const hasOptions = nonEmptyOptions.length > 0;
+    
     return (
       <motion.div
         className="border p-6 rounded-lg relative"
@@ -101,13 +117,27 @@ export function Question({
 
           <div>
             <Label>Correct Answer</Label>
-            <Input
-              value={question?.correctAnswer || ""}
-              onChange={(e) =>
-                onChange({ ...question, correctAnswer: e.target.value })
-              }
-              placeholder="Enter the correct answer"
-            />
+            {hasOptions ? (
+              <Select
+                value={question?.correctAnswer || ""}
+                onValueChange={handleCorrectAnswerChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select the correct answer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {nonEmptyOptions.map((option, index) => (
+                    <SelectItem key={index} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">
+                Enter options above, then select the correct answer
+              </p>
+            )}
           </div>
         </div>
       </motion.div>

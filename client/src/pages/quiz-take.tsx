@@ -6,10 +6,11 @@ import { Question } from "@/components/quiz/Question";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2, Trophy, Clock, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, Trophy, Clock, CheckCircle, XCircle, Search } from "lucide-react";
 import { motion } from "framer-motion";
 import { NavBar } from "@/components/layout/nav-bar";
 import { useToast } from "@/hooks/use-toast";
+import { QuizReview } from "@/components/quiz/QuizReview";
 import {
   Card,
   CardContent,
@@ -41,6 +42,7 @@ export default function QuizTake() {
   const [timeStarted, setTimeStarted] = useState<Date>();
   const [warnings, setWarnings] = useState(0);
   const [quizCompleted, setQuizCompleted] = useState(false);
+  const [showReview, setShowReview] = useState(false);
   const [quizResult, setQuizResult] = useState<{
     score: number;
     timeTaken: number;
@@ -232,11 +234,15 @@ export default function QuizTake() {
                 </CardContent>
               </Card>
               
-              <Card>
+              <Card 
+                className="cursor-pointer transition-all hover:shadow-md"
+                onClick={() => setShowReview(true)}
+              >
                 <CardHeader className="pb-2">
                   <CardTitle className="flex items-center text-lg">
                     <CheckCircle className="mr-2 h-5 w-5 text-green-500" />
                     Correct Answers
+                    <Search className="ml-auto h-4 w-4 text-muted-foreground" />
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="flex justify-between items-center">
@@ -309,6 +315,14 @@ export default function QuizTake() {
             </div>
           </motion.div>
         </div>
+
+        {showReview && questions && (
+          <QuizReview 
+            questions={questions} 
+            userAnswers={answers} 
+            onClose={() => setShowReview(false)} 
+          />
+        )}
       </div>
     );
   }

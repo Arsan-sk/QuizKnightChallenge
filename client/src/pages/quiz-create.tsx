@@ -202,6 +202,20 @@ export default function QuizCreate() {
                   />
                 </motion.div>
               ))}
+
+              {questions.length > 0 && (
+                <div className="flex justify-center mt-6">
+                  <Button 
+                    type="button" 
+                    onClick={addQuestion}
+                    variant="outline"
+                    className="px-8"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Another Question
+                  </Button>
+                </div>
+              )}
             </div>
 
             <Button
