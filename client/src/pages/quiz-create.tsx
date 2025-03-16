@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Question } from "@/components/quiz/Question";
 import { apiRequest } from "@/lib/queryClient";
 import { motion } from "framer-motion";
@@ -23,6 +24,7 @@ import { Plus } from "lucide-react";
 export default function QuizCreate() {
   const [, setLocation] = useLocation();
   const [questions, setQuestions] = useState<any[]>([]);
+  const [quizType, setQuizType] = useState<"standard" | "live">("standard");
 
   const form = useForm({
     resolver: zodResolver(insertQuizSchema),
@@ -31,6 +33,8 @@ export default function QuizCreate() {
       description: "",
       difficulty: "easy",
       isPublic: true,
+      quizType: "standard",
+      duration: 30,
     },
   });
 
@@ -59,6 +63,7 @@ export default function QuizCreate() {
         questionType: "mcq",
         options: ["", "", "", ""],
         correctAnswer: "",
+        points: 1,
       },
     ]);
   };
@@ -71,6 +76,12 @@ export default function QuizCreate() {
 
   const removeQuestion = (index: number) => {
     setQuestions(questions.filter((_, i) => i !== index));
+  };
+
+  const handleQuizTypeChange = (value: string) => {
+    const type = value as "standard" | "live";
+    setQuizType(type);
+    form.setValue("quizType", type);
   };
 
   return (
@@ -117,6 +128,53 @@ export default function QuizCreate() {
                     <SelectItem value="hard">Hard</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Quiz Type</label>
+                <Select
+                  onValueChange={handleQuizTypeChange}
+                  defaultValue="standard"
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select quiz type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="standard">Standard</SelectItem>
+                    <SelectItem value="live">Live</SelectItem>
+                  </SelectContent>
+                </Select>
+                {quizType === "live" && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Live quizzes can be started and stopped by the teacher. Students can only take the quiz when it's active.
+                  </p>
+                )}
+              </div>
+
+              {quizType === "live" && (
+                <div>
+                  <label className="text-sm font-medium">Duration (minutes)</label>
+                  <Input 
+                    type="number" 
+                    min="1" 
+                    max="180"
+                    defaultValue="30"
+                    onChange={(e) => form.setValue("duration", parseInt(e.target.value))}
+                  />
+                </div>
+              )}
+
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="isPublic" 
+                  defaultChecked={true}
+                  onCheckedChange={(checked) => {
+                    form.setValue("isPublic", checked === true);
+                  }}
+                />
+                <label htmlFor="isPublic" className="text-sm font-medium">
+                  Make quiz public
+                </label>
               </div>
             </div>
 

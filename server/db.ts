@@ -1,9 +1,10 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
+import pg from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
+import dotenv from "dotenv";
+dotenv.config();
 
-neonConfig.webSocketConstructor = ws;
+const { Pool } = pg;
 
 // Check for DATABASE_URL and provide a fallback for development
 if (!process.env.DATABASE_URL) {
@@ -23,4 +24,14 @@ export const pool = new Pool({
   idleTimeoutMillis: 30000 
 });
 
-export const db = drizzle({ client: pool, schema });
+// Test the database connection
+pool.connect((err, client, done) => {
+  if (err) {
+    console.error('Error connecting to the database:', err.stack);
+  } else {
+    console.log('Successfully connected to the database');
+    done();
+  }
+});
+
+export const db = drizzle(pool, { schema });

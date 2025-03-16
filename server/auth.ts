@@ -6,6 +6,10 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
+import dotenv from "dotenv";
+dotenv.config();
+
+// const dotenv = require('dotenv').config()
 
 declare global {
   namespace Express {
@@ -30,7 +34,7 @@ async function comparePasswords(supplied: string, stored: string) {
 
 export function setupAuth(app: Express) {
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.REPL_ID!,
+    secret: "3b1f4e7a9c6d9e8d1f2a3b4c5d6e7f8192a3b4c5d6e7f8192a3b4c5d6e7f819",
     resave: false,
     saveUninitialized: false,
     store: storage.sessionStore,

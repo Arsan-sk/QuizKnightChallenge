@@ -1,13 +1,21 @@
-import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// Define enums for better type safety
+export const roleEnum = pgEnum("role", ["teacher", "student"]);
+export const difficultyEnum = pgEnum("difficulty", ["easy", "medium", "hard"]);
+export const questionTypeEnum = pgEnum("question_type", ["mcq", "true_false"]);
+export const quizTypeEnum = pgEnum("quiz_type", ["standard", "live"]);
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
+  // Keep as text with enum for now for compatibility
   role: text("role", { enum: ["teacher", "student"] }).notNull(),
   points: integer("points").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const quizzes = pgTable("quizzes", {
@@ -15,18 +23,28 @@ export const quizzes = pgTable("quizzes", {
   title: text("title").notNull(),
   description: text("description").notNull(),
   createdBy: integer("created_by").notNull(),
+  // Keep as text with enum for now for compatibility
   difficulty: text("difficulty", { enum: ["easy", "medium", "hard"] }).notNull(),
   isPublic: boolean("is_public").default(false),
+  quizType: quizTypeEnum("quiz_type").default("standard"),
+  isActive: boolean("is_active").default(false),
+  duration: integer("duration"),  // Duration in minutes for live quizzes
+  startTime: timestamp("start_time"),
+  endTime: timestamp("end_time"),
   createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const questions = pgTable("questions", {
   id: serial("id").primaryKey(),
   quizId: integer("quiz_id").notNull(),
   questionText: text("question_text").notNull(),
+  // Keep as text with enum for now for compatibility
   questionType: text("question_type", { enum: ["mcq", "true_false"] }).notNull(),
   options: text("options").array(),
   correctAnswer: text("correct_answer").notNull(),
+  points: integer("points").default(1),  // Points awarded for correct answer
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 export const results = pgTable("results", {
@@ -34,10 +52,14 @@ export const results = pgTable("results", {
   quizId: integer("quiz_id").notNull(),
   userId: integer("user_id").notNull(),
   score: integer("score").notNull(),
-  timeTaken: integer("time_taken").notNull(),
+  totalQuestions: integer("total_questions").notNull(),
+  correctAnswers: integer("correct_answers").notNull(),
+  wrongAnswers: integer("wrong_answers").notNull(),
+  timeTaken: integer("time_taken").notNull(),  // Time taken in seconds
   completedAt: timestamp("completed_at").defaultNow(),
 });
 
+// Validation schemas for API requests
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
@@ -49,6 +71,18 @@ export const insertQuizSchema = createInsertSchema(quizzes).pick({
   description: true,
   difficulty: true,
   isPublic: true,
+  quizType: true,
+  duration: true,
+});
+
+export const updateQuizSchema = createInsertSchema(quizzes).pick({
+  title: true,
+  description: true,
+  difficulty: true,
+  isPublic: true,
+  quizType: true,
+  duration: true,
+  isActive: true,
 });
 
 export const insertQuestionSchema = createInsertSchema(questions).pick({
@@ -57,15 +91,32 @@ export const insertQuestionSchema = createInsertSchema(questions).pick({
   options: true,
   correctAnswer: true,
   quizId: true,
+  points: true,
+});
+
+export const updateQuestionSchema = createInsertSchema(questions).pick({
+  questionText: true,
+  questionType: true,
+  options: true,
+  correctAnswer: true,
+  points: true,
 });
 
 export const insertResultSchema = createInsertSchema(results).pick({
   quizId: true,
   score: true,
+  totalQuestions: true,
+  correctAnswers: true,
+  wrongAnswers: true,
   timeTaken: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type InsertQuiz = z.infer<typeof insertQuizSchema>;
+export type UpdateQuiz = z.infer<typeof updateQuizSchema>;
+export type InsertQuestion = z.infer<typeof insertQuestionSchema>;
+export type UpdateQuestion = z.infer<typeof updateQuestionSchema>;
+export type InsertResult = z.infer<typeof insertResultSchema>;
 export type User = typeof users.$inferSelect;
 export type Quiz = typeof quizzes.$inferSelect;
 export type Question = typeof questions.$inferSelect;

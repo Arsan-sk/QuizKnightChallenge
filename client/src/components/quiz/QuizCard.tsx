@@ -4,20 +4,94 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Quiz } from "@shared/schema";
 import { Link } from "wouter";
-import { User } from "lucide-react";
+import { User, Play, Square, Clock } from "lucide-react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
+import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface QuizCardProps {
   quiz: Quiz;
   actionLabel: string;
   actionPath: string;
   teacherName?: string;
+  isTeacher?: boolean;
 }
 
-export function QuizCard({ quiz, actionLabel, actionPath, teacherName }: QuizCardProps) {
+export function QuizCard({ 
+  quiz, 
+  actionLabel, 
+  actionPath, 
+  teacherName, 
+  isTeacher = false 
+}: QuizCardProps) {
+  const [isStarting, setIsStarting] = useState(false);
+  const [isStopping, setIsStopping] = useState(false);
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
   const difficultyColors = {
     easy: "bg-green-500",
     medium: "bg-yellow-500",
     hard: "bg-red-500",
+  };
+
+  const startQuizMutation = useMutation({
+    mutationFn: async () => {
+      setIsStarting(true);
+      const res = await apiRequest("POST", `/api/quizzes/${quiz.id}/start`, {
+        duration: quiz.duration || 30,
+      });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quizzes/teacher"] });
+      toast({
+        title: "Quiz started",
+        description: "Students can now take this quiz",
+      });
+      setIsStarting(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to start quiz",
+        description: error.message,
+        variant: "destructive",
+      });
+      setIsStarting(false);
+    },
+  });
+
+  const stopQuizMutation = useMutation({
+    mutationFn: async () => {
+      setIsStopping(true);
+      const res = await apiRequest("POST", `/api/quizzes/${quiz.id}/end`);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/quizzes/teacher"] });
+      toast({
+        title: "Quiz ended",
+        description: "The quiz is no longer active",
+      });
+      setIsStopping(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to end quiz",
+        description: error.message,
+        variant: "destructive",
+      });
+      setIsStopping(false);
+    },
+  });
+
+  const handleStartQuiz = () => {
+    startQuizMutation.mutate();
+  };
+
+  const handleStopQuiz = () => {
+    stopQuizMutation.mutate();
   };
 
   return (
@@ -35,12 +109,23 @@ export function QuizCard({ quiz, actionLabel, actionPath, teacherName }: QuizCar
     >
       <Card className="p-6 relative bg-card/50 backdrop-blur-sm border border-primary/10">
         <div className="flex justify-between items-start mb-4">
-          <h3 className="text-xl font-bold">{quiz.title}</h3>
-          <Badge className={difficultyColors[quiz.difficulty]}>
-            {quiz.difficulty}
-          </Badge>
+          <div>
+            <h3 className="text-xl font-bold">{quiz.title}</h3>
+            <div className="flex gap-2 mt-1">
+              <Badge className={difficultyColors[quiz.difficulty]}>
+                {quiz.difficulty}
+              </Badge>
+              {quiz.quizType === "live" && (
+                <Badge variant={quiz.isActive ? "default" : "outline"} className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {quiz.isActive ? "Live" : "Live Quiz"}
+                </Badge>
+              )}
+            </div>
+          </div>
         </div>
         <p className="text-muted-foreground mb-4">{quiz.description}</p>
+        
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             {teacherName && (
@@ -54,9 +139,38 @@ export function QuizCard({ quiz, actionLabel, actionPath, teacherName }: QuizCar
               {quiz.createdAt ? new Date(quiz.createdAt).toLocaleDateString() : 'Recently'}
             </span>
           </div>
-          <Link href={actionPath}>
-            <Button>{actionLabel}</Button>
-          </Link>
+          
+          <div className="flex gap-2">
+            {isTeacher && quiz.quizType === "live" && (
+              <>
+                {quiz.isActive ? (
+                  <Button 
+                    variant="destructive" 
+                    size="sm"
+                    onClick={handleStopQuiz}
+                    disabled={isStopping}
+                  >
+                    <Square className="h-4 w-4 mr-1" />
+                    {isStopping ? "Stopping..." : "Stop Quiz"}
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="default" 
+                    size="sm"
+                    onClick={handleStartQuiz}
+                    disabled={isStarting}
+                  >
+                    <Play className="h-4 w-4 mr-1" />
+                    {isStarting ? "Starting..." : "Start Quiz"}
+                  </Button>
+                )}
+              </>
+            )}
+            
+            <Link href={actionPath}>
+              <Button size="sm">{actionLabel}</Button>
+            </Link>
+          </div>
         </div>
       </Card>
     </motion.div>

@@ -1,8 +1,8 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import { Result } from "@shared/schema";
+import { Result, Quiz } from "@shared/schema";
 import { Button } from "@/components/ui/button";
-import { Loader2, Trophy, BookOpen, Target } from "lucide-react";
+import { Loader2, Trophy, BookOpen, Target, Clock } from "lucide-react";
 import { motion } from "framer-motion";
 import { NavBar } from "@/components/layout/nav-bar";
 import { Link } from "wouter";
@@ -11,7 +11,11 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
+  CardDescription,
+  CardFooter,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { QuizCard } from "@/components/quiz/QuizCard";
 
 export default function StudentDashboard() {
   const { user } = useAuth();
@@ -19,7 +23,12 @@ export default function StudentDashboard() {
     queryKey: ["/api/results/user"],
   });
 
-  if (loadingResults) {
+  const { data: liveQuizzes, isLoading: loadingLiveQuizzes } = useQuery<(Quiz & { teacherName: string })[]>({
+    queryKey: ["/api/quizzes/live"],
+    refetchInterval: 30000, // Refetch every 30 seconds to check for new live quizzes
+  });
+
+  if (loadingResults || loadingLiveQuizzes) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
@@ -40,6 +49,31 @@ export default function StudentDashboard() {
           <h1 className="text-3xl font-bold mb-2">Welcome, {user?.username}!</h1>
           <p className="text-muted-foreground">Ready to test your knowledge?</p>
         </motion.div>
+
+        {liveQuizzes && liveQuizzes.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="mb-8"
+          >
+            <h2 className="text-2xl font-bold mb-4 flex items-center">
+              <Clock className="mr-2 h-5 w-5 text-blue-500" />
+              Live Quizzes
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {liveQuizzes.map((quiz) => (
+                <QuizCard
+                  key={quiz.id}
+                  quiz={quiz}
+                  actionLabel="Take Quiz"
+                  actionPath={`/student/quiz/${quiz.id}`}
+                  teacherName={quiz.teacherName}
+                />
+              ))}
+            </div>
+          </motion.div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           <motion.div

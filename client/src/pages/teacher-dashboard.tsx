@@ -57,6 +57,7 @@ export default function TeacherDashboard() {
               quiz={quiz}
               actionLabel="Edit Quiz"
               actionPath={`/teacher/quiz/${quiz.id}`}
+              isTeacher={true}
             />
           ))}
         </div>
