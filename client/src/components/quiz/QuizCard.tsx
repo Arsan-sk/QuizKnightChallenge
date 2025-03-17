@@ -9,7 +9,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { LiveQuizMonitor } from "@/components/quiz/LiveQuizMonitor";
 
 interface QuizCardProps {
   quiz: Quiz;
@@ -28,7 +27,6 @@ export function QuizCard({
 }: QuizCardProps) {
   const [isStarting, setIsStarting] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
-  const [showMonitor, setShowMonitor] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -147,14 +145,15 @@ export function QuizCard({
               <>
                 {quiz.isActive ? (
                   <>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => setShowMonitor(true)}
-                    >
-                      <Eye className="h-4 w-4 mr-1" />
-                      Monitor
-                    </Button>
+                    <Link href={`/teacher/monitor/${quiz.id}`}>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Monitor
+                      </Button>
+                    </Link>
                     <Button 
                       variant="destructive" 
                       size="sm"
@@ -185,14 +184,6 @@ export function QuizCard({
           </div>
         </div>
       </Card>
-
-      {/* Live Quiz Monitoring Modal */}
-      {showMonitor && (
-        <LiveQuizMonitor 
-          quizId={quiz.id} 
-          onClose={() => setShowMonitor(false)} 
-        />
-      )}
     </motion.div>
   );
 }

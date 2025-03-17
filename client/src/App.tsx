@@ -12,6 +12,7 @@ import StudentDashboard from "@/pages/student-dashboard";
 import QuizCreate from "@/pages/quiz-create";
 import QuizTake from "@/pages/quiz-take";
 import QuizBrowse from "@/pages/quiz-browse";
+import LiveQuizMonitorPage from "@/pages/live-quiz-monitor";
 
 function Router() {
   return (
@@ -28,6 +29,11 @@ function Router() {
       <ProtectedRoute 
         path="/teacher/quiz/create" 
         component={QuizCreate}
+        role="teacher"
+      />
+      <ProtectedRoute 
+        path="/teacher/monitor/:quizId" 
+        component={LiveQuizMonitorPage}
         role="teacher"
       />
       <ProtectedRoute 
