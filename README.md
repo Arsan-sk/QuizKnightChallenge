@@ -10,6 +10,13 @@ An interactive quiz application that allows teachers to create and manage quizze
 - Leaderboard system
 - Real-time quiz participation
 - Detailed quiz results and analytics
+- Advanced proctoring system with:
+  - Tab/window switching detection
+  - Copy-paste prevention
+  - Keyboard shortcut blocking
+  - Full-screen enforcement
+  - Webcam monitoring for detecting multiple people
+  - Single-attempt restriction for quizzes
 
 ## Prerequisites
 
@@ -72,6 +79,14 @@ quiz-knight-challenge/
 ├── migrations/         # Database migrations
 └── checkpoints/        # Development checkpoints
 ```
+
+## 👨‍💻 About the Creator
+
+I'm Shaikh Mohd Arsan, the architect behind the ideas, structure, and vision of this project. Every concept, feature, and future enhancement originates from my mind, meticulously framed and structured before execution.
+
+While I leverage Generative and Agentic AI as powerful tools in the implementation process, the core logic, planning, and innovation are entirely my own. AI assists in execution, but the blueprint is purely human.
+
+"Machines assist, but ideas are built by the mind."
 
 ## Contributing
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Quiz, Question as QuestionType } from "@shared/schema";
@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import { NavBar } from "@/components/layout/nav-bar";
 import { useToast } from "@/hooks/use-toast";
 import { QuizReview } from "@/components/quiz/QuizReview";
+import { WebcamMonitor } from "@/components/quiz/WebcamMonitor";
 import {
   Card,
   CardContent,
@@ -20,6 +21,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { hasAttemptedQuiz, registerAttempt, completeAttempt } from "@/lib/attemptManager";
+import { LiveQuizController } from "@/components/quiz/LiveQuizController";
 
 type LeaderboardEntry = {
   id: number;
@@ -43,6 +46,9 @@ export default function QuizTake() {
   const [warnings, setWarnings] = useState(0);
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [showReview, setShowReview] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [copyPasteAttempts, setCopyPasteAttempts] = useState(0);
+  const [enableWebcam, setEnableWebcam] = useState(false);
   const [quizResult, setQuizResult] = useState<{
     score: number;
     timeTaken: number;
@@ -50,8 +56,9 @@ export default function QuizTake() {
     correctAnswers: number;
     wrongAnswers: number;
   } | null>(null);
+  const [hasAttempted, setHasAttempted] = useState(false);
 
-  const { data: quiz, isError: quizError } = useQuery<Quiz>({
+  const { data: quiz, isError: quizError, isLoading } = useQuery<Quiz>({
     queryKey: [`/api/quizzes/${id}`],
     onError: (error) => {
       toast({
@@ -77,6 +84,29 @@ export default function QuizTake() {
     queryKey: [`/api/quizzes/${id}/leaderboard`],
     enabled: quizCompleted,
   });
+
+  // Check if user has already attempted this quiz
+  const { data: user } = useQuery({
+    queryKey: ['/api/user'],
+  });
+
+  useEffect(() => {
+    if (user && id) {
+      const attempted = hasAttemptedQuiz(parseInt(id), user.id);
+      setHasAttempted(attempted);
+      
+      if (attempted) {
+        toast({
+          title: "Quiz already attempted",
+          description: "You have already completed this quiz. Multiple attempts are not allowed.",
+          variant: "destructive",
+        });
+      } else {
+        // Register a new attempt
+        registerAttempt(parseInt(id), user.id);
+      }
+    }
+  }, [user, id, toast]);
 
   const submitMutation = useMutation({
     mutationFn: async () => {
@@ -106,6 +136,11 @@ export default function QuizTake() {
 
       setQuizResult(result);
 
+      // Mark the attempt as completed
+      if (user) {
+        completeAttempt(parseInt(id), user.id);
+      }
+
       const res = await apiRequest("POST", `/api/quizzes/${id}/results`, result);
       return res.json();
     },
@@ -127,17 +162,41 @@ export default function QuizTake() {
     },
   });
 
+  const handleWebcamViolation = useCallback(() => {
+    setWarnings(prev => {
+      const newWarnings = prev + 1;
+      
+      if (newWarnings >= 3) {
+        toast({
+          title: "Quiz terminated",
+          description: "Multiple people detected. Your quiz has been automatically submitted.",
+          variant: "destructive",
+        });
+        submitMutation.mutate();
+      }
+      
+      return newWarnings;
+    });
+  }, [submitMutation, toast]);
+
   useEffect(() => {
     setTimeStarted(new Date());
 
+    // Tab switching detection
     const handleVisibilityChange = () => {
-      if (document.hidden) {
+      if (document.hidden && !quizCompleted) {
         setWarnings((w) => {
           const newWarnings = w + 1;
-          if (newWarnings >= 2) {
+          toast({
+            title: `Warning ${newWarnings}/3`,
+            description: `Tab switching detected. ${3 - newWarnings} warnings left before automatic submission.`,
+            variant: "destructive",
+          });
+          
+          if (newWarnings >= 3) {
             toast({
               title: "Quiz terminated",
-              description: "Too many tab switches detected.",
+              description: "Too many tab switches detected. Your quiz has been automatically submitted.",
               variant: "destructive",
             });
             submitMutation.mutate();
@@ -147,10 +206,140 @@ export default function QuizTake() {
       }
     };
 
+    // Copy-paste prevention
+    const preventCopyPaste = (e: ClipboardEvent) => {
+      if (!quizCompleted) {
+        e.preventDefault();
+        setCopyPasteAttempts(prev => {
+          const newAttempts = prev + 1;
+          toast({
+            title: "Copy/Paste Blocked",
+            description: "Copy and paste functionality is disabled during the quiz.",
+            variant: "destructive",
+          });
+          
+          if (newAttempts >= 3) {
+            toast({
+              title: "Warning",
+              description: "Multiple copy/paste attempts detected. This will be logged.",
+              variant: "destructive",
+            });
+          }
+          return newAttempts;
+        });
+      }
+    };
+
+    // Hotkey blocking
+    const preventHotkeys = (e: KeyboardEvent) => {
+      if (!quizCompleted && (e.ctrlKey || e.altKey || e.metaKey)) {
+        // Allow some essential combinations like Ctrl+Home, Ctrl+End for navigation
+        const allowedCombinations = ['Home', 'End'];
+        if (!allowedCombinations.includes(e.key)) {
+          e.preventDefault();
+          toast({
+            title: "Hotkey Blocked",
+            description: "Keyboard shortcuts are disabled during the quiz.",
+            variant: "destructive",
+          });
+        }
+      }
+    };
+
+    // Full screen handling
+    const enterFullScreen = () => {
+      const element = document.documentElement;
+      if (element.requestFullscreen) {
+        element.requestFullscreen();
+      }
+      setIsFullScreen(true);
+    };
+
+    const exitHandler = () => {
+      if (!document.fullscreenElement && !quizCompleted) {
+        setIsFullScreen(false);
+        setWarnings(prev => {
+          const newWarnings = prev + 1;
+          toast({
+            title: `Warning ${newWarnings}/3`,
+            description: `Full-screen mode exited. ${3 - newWarnings} warnings left before automatic submission.`,
+            variant: "destructive",
+          });
+          
+          if (newWarnings >= 3) {
+            toast({
+              title: "Quiz terminated",
+              description: "Too many full-screen exits detected. Your quiz has been automatically submitted.",
+              variant: "destructive",
+            });
+            submitMutation.mutate();
+          }
+          return newWarnings;
+        });
+      }
+    };
+
+    // Enter full screen when starting quiz
+    if (!isFullScreen && !quizCompleted) {
+      enterFullScreen();
+    }
+
+    // Event listeners
     document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () =>
+    document.addEventListener("copy", preventCopyPaste);
+    document.addEventListener("cut", preventCopyPaste);
+    document.addEventListener("paste", preventCopyPaste);
+    document.addEventListener("keydown", preventHotkeys);
+    document.addEventListener("fullscreenchange", exitHandler);
+
+    return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, []);
+      document.removeEventListener("copy", preventCopyPaste);
+      document.removeEventListener("cut", preventCopyPaste);
+      document.removeEventListener("paste", preventCopyPaste);
+      document.removeEventListener("keydown", preventHotkeys);
+      document.removeEventListener("fullscreenchange", exitHandler);
+    };
+  }, [quizCompleted, isFullScreen]);
+
+  if (isLoading) {
+    return (
+      <div>
+        <NavBar />
+        <div className="container mx-auto h-screen flex flex-col items-center justify-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+          <p className="mt-4 text-lg">Loading quiz...</p>
+          
+          <div className="mt-8 p-4 bg-muted rounded-lg max-w-md">
+            <h3 className="font-medium mb-2">Quiz Proctoring Information</h3>
+            <p className="text-sm mb-4">
+              This quiz uses advanced proctoring technology to ensure academic integrity.
+            </p>
+            <ul className="list-disc pl-5 text-sm space-y-2">
+              <li>Leaving the quiz tab will be recorded as a violation</li>
+              <li>Copy and paste functionality is disabled</li>
+              <li>You must remain in full-screen mode</li>
+              <li>Keyboard shortcuts are restricted</li>
+              <li className="font-medium">
+                <label className="flex items-center">
+                  <input 
+                    type="checkbox" 
+                    checked={enableWebcam}
+                    onChange={(e) => setEnableWebcam(e.target.checked)}
+                    className="mr-2"
+                  />
+                  Enable webcam monitoring for enhanced security
+                </label>
+              </li>
+            </ul>
+            <p className="text-sm mt-4">
+              After 3 violations, your quiz will be automatically submitted.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (quizError || questionsError) {
     return (
@@ -173,6 +362,23 @@ export default function QuizTake() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (hasAttempted) {
+    return (
+      <div>
+        <NavBar />
+        <div className="container mx-auto p-8 text-center">
+          <h1 className="text-2xl font-bold text-red-500 mb-4">Quiz Already Attempted</h1>
+          <p className="text-muted-foreground mb-6">
+            You have already completed this quiz. Multiple attempts are not allowed.
+          </p>
+          <Button onClick={() => setLocation("/student")}>
+            Return to Dashboard
+          </Button>
+        </div>
       </div>
     );
   }
@@ -327,10 +533,127 @@ export default function QuizTake() {
     );
   }
 
+  if (!isLoading && quiz && questions && quiz.quizType === "live" && quiz.isActive) {
+    return (
+      <div className="min-h-screen bg-background">
+        <NavBar />
+        
+        <WebcamMonitor 
+          enabled={enableWebcam && !quizCompleted} 
+          onViolationDetected={handleWebcamViolation} 
+        />
+        
+        <div className="container mx-auto px-4 py-8">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="max-w-3xl mx-auto"
+          >
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold">{quiz.title}</h1>
+              <p className="text-muted-foreground">{quiz.description}</p>
+            </div>
+            
+            <div className="bg-card rounded-lg shadow-sm p-6 border">
+              <LiveQuizController 
+                questions={questions}
+                duration={quiz.duration || 30}
+                onAnswer={handleAnswer}
+                onComplete={() => submitMutation.mutate()}
+                userAnswers={answers}
+              />
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Regular quiz rendering for non-live quizzes
+  if (!isLoading && !quizCompleted && quiz) {
+    return (
+      <div className="min-h-screen bg-background">
+        <NavBar />
+        
+        <WebcamMonitor 
+          enabled={enableWebcam && !quizCompleted} 
+          onViolationDetected={handleWebcamViolation} 
+        />
+        
+        <div className="container mx-auto px-4 py-8">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="mb-8">
+              <h1 className="text-3xl font-bold mb-2">{quiz.title}</h1>
+              <p className="text-muted-foreground mb-4">{quiz.description}</p>
+              {warnings > 0 && (
+                <p className="text-red-500 mb-2">
+                  Warning: Tab switching detected! ({warnings}/3)
+                </p>
+              )}
+              <Progress
+                value={((currentQuestion + 1) / questions.length) * 100}
+                className="h-2"
+              />
+            </div>
+
+            {questions[currentQuestion] && (
+              <motion.div
+                key={currentQuestion}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Question
+                  question={questions[currentQuestion]}
+                  onChange={(value: string) => handleAnswer(value)}
+                  answer={answers[currentQuestion]}
+                  mode="take"
+                />
+              </motion.div>
+            )}
+
+            <div className="flex justify-between mt-8">
+              <Button onClick={previous} disabled={currentQuestion === 0}>
+                Previous
+              </Button>
+              {currentQuestion === questions.length - 1 ? (
+                <Button
+                  onClick={() => submitMutation.mutate()}
+                  disabled={submitMutation.isPending}
+                >
+                  {submitMutation.isPending ? "Submitting..." : "Submit Quiz"}
+                </Button>
+              ) : (
+                <Button
+                  onClick={next}
+                  disabled={!answers[currentQuestion]}
+                >
+                  Next
+                </Button>
+              )}
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div>
+    <div className="min-h-screen bg-background">
       <NavBar />
-      <div className="container mx-auto p-8 max-w-3xl">
+      
+      <WebcamMonitor 
+        enabled={enableWebcam && !quizCompleted} 
+        onViolationDetected={handleWebcamViolation} 
+      />
+      
+      <div className="container mx-auto px-4 py-8">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -341,7 +664,7 @@ export default function QuizTake() {
             <p className="text-muted-foreground mb-4">{quiz.description}</p>
             {warnings > 0 && (
               <p className="text-red-500 mb-2">
-                Warning: Tab switching detected! ({warnings}/2)
+                Warning: Tab switching detected! ({warnings}/3)
               </p>
             )}
             <Progress

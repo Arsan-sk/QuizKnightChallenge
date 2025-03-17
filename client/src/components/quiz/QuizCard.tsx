@@ -4,11 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Quiz } from "@shared/schema";
 import { Link } from "wouter";
-import { User, Play, Square, Clock } from "lucide-react";
+import { User, Play, Square, Clock, Eye } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { LiveQuizMonitor } from "@/components/quiz/LiveQuizMonitor";
 
 interface QuizCardProps {
   quiz: Quiz;
@@ -27,6 +28,7 @@ export function QuizCard({
 }: QuizCardProps) {
   const [isStarting, setIsStarting] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
+  const [showMonitor, setShowMonitor] = useState(false);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -144,15 +146,25 @@ export function QuizCard({
             {isTeacher && quiz.quizType === "live" && (
               <>
                 {quiz.isActive ? (
-                  <Button 
-                    variant="destructive" 
-                    size="sm"
-                    onClick={handleStopQuiz}
-                    disabled={isStopping}
-                  >
-                    <Square className="h-4 w-4 mr-1" />
-                    {isStopping ? "Stopping..." : "Stop Quiz"}
-                  </Button>
+                  <>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setShowMonitor(true)}
+                    >
+                      <Eye className="h-4 w-4 mr-1" />
+                      Monitor
+                    </Button>
+                    <Button 
+                      variant="destructive" 
+                      size="sm"
+                      onClick={handleStopQuiz}
+                      disabled={isStopping}
+                    >
+                      <Square className="h-4 w-4 mr-1" />
+                      {isStopping ? "Stopping..." : "Stop Quiz"}
+                    </Button>
+                  </>
                 ) : (
                   <Button 
                     variant="default" 
@@ -173,6 +185,14 @@ export function QuizCard({
           </div>
         </div>
       </Card>
+
+      {/* Live Quiz Monitoring Modal */}
+      {showMonitor && (
+        <LiveQuizMonitor 
+          quizId={quiz.id} 
+          onClose={() => setShowMonitor(false)} 
+        />
+      )}
     </motion.div>
   );
 }
