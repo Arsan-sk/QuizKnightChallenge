@@ -5,6 +5,9 @@ import { Quiz, Question as QuestionType } from "@shared/schema";
 import { Question } from "@/components/quiz/Question";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { QuizProgress } from "@/components/ui/quiz-progress";
+import { CountdownTimer } from "@/components/ui/countdown-timer";
+import { QuestionTransition } from "@/components/ui/question-transition";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Loader2, Trophy, Clock, CheckCircle, XCircle, Search } from "lucide-react";
 import { motion } from "framer-motion";
@@ -601,40 +604,79 @@ export default function QuizTake() {
               />
             </div>
 
-            {questions[currentQuestion] && (
-              <motion.div
-                key={currentQuestion}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Question
-                  question={questions[currentQuestion]}
-                  onChange={(value: string) => handleAnswer(value)}
-                  answer={answers[currentQuestion]}
-                  mode="take"
+            {quiz.timeLimit > 0 && (
+              <div className="flex justify-end mb-4">
+                <CountdownTimer 
+                  duration={quiz.timeLimit * 60} 
+                  onTimeUp={() => {
+                    toast({
+                      title: "Time's up!",
+                      description: "Your quiz has been automatically submitted.",
+                    });
+                    submitMutation.mutate();
+                  }}
+                  className="mb-4"
                 />
-              </motion.div>
+              </div>
             )}
-
-            <div className="flex justify-between mt-8">
-              <Button onClick={previous} disabled={currentQuestion === 0}>
+            
+            <QuizProgress 
+              currentQuestion={currentQuestion + 1} 
+              totalQuestions={questions.length}
+              className="mb-6" 
+            />
+            
+            <QuestionTransition 
+              id={currentQuestion}
+              direction={currentQuestion > 0 ? "right" : "left"}
+            >
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle>
+                    Question {currentQuestion + 1}
+                  </CardTitle>
+                  <CardDescription>
+                    {quiz.name} - {quiz.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Question
+                    question={questions[currentQuestion]}
+                    userAnswer={answers[currentQuestion] || ""}
+                    onChange={handleAnswer}
+                    showResult={false}
+                  />
+                </CardContent>
+              </Card>
+            </QuestionTransition>
+            
+            <div className="flex justify-between mt-4">
+              <Button
+                variant="outline"
+                onClick={previous}
+                disabled={currentQuestion === 0}
+              >
                 Previous
               </Button>
-              {currentQuestion === questions.length - 1 ? (
-                <Button
-                  onClick={() => submitMutation.mutate()}
+              
+              {currentQuestion < questions.length - 1 ? (
+                <Button onClick={next}>Next</Button>
+              ) : (
+                <Button 
+                  onClick={() => {
+                    if (answers.filter(Boolean).length < questions.length) {
+                      const unanswered = questions.length - answers.filter(Boolean).length;
+                      
+                      if (window.confirm(`You have ${unanswered} unanswered question(s). Are you sure you want to submit?`)) {
+                        submitMutation.mutate();
+                      }
+                    } else {
+                      submitMutation.mutate();
+                    }
+                  }}
                   disabled={submitMutation.isPending}
                 >
                   {submitMutation.isPending ? "Submitting..." : "Submit Quiz"}
-                </Button>
-              ) : (
-                <Button
-                  onClick={next}
-                  disabled={!answers[currentQuestion]}
-                >
-                  Next
                 </Button>
               )}
             </div>
@@ -673,40 +715,79 @@ export default function QuizTake() {
             />
           </div>
 
-          {questions[currentQuestion] && (
-            <motion.div
-              key={currentQuestion}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Question
-                question={questions[currentQuestion]}
-                onChange={(value: string) => handleAnswer(value)}
-                answer={answers[currentQuestion]}
-                mode="take"
+          {quiz.timeLimit > 0 && (
+            <div className="flex justify-end mb-4">
+              <CountdownTimer 
+                duration={quiz.timeLimit * 60} 
+                onTimeUp={() => {
+                  toast({
+                    title: "Time's up!",
+                    description: "Your quiz has been automatically submitted.",
+                  });
+                  submitMutation.mutate();
+                }}
+                className="mb-4"
               />
-            </motion.div>
+            </div>
           )}
-
-          <div className="flex justify-between mt-8">
-            <Button onClick={previous} disabled={currentQuestion === 0}>
+          
+          <QuizProgress 
+            currentQuestion={currentQuestion + 1} 
+            totalQuestions={questions.length}
+            className="mb-6" 
+          />
+          
+          <QuestionTransition 
+            id={currentQuestion}
+            direction={currentQuestion > 0 ? "right" : "left"}
+          >
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>
+                  Question {currentQuestion + 1}
+                </CardTitle>
+                <CardDescription>
+                  {quiz.name} - {quiz.description}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Question
+                  question={questions[currentQuestion]}
+                  userAnswer={answers[currentQuestion] || ""}
+                  onChange={handleAnswer}
+                  showResult={false}
+                />
+              </CardContent>
+            </Card>
+          </QuestionTransition>
+          
+          <div className="flex justify-between mt-4">
+            <Button
+              variant="outline"
+              onClick={previous}
+              disabled={currentQuestion === 0}
+            >
               Previous
             </Button>
-            {currentQuestion === questions.length - 1 ? (
-              <Button
-                onClick={() => submitMutation.mutate()}
+            
+            {currentQuestion < questions.length - 1 ? (
+              <Button onClick={next}>Next</Button>
+            ) : (
+              <Button 
+                onClick={() => {
+                  if (answers.filter(Boolean).length < questions.length) {
+                    const unanswered = questions.length - answers.filter(Boolean).length;
+                    
+                    if (window.confirm(`You have ${unanswered} unanswered question(s). Are you sure you want to submit?`)) {
+                      submitMutation.mutate();
+                    }
+                  } else {
+                    submitMutation.mutate();
+                  }
+                }}
                 disabled={submitMutation.isPending}
               >
                 {submitMutation.isPending ? "Submitting..." : "Submit Quiz"}
-              </Button>
-            ) : (
-              <Button
-                onClick={next}
-                disabled={!answers[currentQuestion]}
-              >
-                Next
               </Button>
             )}
           </div>

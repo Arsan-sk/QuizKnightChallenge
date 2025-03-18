@@ -20,4 +20,15 @@ export default defineConfig({
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
   },
+  server: {
+    host: '0.0.0.0', // Listen on all network interfaces
+    port: parseInt(process.env.PORT || '5000'),
+    strictPort: true,
+    proxy: {
+      '/api': {
+        target: `http://localhost:5000`,
+        changeOrigin: true,
+      }
+    }
+  },
 });

@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { LogOut } from "lucide-react";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export function NavBar() {
   const { user, logoutMutation } = useAuth();
@@ -14,20 +15,23 @@ export function NavBar() {
             Logged in as {user?.username} ({user?.role})
           </span>
         </div>
-        <Button
-          variant="outline"
-          onClick={() => logoutMutation.mutate()}
-          disabled={logoutMutation.isPending}
-        >
-          {logoutMutation.isPending ? (
-            "Logging out..."
-          ) : (
-            <>
-              <LogOut className="mr-2 h-4 w-4" />
-              Logout
-            </>
-          )}
-        </Button>
+        <div className="flex items-center space-x-2">
+          <ThemeToggle />
+          <Button
+            variant="outline"
+            onClick={() => logoutMutation.mutate()}
+            disabled={logoutMutation.isPending}
+          >
+            {logoutMutation.isPending ? (
+              "Logging out..."
+            ) : (
+              <>
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+              </>
+            )}
+          </Button>
+        </div>
       </div>
     </nav>
   );
