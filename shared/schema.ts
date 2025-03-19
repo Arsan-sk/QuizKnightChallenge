@@ -7,6 +7,8 @@ export const roleEnum = pgEnum("role", ["teacher", "student"]);
 export const difficultyEnum = pgEnum("difficulty", ["easy", "medium", "hard"]);
 export const questionTypeEnum = pgEnum("question_type", ["mcq", "true_false"]);
 export const quizTypeEnum = pgEnum("quiz_type", ["standard", "live"]);
+export const branchEnum = pgEnum("branch", ["CS", "AIML", "DS", "ECS", "ECE", "CE", "ME"]);
+export const yearEnum = pgEnum("year", ["1st", "2nd", "3rd", "4th"]);
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -15,7 +17,20 @@ export const users = pgTable("users", {
   // Keep as text with enum for now for compatibility
   role: text("role", { enum: ["teacher", "student"] }).notNull(),
   points: integer("points").default(0),
+  // New profile fields
+  name: text("name"),
+  profilePicture: text("profile_picture"),
+  bio: text("bio"),
+  branch: text("branch", { enum: ["CS", "AIML", "DS", "ECS", "ECE", "CE", "ME"] }),
+  year: text("year", { enum: ["1st", "2nd", "3rd", "4th"] }),
+  email: text("email"),
+  lastActive: timestamp("last_active").defaultNow(),
+  achievements: text("achievements").array().default([]),
   createdAt: timestamp("created_at").defaultNow(),
+  displayName: text("display_name"),
+  profileImage: text("profile_image"),
+  friendIds: integer("friend_ids").array().default([]),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 export const quizzes = pgTable("quizzes", {
@@ -29,6 +44,9 @@ export const quizzes = pgTable("quizzes", {
   quizType: quizTypeEnum("quiz_type").default("standard"),
   isActive: boolean("is_active").default(false),
   duration: integer("duration"),  // Duration in minutes for live quizzes
+  // Add new fields for targeting specific branches and years
+  targetBranch: text("target_branch", { enum: ["CS", "AIML", "DS", "ECS", "ECE", "CE", "ME"] }),
+  targetYear: text("target_year", { enum: ["1st", "2nd", "3rd", "4th"] }),
   startTime: timestamp("start_time"),
   endTime: timestamp("end_time"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -59,11 +77,53 @@ export const results = pgTable("results", {
   completedAt: timestamp("completed_at").defaultNow(),
 });
 
+// Add achievements table
+export const achievements = pgTable("achievements", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  iconUrl: text("icon_url"),
+  criteria: text("criteria").notNull(), // JSON string with criteria for earning this achievement
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Add user achievements table to track which users have which achievements
+export const userAchievements = pgTable("user_achievements", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  achievementId: integer("achievement_id").notNull(),
+  earnedAt: timestamp("earned_at").defaultNow(),
+});
+
+// Add friends table
+export const friendships = pgTable("friendships", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  friendId: integer("friend_id").notNull(),
+  status: text("status", { enum: ["pending", "accepted", "rejected"] }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Validation schemas for API requests
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
   role: true,
+  name: true,
+  profilePicture: true,
+  bio: true,
+  branch: true,
+  year: true,
+});
+
+export const updateUserProfileSchema = createInsertSchema(users).pick({
+  name: true,
+  username: true,
+  profilePicture: true,
+  bio: true,
+  branch: true,
+  year: true,
 });
 
 export const insertQuizSchema = createInsertSchema(quizzes).pick({
@@ -73,6 +133,8 @@ export const insertQuizSchema = createInsertSchema(quizzes).pick({
   isPublic: true,
   quizType: true,
   duration: true,
+  targetBranch: true,
+  targetYear: true,
 });
 
 export const updateQuizSchema = createInsertSchema(quizzes).pick({
@@ -83,6 +145,10 @@ export const updateQuizSchema = createInsertSchema(quizzes).pick({
   quizType: true,
   duration: true,
   isActive: true,
+  targetBranch: true,
+  targetYear: true,
+  startTime: true,
+  endTime: true,
 });
 
 export const insertQuestionSchema = createInsertSchema(questions).pick({
@@ -112,12 +178,17 @@ export const insertResultSchema = createInsertSchema(results).pick({
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
+export type UpdateUserProfile = z.infer<typeof updateUserProfileSchema>;
 export type InsertQuiz = z.infer<typeof insertQuizSchema>;
 export type UpdateQuiz = z.infer<typeof updateQuizSchema>;
 export type InsertQuestion = z.infer<typeof insertQuestionSchema>;
 export type UpdateQuestion = z.infer<typeof updateQuestionSchema>;
 export type InsertResult = z.infer<typeof insertResultSchema>;
+
 export type User = typeof users.$inferSelect;
 export type Quiz = typeof quizzes.$inferSelect;
 export type Question = typeof questions.$inferSelect;
 export type Result = typeof results.$inferSelect;
+export type Achievement = typeof achievements.$inferSelect;
+export type UserAchievement = typeof userAchievements.$inferSelect;
+export type Friendship = typeof friendships.$inferSelect;
