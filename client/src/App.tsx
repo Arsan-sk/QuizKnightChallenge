@@ -1,10 +1,12 @@
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Switch, Route, Redirect } from "wouter";
 import { AuthProvider } from "./hooks/use-auth";
+import { ProfileProvider } from "./hooks/use-profile";
 import { Toaster } from "@/components/ui/toaster";
 import { queryClient } from "./lib/queryClient";
 import { ProtectedRoute } from "./lib/protected-route";
 import { ThemeProvider } from "./hooks/use-theme";
+import { NavigationWithProfile } from "./components/profile/navigation-with-profile";
 
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
@@ -14,6 +16,8 @@ import QuizCreate from "@/pages/quiz-create";
 import QuizTake from "@/pages/quiz-take";
 import QuizBrowse from "@/pages/quiz-browse";
 import LiveQuizMonitorPage from "@/pages/live-quiz-monitor";
+import ProfilePage from "@/pages/profile-page";
+import ProfileEditPage from "@/pages/profile-edit";
 
 function Router() {
   return (
@@ -52,8 +56,24 @@ function Router() {
         component={QuizTake}
         role="student"
       />
+      <ProtectedRoute 
+        path="/profile" 
+        component={ProfilePage}
+      />
+      <ProtectedRoute 
+        path="/profile/edit" 
+        component={ProfileEditPage}
+      />
       <Route component={NotFound} />
     </Switch>
+  );
+}
+
+function AppContent() {
+  return (
+    <NavigationWithProfile>
+      <Router />
+    </NavigationWithProfile>
   );
 }
 
@@ -62,8 +82,10 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <Router />
-          <Toaster />
+          <ProfileProvider>
+            <AppContent />
+            <Toaster />
+          </ProfileProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
