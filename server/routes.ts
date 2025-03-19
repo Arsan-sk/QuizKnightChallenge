@@ -7,7 +7,8 @@ import {
   insertQuestionSchema, 
   insertResultSchema,
   updateQuizSchema,
-  updateQuestionSchema
+  updateQuestionSchema,
+  updateUserProfileSchema
 } from "@shared/schema";
 
 // Helper middleware to check if user is authenticated with specific role
@@ -25,6 +26,206 @@ const requireAuth = (req: Request, res: Response, next: Function, role?: "teache
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
+
+  // User profile routes
+  app.get("/api/users/me", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      const userDetails = await storage.getUserWithDetails(req.user.id);
+      res.json(userDetails);
+    } catch (error) {
+      console.error("Error fetching user details:", error);
+      res.status(500).json({ error: "Failed to fetch user details" });
+    }
+  });
+
+  app.put("/api/users/profile", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      const validatedData = updateUserProfileSchema.parse(req.body);
+      const updatedUser = await storage.updateUserProfile(req.user.id, validatedData);
+      res.json(updatedUser);
+    } catch (error) {
+      console.error("Error updating user profile:", error);
+      res.status(400).json({ error: error.message || "Failed to update profile" });
+    }
+  });
+
+  app.get("/api/users/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+      
+      const userDetails = await storage.getUserWithDetails(userId);
+      res.json(userDetails);
+    } catch (error) {
+      console.error("Error fetching user details:", error);
+      res.status(500).json({ error: "Failed to fetch user details" });
+    }
+  });
+
+  // Social features routes
+  app.get("/api/friends", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      const friends = await storage.getFriends(req.user.id);
+      res.json(friends);
+    } catch (error) {
+      console.error("Error fetching friends:", error);
+      res.status(500).json({ error: "Failed to fetch friends" });
+    }
+  });
+
+  app.get("/api/friends/requests", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      const friendRequests = await storage.getFriendRequests(req.user.id);
+      res.json(friendRequests);
+    } catch (error) {
+      console.error("Error fetching friend requests:", error);
+      res.status(500).json({ error: "Failed to fetch friend requests" });
+    }
+  });
+
+  app.post("/api/friends/request/:userId", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+      
+      const friendship = await storage.sendFriendRequest(req.user.id, userId);
+      res.status(201).json(friendship);
+    } catch (error) {
+      console.error("Error sending friend request:", error);
+      res.status(400).json({ error: error.message || "Failed to send friend request" });
+    }
+  });
+
+  app.post("/api/friends/accept/:userId", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+      
+      const friendship = await storage.acceptFriendRequest(req.user.id, userId);
+      res.status(200).json(friendship);
+    } catch (error) {
+      console.error("Error accepting friend request:", error);
+      res.status(400).json({ error: error.message || "Failed to accept friend request" });
+    }
+  });
+
+  app.post("/api/friends/reject/:userId", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+      
+      const friendship = await storage.rejectFriendRequest(req.user.id, userId);
+      res.status(200).json(friendship);
+    } catch (error) {
+      console.error("Error rejecting friend request:", error);
+      res.status(400).json({ error: error.message || "Failed to reject friend request" });
+    }
+  });
+
+  // Achievements routes
+  app.get("/api/achievements", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      const achievements = await storage.getAchievements();
+      res.json(achievements);
+    } catch (error) {
+      console.error("Error fetching achievements:", error);
+      res.status(500).json({ error: "Failed to fetch achievements" });
+    }
+  });
+
+  app.get("/api/users/:id/achievements", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      const userId = parseInt(req.params.id);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+      
+      const achievements = await storage.getUserAchievements(userId);
+      res.json(achievements);
+    } catch (error) {
+      console.error("Error fetching user achievements:", error);
+      res.status(500).json({ error: "Failed to fetch user achievements" });
+    }
+  });
+
+  // Global leaderboard
+  app.get("/api/leaderboard", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const leaderboard = await storage.getGlobalLeaderboard(limit);
+      res.json(leaderboard);
+    } catch (error) {
+      console.error("Error fetching global leaderboard:", error);
+      res.status(500).json({ error: "Failed to fetch global leaderboard" });
+    }
+  });
+
+  // Targeted quizzes for student
+  app.get("/api/quizzes/student", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== "student") {
+        return res.status(403).json({ error: "Student role required" });
+      }
+      
+      const quizzes = await storage.getQuizzesForStudent(req.user.id);
+      res.json(quizzes || []);
+    } catch (error) {
+      console.error("Error fetching student quizzes:", error);
+      res.status(500).json({ error: "Failed to fetch student quizzes" });
+    }
+  });
 
   // Quiz routes
   app.post("/api/quizzes", async (req, res) => {
