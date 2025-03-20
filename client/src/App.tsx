@@ -18,6 +18,9 @@ import QuizBrowse from "@/pages/quiz-browse";
 import LiveQuizMonitorPage from "@/pages/live-quiz-monitor";
 import ProfilePage from "@/pages/profile-page";
 import ProfileEditPage from "@/pages/profile-edit";
+import HistoryPage from "@/pages/history";
+import AchievementsPage from "@/pages/achievements";
+import LeaderboardPage from "@/pages/leaderboard";
 
 function Router() {
   return (
@@ -63,6 +66,18 @@ function Router() {
       <ProtectedRoute 
         path="/profile/edit" 
         component={ProfileEditPage}
+      />
+      <ProtectedRoute 
+        path="/history" 
+        component={HistoryPage}
+      />
+      <ProtectedRoute 
+        path="/achievements" 
+        component={AchievementsPage}
+      />
+      <ProtectedRoute 
+        path="/leaderboard" 
+        component={LeaderboardPage}
       />
       <Route component={NotFound} />
     </Switch>

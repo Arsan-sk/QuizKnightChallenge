@@ -39,8 +39,8 @@ export interface IStorage {
   updateUserPoints(userId: number, points: number): Promise<void>;
 
   // Achievement methods
-  getAchievements(): Promise<Achievement[]>;
-  getUserAchievements(userId: number): Promise<(Achievement & { earnedAt: Date })[]>;
+  getAchievements(): Promise<any[]>;
+  getUserAchievements(userId: number): Promise<any[]>;
   awardAchievement(userId: number, achievementId: number): Promise<UserAchievement>;
 
   // Friendship methods
@@ -420,22 +420,38 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Achievements implementation
-  async getAchievements(): Promise<Achievement[]> {
+  async getAchievements(): Promise<any[]> {
     try {
-      return await db
-        .select()
+      // Use explicit columns to handle the icon_url field correctly
+      const achievementsList = await db
+        .select({
+          id: achievements.id,
+          name: achievements.name,
+          description: achievements.description,
+          iconUrl: sql`${achievements}.icon_url`, // Use SQL to reference the column with underscore
+          criteria: achievements.criteria,
+          createdAt: achievements.createdAt,
+        })
         .from(achievements);
+
+      return achievementsList;
     } catch (error) {
       console.error("Error in getAchievements:", error);
       return [];
     }
   }
 
-  async getUserAchievements(userId: number): Promise<(Achievement & { earnedAt: Date })[]> {
+  async getUserAchievements(userId: number): Promise<any[]> {
     try {
+      // Need to use sql literal to reference the actual column name
       const userAchievementsList = await db
         .select({
-          ...achievements,
+          id: achievements.id,
+          name: achievements.name,
+          description: achievements.description,
+          iconUrl: sql`${achievements}.icon_url`, // Use SQL to reference the column with underscore
+          criteria: achievements.criteria,
+          createdAt: achievements.createdAt,
           earnedAt: userAchievements.earnedAt,
         })
         .from(userAchievements)

@@ -1,0 +1,5 @@
+[33m508f8e4[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m Add user profile hooks and pages
+[33m24e920d[m Add client configuration files and dependencies
+[33mcf0f33c[m Fix database schema issues for user profiles and social features
+[33me8e59cf[m Fix database schema issues for user profile fields
+[33m9d30767[m Add user profile system with sidebar, profile page, and edit functionality
