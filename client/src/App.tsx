@@ -21,6 +21,7 @@ import ProfileEditPage from "@/pages/profile-edit";
 import HistoryPage from "@/pages/history";
 import AchievementsPage from "@/pages/achievements";
 import LeaderboardPage from "@/pages/leaderboard";
+import QuizAnalyticsPage from "@/pages/QuizAnalytics";
 
 function Router() {
   return (
@@ -43,6 +44,11 @@ function Router() {
         path="/teacher/monitor/:quizId" 
         component={LiveQuizMonitorPage}
         role="teacher"
+      />
+      <ProtectedRoute 
+        path="/quiz-analytics/:id" 
+        element={<QuizAnalyticsPage />}
+        requiredRoles={["teacher"]}
       />
       <ProtectedRoute 
         path="/student" 

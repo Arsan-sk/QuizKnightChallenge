@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Quiz } from "@shared/schema";
 import { Link } from "wouter";
-import { User, Play, Square, Clock, Eye } from "lucide-react";
+import { User, Play, Square, Clock, Eye, BarChart } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useState } from "react";
@@ -141,6 +141,15 @@ export function QuizCard({
           </div>
           
           <div className="flex gap-2">
+            {isTeacher && (
+              <Link href={`/quiz-analytics/${quiz.id}`}>
+                <Button variant="outline" size="sm">
+                  <BarChart className="h-4 w-4 mr-1" />
+                  Analytics
+                </Button>
+              </Link>
+            )}
+            
             {isTeacher && quiz.quizType === "live" && (
               <>
                 {quiz.isActive ? (

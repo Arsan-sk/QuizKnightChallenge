@@ -1,3 +1,24 @@
+export interface QuestionStat {
+  questionId: number;
+  questionText: string;
+  totalAttempts: number;
+  correctCount: number;
+  averageTime: number;
+}
+
+export interface ScoreDistribution {
+  scoreRange: string;
+  count: number;
+}
+
+export interface TimePerformance {
+  date: string;
+  attempts: number;
+  averageScore: number;
+  correct: number;
+  wrong: number;
+}
+
 export interface QuizAnalytics {
   // Basic stats
   totalAttempts: number;
@@ -7,26 +28,11 @@ export interface QuizAnalytics {
   averageTime: number | null; // in seconds
   
   // Question stats
-  questionStats: {
-    questionId: number;
-    questionText: string;
-    correctCount: number;
-    totalAttempts: number;
-    averageTime: number | null;
-  }[];
+  questionStats: QuestionStat[];
   
   // Distribution
-  performanceDistribution: {
-    scoreRange: string;
-    count: number;
-  }[];
+  performanceDistribution: ScoreDistribution[];
   
   // Time-based performance
-  timePerformance: {
-    date: string;
-    averageScore: number | null;
-    attempts: number;
-    correct: number;
-    wrong: number;
-  }[];
+  timePerformance: TimePerformance[];
 } 

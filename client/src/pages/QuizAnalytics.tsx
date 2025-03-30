@@ -8,7 +8,7 @@ import { DistributionChart } from '../components/analytics/DistributionChart';
 import { PerformanceChart } from '../components/analytics/PerformanceChart';
 import { Alert, AlertDescription, AlertTitle } from '../components/ui/alert';
 import { Skeleton } from '../components/ui/skeleton';
-import { QuizAnalytics } from '../types/analytics';
+import { QuizAnalytics } from '@/types/analytics';
 import { formatTime, formatNumber } from '../utils/analytics';
 
 // Default empty analytics state with proper structure
@@ -29,7 +29,7 @@ const emptyAnalytics: QuizAnalytics = {
   timePerformance: []
 };
 
-export function QuizAnalyticsPage() {
+export default function QuizAnalyticsPage() {
   const { id } = useParams<{ id: string }>();
   const [analytics, setAnalytics] = useState<QuizAnalytics>(emptyAnalytics);
   const [quizTitle, setQuizTitle] = useState<string>("");
