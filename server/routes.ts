@@ -626,8 +626,13 @@ export function registerRoutes(app: Express): Server {
         quizId: quizId,
       });
 
-      // Award points based on score
-      const pointsEarned = Math.floor(result.score * 10);
+      // Calculate points based on percentage of correct answers
+      const percentCorrect = result.totalQuestions > 0 
+        ? (result.correctAnswers / result.totalQuestions) * 100 
+        : 0;
+        
+      // Award points based on percentage (10 points for 100%)
+      const pointsEarned = Math.round(percentCorrect / 10);
       await storage.updateUserPoints(req.user.id, pointsEarned);
 
       res.status(201).json(result);
@@ -902,6 +907,38 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error("Error generating analytics:", error);
       res.status(500).json({ error: "Failed to generate analytics" });
+    }
+  });
+
+  app.get("/api/quizzes/:quizId/results/:userId", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      const quizId = parseInt(req.params.quizId);
+      const userId = parseInt(req.params.userId);
+      
+      if (isNaN(quizId) || isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid quiz ID or user ID" });
+      }
+      
+      // Only allow teachers or the user themselves to view their results
+      if (req.user.role !== "teacher" && req.user.id !== userId) {
+        return res.status(403).json({ error: "Not authorized to view these results" });
+      }
+      
+      // Get the user's result for this quiz
+      const result = await storage.getUserQuizResult(quizId, userId);
+      
+      if (!result) {
+        return res.status(404).json({ error: "Result not found" });
+      }
+      
+      res.json(result);
+    } catch (error) {
+      console.error("Error fetching user quiz result:", error);
+      res.status(500).json({ error: "Failed to fetch user quiz result" });
     }
   });
 

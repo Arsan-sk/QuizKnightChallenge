@@ -51,6 +51,9 @@ export interface IStorage {
   rejectFriendRequest(userId: number, friendId: number): Promise<Friendship>;
 
   sessionStore: session.Store;
+
+  // Method to get a specific user's result for a quiz
+  getUserQuizResult(quizId: number, userId: number): Promise<Result | null>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -672,6 +675,28 @@ export class DatabaseStorage implements IStorage {
     } catch (error) {
       console.error("Error in rejectFriendRequest:", error);
       throw error;
+    }
+  }
+
+  // Method to get a specific user's result for a quiz
+  async getUserQuizResult(quizId: number, userId: number): Promise<Result | null> {
+    try {
+      const [result] = await db
+        .select()
+        .from(results)
+        .where(
+          and(
+            eq(results.quizId, quizId),
+            eq(results.userId, userId)
+          )
+        )
+        .orderBy(desc(results.completedAt))
+        .limit(1);
+        
+      return result || null;
+    } catch (error) {
+      console.error("Error in getUserQuizResult:", error);
+      return null;
     }
   }
 }

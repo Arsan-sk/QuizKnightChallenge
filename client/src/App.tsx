@@ -22,6 +22,7 @@ import HistoryPage from "@/pages/history";
 import AchievementsPage from "@/pages/achievements";
 import LeaderboardPage from "@/pages/leaderboard";
 import QuizAnalyticsPage from "@/pages/QuizAnalytics";
+import QuizReviewPage from "@/pages/quiz-review";
 
 function Router() {
   return (
@@ -48,6 +49,11 @@ function Router() {
       <ProtectedRoute 
         path="/quiz-analytics/:id" 
         element={<QuizAnalyticsPage />}
+        requiredRoles={["teacher"]}
+      />
+      <ProtectedRoute 
+        path="/quiz-review/:quizId/:userId" 
+        component={QuizReviewPage}
         requiredRoles={["teacher"]}
       />
       <ProtectedRoute 

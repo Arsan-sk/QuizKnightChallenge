@@ -28,6 +28,20 @@ export default function StudentDashboard() {
     refetchInterval: 30000, // Refetch every 30 seconds to check for new live quizzes
   });
 
+  // Calculate the correct average score based on correct answers and total questions
+  const calculateAverageScore = () => {
+    if (!results || results.length === 0) return 0;
+    
+    const scores = results.map(result => 
+      result.totalQuestions > 0 
+        ? (result.correctAnswers / result.totalQuestions) * 100 
+        : 0
+    );
+    
+    const avgScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
+    return Math.round(avgScore); // Round to nearest whole number for display
+  };
+
   if (loadingResults || loadingLiveQuizzes) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -120,13 +134,7 @@ export default function StudentDashboard() {
               </CardHeader>
               <CardContent>
                 <p className="text-3xl font-bold">
-                  {results && results.length > 0
-                    ? Math.round(
-                        results.reduce((acc, r) => acc + r.score, 0) /
-                          results.length
-                      )
-                    : 0}
-                  %
+                  {calculateAverageScore()}%
                 </p>
               </CardContent>
             </Card>

@@ -5,6 +5,7 @@ import { StudentReport } from "@/types/analytics";
 import { formatTime } from "@/utils/analytics";
 import { Eye, Users } from "lucide-react";
 import { useState } from "react";
+import { Link } from "wouter";
 
 interface StudentReportTableProps {
   data: StudentReport[];
@@ -133,9 +134,9 @@ export function StudentReportTable({ data, quizId }: StudentReportTableProps) {
                         size="sm"
                         asChild
                       >
-                        <a href={`/quiz-review/${quizId}?userId=${student.userId}`} target="_blank" rel="noopener noreferrer">
+                        <Link href={`/quiz-review/${quizId}/${student.userId}`}>
                           <Eye className="h-3 w-3 mr-1" /> Review
-                        </a>
+                        </Link>
                       </Button>
                     </TableCell>
                   </TableRow>
