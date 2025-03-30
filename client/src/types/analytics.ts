@@ -19,6 +19,16 @@ export interface TimePerformance {
   wrong: number;
 }
 
+export interface StudentReport {
+  userId: number;
+  username: string;
+  score: number;
+  correctAnswers: number;
+  wrongAnswers: number;
+  timeTaken: number;
+  completedAt: string;
+}
+
 export interface QuizAnalytics {
   // Basic stats
   totalAttempts: number;
@@ -35,4 +45,7 @@ export interface QuizAnalytics {
   
   // Time-based performance
   timePerformance: TimePerformance[];
+  
+  // Student reports
+  studentReports: StudentReport[];
 } 

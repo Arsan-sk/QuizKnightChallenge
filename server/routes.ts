@@ -715,13 +715,25 @@ export function registerRoutes(app: Express): Server {
             { scoreRange: "80-89%", count: 0 },
             { scoreRange: "90-100%", count: 0 }
           ],
-          timePerformance: []
+          timePerformance: [],
+          studentReports: []
         });
       }
 
-      // Calculate basic statistics
+      // Calculate basic statistics with proper normalization
       const totalAttempts = results.length;
-      const scores = results.map(r => r.score * 100); // Convert to percentage
+      
+      // Get the maximum possible score for this quiz (based on total questions)
+      // In this case we use the number of questions as a reference
+      const questions = await storage.getQuestionsByQuiz(quizId);
+      const maxPossibleScore = questions.length; // Maximum score is 1 point per question
+      
+      // Calculate scores as percentages (0-100%)
+      const scores = results.map(r => {
+        if (r.totalQuestions === 0) return 0; // Handle edge case
+        return (r.correctAnswers / r.totalQuestions) * 100; // Convert to percentage based on correct answers
+      });
+      
       const durations = results.map(r => r.timeTaken);
       
       const averageScore = scores.reduce((acc, val) => acc + val, 0) / totalAttempts;
@@ -729,23 +741,82 @@ export function registerRoutes(app: Express): Server {
       const lowestScore = Math.min(...scores);
       const averageTime = durations.reduce((acc, val) => acc + val, 0) / totalAttempts;
 
-      // Get questions for this quiz
-      const questions = await storage.getQuestionsByQuiz(quizId);
+      // Get all users who attempted this quiz
+      const userIds = [...new Set(results.map(r => r.userId))];
+      const users = await Promise.all(userIds.map(id => storage.getUser(id)));
+      const userMap = Object.fromEntries(users.filter(Boolean).map(user => [user.id, user]));
       
-      // Calculate statistics for each question
-      const questionStats = questions.map(question => {
-        // In a real implementation, you would analyze actual question results
-        // This is a simplified version that generates mock data
-        const totalAttempts = results.length;
-        const correctCount = Math.floor(Math.random() * totalAttempts);
-        const averageTime = Math.floor(Math.random() * 30) + 5; // 5-35 seconds
-        
+      // Create student reports
+      const studentReports = results.map(result => {
+        const user = userMap[result.userId];
+        // Calculate score as percentage
+        const scorePercentage = result.totalQuestions > 0 
+          ? (result.correctAnswers / result.totalQuestions) * 100 
+          : 0;
+          
         return {
-          questionId: question.id,
-          questionText: question.questionText,
-          totalAttempts,
-          correctCount,
-          averageTime
+          userId: result.userId,
+          username: user ? user.username : 'Unknown',
+          score: parseFloat(scorePercentage.toFixed(1)),
+          correctAnswers: result.correctAnswers,
+          wrongAnswers: result.wrongAnswers,
+          timeTaken: result.timeTaken,
+          completedAt: result.completedAt
+        };
+      });
+      
+      // Create a mapping of question IDs to their total attempts, correct counts, and average times
+      const questionData = {};
+      
+      // Initialize question data
+      questions.forEach(q => {
+        questionData[q.id] = {
+          id: q.id,
+          text: q.questionText,
+          totalAttempts: 0,
+          correctCount: 0,
+          totalTime: 0
+        };
+      });
+      
+      // Here we would analyze actual question results from individual submissions
+      // For the moment, we'll simulate this with realistic values
+      results.forEach(result => {
+        // For each result, let's simulate the distribution of correct/wrong answers
+        const totalQuestions = result.totalQuestions;
+        const correctCount = result.correctAnswers;
+        
+        // Divide the questions into correct and wrong based on the result
+        const questionIds = questions.map(q => q.id);
+        
+        // Shuffle the question IDs to randomly assign correct/wrong
+        const shuffledIds = [...questionIds].sort(() => Math.random() - 0.5);
+        
+        // The first 'correctCount' questions are considered correct
+        const correctIds = shuffledIds.slice(0, correctCount);
+        
+        // Update question statistics
+        questionIds.forEach(id => {
+          questionData[id].totalAttempts++;
+          
+          // If this was marked as a correct answer
+          if (correctIds.includes(id)) {
+            questionData[id].correctCount++;
+          }
+          
+          // Add some time (between 5-30 seconds) for this question
+          questionData[id].totalTime += Math.floor(5 + Math.random() * 25);
+        });
+      });
+      
+      // Transform question data into the required format
+      const questionStats = Object.values(questionData).map(q => {
+        return {
+          questionId: q.id,
+          questionText: q.text,
+          totalAttempts: q.totalAttempts,
+          correctCount: q.correctCount,
+          averageTime: q.totalAttempts > 0 ? Math.round(q.totalTime / q.totalAttempts) : 0
         };
       });
 
@@ -758,30 +829,64 @@ export function registerRoutes(app: Express): Server {
         { scoreRange: "90-100%", count: scores.filter(s => s >= 90).length }
       ];
 
-      // Generate time performance data
-      // In a real implementation, this would come from actual timestamps in the results
+      // Generate time performance data based on actual completion dates
       const timePerformance = [];
       const now = new Date();
+      const pastWeek = new Date(now);
+      pastWeek.setDate(pastWeek.getDate() - 6);
       
-      for (let i = 6; i >= 0; i--) {
+      // Create a map of dates to results
+      const resultsByDate = {};
+      for (let i = 0; i <= 6; i++) {
         const date = new Date(now);
         date.setDate(date.getDate() - i);
         const dateStr = date.toISOString().split('T')[0];
-        
-        // Generate random stats for this day
-        const attempts = Math.floor(Math.random() * 10);
-        const avgScore = Math.floor(Math.random() * 30) + 70; // 70-100%
-        const correct = Math.floor(Math.random() * 50) + 50; // 50-100
-        const wrong = Math.floor(Math.random() * 30); // 0-30
-        
-        timePerformance.push({
-          date: dateStr,
-          attempts,
-          averageScore: avgScore,
-          correct,
-          wrong
-        });
+        resultsByDate[dateStr] = [];
       }
+      
+      // Group results by date
+      results.forEach(result => {
+        const completedAt = new Date(result.completedAt);
+        if (completedAt >= pastWeek) {
+          const dateStr = completedAt.toISOString().split('T')[0];
+          if (resultsByDate[dateStr]) {
+            resultsByDate[dateStr].push(result);
+          }
+        }
+      });
+      
+      // Calculate performance for each day
+      Object.entries(resultsByDate).forEach(([dateStr, dateResults]) => {
+        if (dateResults.length === 0) {
+          timePerformance.push({
+            date: dateStr,
+            attempts: 0,
+            averageScore: 0,
+            correct: 0,
+            wrong: 0
+          });
+        } else {
+          const totalCorrect = dateResults.reduce((sum, r) => sum + r.correctAnswers, 0);
+          const totalWrong = dateResults.reduce((sum, r) => sum + r.wrongAnswers, 0);
+          
+          // Calculate average score as percentage
+          const dayScores = dateResults.map(r => 
+            r.totalQuestions > 0 ? (r.correctAnswers / r.totalQuestions) * 100 : 0
+          );
+          const avgScore = dayScores.reduce((sum, score) => sum + score, 0) / dayScores.length;
+          
+          timePerformance.push({
+            date: dateStr,
+            attempts: dateResults.length,
+            averageScore: Math.round(avgScore),
+            correct: totalCorrect,
+            wrong: totalWrong
+          });
+        }
+      });
+      
+      // Sort by date ascending
+      timePerformance.sort((a, b) => a.date.localeCompare(b.date));
 
       res.json({
         totalAttempts,
@@ -791,7 +896,8 @@ export function registerRoutes(app: Express): Server {
         averageTime,
         questionStats,
         performanceDistribution,
-        timePerformance
+        timePerformance,
+        studentReports
       });
     } catch (error) {
       console.error("Error generating analytics:", error);

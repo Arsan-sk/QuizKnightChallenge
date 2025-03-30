@@ -428,7 +428,7 @@ export class DatabaseStorage implements IStorage {
           id: achievements.id,
           name: achievements.name,
           description: achievements.description,
-          iconUrl: sql`${achievements}.icon_url`, // Use SQL to reference the column with underscore
+          iconUrl: achievements.iconUrl, // Use the drizzle field instead of SQL literal
           criteria: achievements.criteria,
           createdAt: achievements.createdAt,
         })
@@ -449,7 +449,7 @@ export class DatabaseStorage implements IStorage {
           id: achievements.id,
           name: achievements.name,
           description: achievements.description,
-          iconUrl: sql`${achievements}.icon_url`, // Use SQL to reference the column with underscore
+          iconUrl: achievements.iconUrl, // Use the drizzle field instead of SQL literal
           criteria: achievements.criteria,
           createdAt: achievements.createdAt,
           earnedAt: userAchievements.earnedAt,
