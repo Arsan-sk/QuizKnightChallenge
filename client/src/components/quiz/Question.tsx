@@ -25,6 +25,7 @@ interface QuestionEditProps extends QuestionPropsBase {
 }
 
 interface QuestionTakeProps extends QuestionPropsBase {
+  mode?: "take";
   userAnswer?: string;
   onChange: (answer: string) => void;
   showResult?: boolean;
@@ -60,10 +61,10 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
     onChange({ ...question, correctAnswer: value });
   };
 
-  // Filter non-empty options here to avoid issues in the Select component
+  // Filter non-empty options here to avoid issues with radio buttons
   const nonEmptyOptions = question?.options?.filter(option => option.trim() !== "") || [];
   const hasOptions = nonEmptyOptions.length > 0;
-  
+
   return (
     <motion.div
       className="border p-6 rounded-lg relative"
@@ -99,7 +100,7 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
             onValueChange={(value) =>
               handleQuestionTypeChange(value as "mcq" | "true_false")
             }
-            className="flex space-x-4"
+            className="flex space-x-4 pt-2"
           >
             <div className="flex items-center space-x-2">
               <RadioGroupItem value="mcq" id="mcq" />
@@ -112,11 +113,12 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
           </RadioGroup>
         </div>
 
-        <div className="space-y-2">
+        <div>
           <Label>Options</Label>
           {question?.options?.map((option, index) => (
             <Input
               key={index}
+              className="mb-2"
               value={option}
               onChange={(e) => handleOptionChange(index, e.target.value)}
               placeholder={`Option ${index + 1}`}
@@ -127,21 +129,30 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
         <div>
           <Label>Correct Answer</Label>
           {hasOptions ? (
-            <Select
-              value={question?.correctAnswer || ""}
-              onValueChange={handleCorrectAnswerChange}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select the correct answer" />
-              </SelectTrigger>
-              <SelectContent>
+            <div className="space-y-2 mt-2">
+              <RadioGroup
+                value={question?.correctAnswer || ""}
+                onValueChange={handleCorrectAnswerChange}
+              >
                 {nonEmptyOptions.map((option, index) => (
-                  <SelectItem key={index} value={option}>
-                    {option}
-                  </SelectItem>
+                  <div 
+                    key={index} 
+                    className={cn(
+                      "flex items-center space-x-2 p-3 rounded-md transition-colors",
+                      question?.correctAnswer === option && "bg-green-50 dark:bg-green-900/20 border border-green-300"
+                    )}
+                  >
+                    <RadioGroupItem value={option} id={`correct-${index}`} />
+                    <Label htmlFor={`correct-${index}`} className="w-full">
+                      {option}
+                      {question?.correctAnswer === option && (
+                        <CheckCircle className="inline-block ml-2 h-4 w-4 text-green-600" />
+                      )}
+                    </Label>
+                  </div>
                 ))}
-              </SelectContent>
-            </Select>
+              </RadioGroup>
+            </div>
           ) : (
             <p className="text-sm text-muted-foreground italic">
               Enter options above, then select the correct answer
@@ -153,9 +164,9 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
   );
 }
 
-function QuestionTake({ 
-  question, 
-  onChange, 
+function QuestionTake({
+  question,
+  onChange,
   userAnswer = "",
   showResult = false
 }: QuestionTakeProps) {
@@ -170,22 +181,22 @@ function QuestionTake({
         {question?.options?.map((option, index) => {
           const isCorrect = showResult && option === question.correctAnswer;
           const isIncorrect = showResult && userAnswer === option && option !== question.correctAnswer;
-          
+
           return (
-            <div 
-              key={index} 
+            <div
+              key={index}
               className={cn(
                 "flex items-center space-x-2 p-3 rounded-md transition-colors",
                 isCorrect && "bg-green-50 dark:bg-green-900/20",
                 isIncorrect && "bg-red-50 dark:bg-red-900/20"
               )}
             >
-              <RadioGroupItem 
-                value={option} 
+              <RadioGroupItem
+                value={option}
                 id={`option-${index}`}
-                disabled={showResult} 
+                disabled={showResult}
               />
-              <Label 
+              <Label
                 htmlFor={`option-${index}`}
                 className={cn(
                   "flex items-center w-full",
@@ -202,18 +213,16 @@ function QuestionTake({
           );
         })}
       </RadioGroup>
-      
+
       {showResult && userAnswer && (
-        <div className="mt-4 p-4 border rounded-md bg-muted/50">
-          <p className="font-medium">
-            {userAnswer === question?.correctAnswer ? (
-              <span className="text-green-600 dark:text-green-400">Correct!</span>
-            ) : (
-              <span className="text-red-600 dark:text-red-400">
-                Incorrect. The correct answer is: {question?.correctAnswer}
-              </span>
-            )}
-          </p>
+        <div className="mt-2">
+          {userAnswer === question?.correctAnswer ? (
+            <p className="text-green-600 dark:text-green-400 font-medium">Correct!</p>
+          ) : (
+            <p className="text-red-600 dark:text-red-400 font-medium">
+              Incorrect. The correct answer is: {question?.correctAnswer}
+            </p>
+          )}
         </div>
       )}
     </div>
