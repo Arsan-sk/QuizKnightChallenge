@@ -103,9 +103,13 @@ export class DatabaseStorage implements IStorage {
       const results = await this.getResultsByUser(userId);
       
       const quizzesTaken = results.length;
+      
+      // Calculate total score based on the stored score values
       const totalScore = results.reduce((sum, result) => sum + result.score, 0);
+      
+      // Calculate average score properly
       const averageScore = quizzesTaken > 0 
-        ? Math.round((totalScore / quizzesTaken) * 100) / 100 
+        ? Math.round(totalScore / quizzesTaken) 
         : 0;
         
       // Get global rank

@@ -58,8 +58,10 @@ export default function QuizTake() {
     totalQuestions: number;
     correctAnswers: number;
     wrongAnswers: number;
+    pointsEarned: number;
   } | null>(null);
   const [hasAttempted, setHasAttempted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const { data: quiz, isError: quizError, isLoading } = useQuery<Quiz>({
     queryKey: [`/api/quizzes/${id}`],
@@ -111,59 +113,64 @@ export default function QuizTake() {
     }
   }, [user, id, toast]);
 
-  const submitMutation = useMutation({
-    mutationFn: async () => {
-      if (!id || !questions) throw new Error("Quiz ID is required");
-
-      const timeTaken = timeStarted
-        ? Math.floor((new Date().getTime() - timeStarted.getTime()) / 1000)
-        : 0;
+  const submitQuiz = async () => {
+    try {
+      setSubmitting(true);
       
-      const correctAnswers = answers.filter(
-        (answer, index) =>
-          answer.toLowerCase() === questions[index].correctAnswer.toLowerCase()
-      ).length;
+      // Calculate correct answers
+      let correctCount = 0;
+      let wrongCount = 0;
       
-      const totalQuestions = questions.length;
-      const wrongAnswers = totalQuestions - correctAnswers;
-      const score = Math.round((correctAnswers / totalQuestions) * 100);
-
-      const result = {
-        quizId: parseInt(id),
-        score,
-        timeTaken,
-        totalQuestions,
-        correctAnswers,
-        wrongAnswers
-      };
-
-      setQuizResult(result);
-
-      // Mark the attempt as completed
-      if (user) {
-        completeAttempt(parseInt(id), user.id);
+      for (let i = 0; i < questions.length; i++) {
+        if (answers[i] === questions[i].correctAnswer) {
+          correctCount++;
+        } else if (answers[i]) {
+          wrongCount++;
+        }
       }
-
-      const res = await apiRequest("POST", `/api/quizzes/${id}/results`, result);
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/results/user"] });
-      refetchLeaderboard();
-      setQuizCompleted(true);
-      toast({
-        title: "Quiz submitted",
-        description: "Your results have been recorded!",
+      
+      // Calculate score as percentage
+      const scorePercentage = (correctCount / questions.length) * 100;
+      
+      // Points calculation: 2 points per correct answer
+      const pointsEarned = correctCount * 2;
+      
+      // Submit result
+      const result = await apiRequest(`/api/quizzes/${id}/results`, {
+        method: 'POST',
+        data: {
+          answers: JSON.stringify(answers),
+          score: Math.round(scorePercentage),
+          timeTaken: Math.floor((Date.now() - timeStarted.getTime()) / 1000),
+          correctAnswers: correctCount,
+          wrongAnswers: wrongCount,
+          totalQuestions: questions.length,
+        }
       });
-    },
-    onError: (error) => {
+      
+      setQuizResult({
+        score: Math.round(scorePercentage),
+        timeTaken: Math.floor((Date.now() - timeStarted.getTime()) / 1000),
+        correctAnswers: correctCount,
+        wrongAnswers: wrongCount,
+        totalQuestions: questions.length,
+        pointsEarned: pointsEarned
+      });
+      
+      completeAttempt(parseInt(id), user.id);
+      await refetchLeaderboard();
+      setQuizCompleted(true);
+    } catch (error) {
+      console.error('Error submitting quiz:', error);
       toast({
         title: "Error submitting quiz",
         description: error.message,
         variant: "destructive",
       });
-    },
-  });
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleWebcamViolation = useCallback(() => {
     setWarnings(prev => {
@@ -175,12 +182,12 @@ export default function QuizTake() {
           description: "Multiple people detected. Your quiz has been automatically submitted.",
           variant: "destructive",
         });
-        submitMutation.mutate();
+        submitQuiz();
       }
       
       return newWarnings;
     });
-  }, [submitMutation, toast]);
+  }, [submitQuiz, toast]);
 
   useEffect(() => {
     setTimeStarted(new Date());
@@ -202,7 +209,7 @@ export default function QuizTake() {
               description: "Too many tab switches detected. Your quiz has been automatically submitted.",
               variant: "destructive",
             });
-            submitMutation.mutate();
+            submitQuiz();
           }
           return newWarnings;
         });
@@ -275,7 +282,7 @@ export default function QuizTake() {
               description: "Too many full-screen exits detected. Your quiz has been automatically submitted.",
               variant: "destructive",
             });
-            submitMutation.mutate();
+            submitQuiz();
           }
           return newWarnings;
         });
@@ -408,121 +415,84 @@ export default function QuizTake() {
     return (
       <div>
         <NavBar />
-        <div className="container mx-auto p-8 max-w-4xl">
+        <div className="container max-w-6xl mx-auto p-6">
           <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
+            className="text-center mb-12"
           >
-            <h1 className="text-3xl font-bold mb-8 text-center">Quiz Results</h1>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <h1 className="text-3xl font-bold mb-2">Quiz Completed!</h1>
+            <p className="text-xl text-muted-foreground">
+              Your score: {quizResult.score}% ({quizResult.correctAnswers} of {quizResult.totalQuestions} correct)
+            </p>
+            <p className="text-md text-muted-foreground mt-1">
+              <Trophy className="inline-block mr-1 h-4 w-4 text-yellow-500" />
+              You earned {quizResult.pointsEarned} points!
+            </p>
+          </motion.div>
+
+          {leaderboard && leaderboard.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
               <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center text-lg">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
                     <Trophy className="mr-2 h-5 w-5 text-yellow-500" />
-                    Your Score
+                    Leaderboard
                   </CardTitle>
+                  <CardDescription>Top performers on this quiz</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-4xl font-bold">{quizResult.score}%</p>
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center text-lg">
-                    <Clock className="mr-2 h-5 w-5 text-blue-500" />
-                    Time Taken
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-4xl font-bold">
-                    {Math.floor(quizResult.timeTaken / 60)}:{(quizResult.timeTaken % 60).toString().padStart(2, '0')}
-                  </p>
-                </CardContent>
-              </Card>
-              
-              <Card 
-                className="cursor-pointer transition-all hover:shadow-md"
-                onClick={() => setShowReview(true)}
-              >
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center text-lg">
-                    <CheckCircle className="mr-2 h-5 w-5 text-green-500" />
-                    Correct Answers
-                    <Search className="ml-auto h-4 w-4 text-muted-foreground" />
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex justify-between items-center">
-                  <p className="text-4xl font-bold">{quizResult.correctAnswers}</p>
-                  <p className="text-lg text-muted-foreground">of {quizResult.totalQuestions}</p>
-                </CardContent>
-              </Card>
-            </div>
-            
-            {leaderboard && leaderboard.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-              >
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Trophy className="mr-2 h-5 w-5 text-yellow-500" />
-                      Leaderboard
-                    </CardTitle>
-                    <CardDescription>Top performers on this quiz</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {leaderboard.map((entry, index) => (
-                        <div 
-                          key={entry.id} 
-                          className={`flex items-center justify-between p-3 rounded-lg ${
-                            index === 0 
-                              ? 'bg-yellow-100 dark:bg-yellow-900/20' 
-                              : index === 1 
-                                ? 'bg-gray-100 dark:bg-gray-800/50' 
-                                : index === 2 
-                                  ? 'bg-amber-100 dark:bg-amber-900/20' 
-                                  : ''
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="font-bold w-6 text-center">{index + 1}</div>
-                            <Avatar>
-                              <AvatarFallback>
-                                {entry.username.substring(0, 2).toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium">{entry.username}</p>
-                              <div className="flex items-center text-sm text-muted-foreground">
-                                <CheckCircle className="h-3 w-3 mr-1 text-green-500" />
-                                <span>{entry.correctAnswers} correct</span>
-                                <span className="mx-1">•</span>
-                                <Clock className="h-3 w-3 mr-1" />
-                                <span>{Math.floor(entry.timeTaken / 60)}:{(entry.timeTaken % 60).toString().padStart(2, '0')}</span>
-                              </div>
+                  <div className="space-y-4">
+                    {leaderboard.map((entry, index) => (
+                      <div 
+                        key={entry.id} 
+                        className={`flex items-center justify-between p-3 rounded-lg ${
+                          index === 0 
+                            ? 'bg-yellow-100 dark:bg-yellow-900/20' 
+                            : index === 1 
+                              ? 'bg-gray-100 dark:bg-gray-800/50' 
+                              : index === 2 
+                                ? 'bg-amber-100 dark:bg-amber-900/20' 
+                                : ''
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="font-bold w-6 text-center">{index + 1}</div>
+                          <Avatar>
+                            <AvatarFallback>
+                              {entry.username.substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{entry.username}</p>
+                            <div className="flex items-center text-sm text-muted-foreground">
+                              <CheckCircle className="h-3 w-3 mr-1 text-green-500" />
+                              <span>{entry.correctAnswers} correct</span>
+                              <span className="mx-1">•</span>
+                              <Clock className="h-3 w-3 mr-1" />
+                              <span>{Math.floor(entry.timeTaken / 60)}:{(entry.timeTaken % 60).toString().padStart(2, '0')}</span>
                             </div>
                           </div>
-                          <div className="text-2xl font-bold">{entry.score}%</div>
                         </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-            
-            <div className="flex justify-center mt-8">
-              <Button onClick={() => setLocation("/student")}>
-                Return to Dashboard
-              </Button>
-            </div>
-          </motion.div>
+                        <div className="text-2xl font-bold">{entry.score}%</div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+          
+          <div className="flex justify-center mt-8">
+            <Button onClick={() => setLocation("/student")}>
+              Return to Dashboard
+            </Button>
+          </div>
         </div>
 
         {showReview && questions && (
@@ -563,7 +533,7 @@ export default function QuizTake() {
                 questions={questions}
                 duration={quiz.duration || 30}
                 onAnswer={handleAnswer}
-                onComplete={() => submitMutation.mutate()}
+                onComplete={submitQuiz}
                 userAnswers={answers}
               />
             </div>
@@ -613,7 +583,7 @@ export default function QuizTake() {
                       title: "Time's up!",
                       description: "Your quiz has been automatically submitted.",
                     });
-                    submitMutation.mutate();
+                    submitQuiz();
                   }}
                   className="mb-4"
                 />
@@ -668,15 +638,15 @@ export default function QuizTake() {
                       const unanswered = questions.length - answers.filter(Boolean).length;
                       
                       if (window.confirm(`You have ${unanswered} unanswered question(s). Are you sure you want to submit?`)) {
-                        submitMutation.mutate();
+                        submitQuiz();
                       }
                     } else {
-                      submitMutation.mutate();
+                      submitQuiz();
                     }
                   }}
-                  disabled={submitMutation.isPending}
+                  disabled={submitting}
                 >
-                  {submitMutation.isPending ? "Submitting..." : "Submit Quiz"}
+                  {submitting ? "Submitting..." : "Submit Quiz"}
                 </Button>
               )}
             </div>
@@ -724,7 +694,7 @@ export default function QuizTake() {
                     title: "Time's up!",
                     description: "Your quiz has been automatically submitted.",
                   });
-                  submitMutation.mutate();
+                  submitQuiz();
                 }}
                 className="mb-4"
               />
@@ -779,15 +749,15 @@ export default function QuizTake() {
                     const unanswered = questions.length - answers.filter(Boolean).length;
                     
                     if (window.confirm(`You have ${unanswered} unanswered question(s). Are you sure you want to submit?`)) {
-                      submitMutation.mutate();
+                      submitQuiz();
                     }
                   } else {
-                    submitMutation.mutate();
+                    submitQuiz();
                   }
                 }}
-                disabled={submitMutation.isPending}
+                disabled={submitting}
               >
-                {submitMutation.isPending ? "Submitting..." : "Submit Quiz"}
+                {submitting ? "Submitting..." : "Submit Quiz"}
               </Button>
             )}
           </div>

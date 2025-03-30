@@ -183,6 +183,17 @@ export default function QuizReviewPage() {
             const userAnswer = userAnswers[index] || "";
             const isCorrect = userAnswer === question.correctAnswer;
             
+            // Sort options to put the user's correct answer at the top
+            const sortedOptions = [...(question.options || [])];
+            if (isCorrect && userAnswer) {
+              const correctIndex = sortedOptions.findIndex(o => o === userAnswer);
+              if (correctIndex > 0) {
+                // Move the correct answer to the top
+                const correctOption = sortedOptions.splice(correctIndex, 1)[0];
+                sortedOptions.unshift(correctOption);
+              }
+            }
+            
             return (
               <Card key={question.id} className="relative overflow-hidden border-l-4 border-l-transparent" 
                     style={{ borderLeftColor: isCorrect ? 'rgb(34, 197, 94)' : 'rgb(239, 68, 68)' }}>
@@ -206,19 +217,32 @@ export default function QuizReviewPage() {
                   </h3>
                   
                   <div className="space-y-3 mt-4">
-                    {question.options?.map((option) => {
+                    {sortedOptions.map((option) => {
                       const isUserSelection = option === userAnswer;
                       const isCorrectOption = option === question.correctAnswer;
                       
+                      // Determine the background and border color based on answer status
                       let bgColor = "bg-background border border-border";
                       if (isCorrectOption) bgColor = "bg-green-50 border border-green-200";
                       if (isUserSelection && !isCorrect) bgColor = "bg-red-50 border border-red-200";
                       
+                      // Add extra styling for correct user selection
+                      let extraClasses = "";
+                      if (isUserSelection && isCorrect) {
+                        extraClasses = "bg-green-100 border-green-500 border-2 shadow-sm";
+                      }
+                      
                       return (
                         <div
                           key={option}
-                          className={`p-3 rounded-md flex items-center ${bgColor}`}
+                          className={`p-3 rounded-md flex items-center ${bgColor} ${extraClasses} relative`}
                         >
+                          {isUserSelection && isCorrect && (
+                            <span className="absolute -top-2 -left-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-md font-medium">
+                              CORRECT
+                            </span>
+                          )}
+                          
                           {isCorrectOption && <CheckCircle className="h-4 w-4 mr-2 text-green-600" />}
                           {isUserSelection && !isCorrectOption && <XCircle className="h-4 w-4 mr-2 text-red-600" />}
                           <span className={`${isCorrectOption ? 'font-medium' : ''}`}>{option}</span>

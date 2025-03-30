@@ -28,18 +28,24 @@ export default function StudentDashboard() {
     refetchInterval: 30000, // Refetch every 30 seconds to check for new live quizzes
   });
 
-  // Calculate the correct average score based on correct answers and total questions
+  // Calculate the correct average score based on the stored score values
   const calculateAverageScore = () => {
     if (!results || results.length === 0) return 0;
     
-    const scores = results.map(result => 
-      result.totalQuestions > 0 
-        ? (result.correctAnswers / result.totalQuestions) * 100 
-        : 0
-    );
-    
-    const avgScore = scores.reduce((sum, score) => sum + score, 0) / scores.length;
-    return Math.round(avgScore); // Round to nearest whole number for display
+    const totalScore = results.reduce((sum, result) => sum + result.score, 0);
+    return Math.round(totalScore / results.length);
+  };
+
+  // Calculate total points earned from quizzes
+  const calculateTotalPoints = () => {
+    if (!user) return 0;
+    return user.points || 0;
+  };
+
+  // Get the number of completed quizzes
+  const getCompletedQuizCount = () => {
+    if (!results) return 0;
+    return results.length;
   };
 
   if (loadingResults || loadingLiveQuizzes) {
@@ -101,9 +107,10 @@ export default function StudentDashboard() {
                   <Trophy className="mr-2 h-5 w-5 text-yellow-500" />
                   Your Points
                 </CardTitle>
+                <CardDescription>2 points per correct answer</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold">{user?.points || 0}</p>
+                <p className="text-3xl font-bold">{calculateTotalPoints()}</p>
               </CardContent>
             </Card>
           </motion.div>
@@ -116,9 +123,10 @@ export default function StudentDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Quizzes Completed</CardTitle>
+                <CardDescription>Total attempts submitted</CardDescription>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold">{results?.length || 0}</p>
+                <p className="text-3xl font-bold">{getCompletedQuizCount()}</p>
               </CardContent>
             </Card>
           </motion.div>
@@ -131,6 +139,7 @@ export default function StudentDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle>Average Score</CardTitle>
+                <CardDescription>Across all quizzes</CardDescription>
               </CardHeader>
               <CardContent>
                 <p className="text-3xl font-bold">

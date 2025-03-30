@@ -620,19 +620,21 @@ export function registerRoutes(app: Express): Server {
       }
 
       const validatedData = insertResultSchema.parse(req.body);
+      
+      // Calculate score as percentage of correct answers
+      const score = validatedData.totalQuestions > 0 
+        ? Math.round((validatedData.correctAnswers / validatedData.totalQuestions) * 100) 
+        : 0;
+      
       const result = await storage.createResult({
         ...validatedData,
         userId: req.user.id,
         quizId: quizId,
+        score: score,
       });
 
-      // Calculate points based on percentage of correct answers
-      const percentCorrect = result.totalQuestions > 0 
-        ? (result.correctAnswers / result.totalQuestions) * 100 
-        : 0;
-        
-      // Award points based on percentage (10 points for 100%)
-      const pointsEarned = Math.round(percentCorrect / 10);
+      // Award 2 points per correct answer
+      const pointsEarned = validatedData.correctAnswers * 2;
       await storage.updateUserPoints(req.user.id, pointsEarned);
 
       res.status(201).json(result);
