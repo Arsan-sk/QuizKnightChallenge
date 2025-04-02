@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Quiz, Question as QuestionType } from "@shared/schema";
@@ -62,14 +62,6 @@ export default function QuizTake() {
   } | null>(null);
   const [hasAttempted, setHasAttempted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [isProcessingVisibility, setIsProcessingVisibility] = useState(false);
-  const [isSubmissionInProgress, setIsSubmissionInProgress] = useState(false);
-  const [tabSwitchTimestamp, setTabSwitchTimestamp] = useState<number | null>(null);
-  
-  // Use refs to prevent race conditions
-  const submittingRef = useRef(false);
-  const warningsRef = useRef(0);
-  const isActiveRef = useRef(true);
 
   const { data: quiz, isError: quizError, isLoading } = useQuery<Quiz>({
     queryKey: [`/api/quizzes/${id}`],
@@ -122,29 +114,12 @@ export default function QuizTake() {
   }, [user, id, toast]);
 
   const submitQuiz = async () => {
-    // Use refs to track submission status to avoid race conditions
-    if (submittingRef.current || isSubmissionInProgress) {
-      console.log("Submission already in progress, ignoring duplicate call");
-      return; // Prevent double submissions
-    }
-    
     try {
-      console.log("Starting quiz submission process");
-      submittingRef.current = true;
       setSubmitting(true);
-      setIsSubmissionInProgress(true); // Additional flag to prevent race conditions
       
       // Calculate correct answers
       let correctCount = 0;
       let wrongCount = 0;
-      
-      if (!questions || !questions.length) {
-        throw new Error("Questions not loaded properly");
-      }
-      
-      if (!id) {
-        throw new Error("Quiz ID is missing");
-      }
       
       for (let i = 0; i < questions.length; i++) {
         if (answers[i] === questions[i].correctAnswer) {
@@ -160,291 +135,114 @@ export default function QuizTake() {
       // Points calculation: 2 points per correct answer
       const pointsEarned = correctCount * 2;
       
-      // Create a timestamp to handle timing issues
-      const submitTime = timeStarted ? (Date.now() - timeStarted.getTime()) : 0;
-      
-      // Submit result with retry mechanism
-      let retryCount = 0;
-      const maxRetries = 2;
-      
-      while (retryCount <= maxRetries) {
-        try {
-          console.log(`Submitting quiz, attempt ${retryCount + 1}/${maxRetries + 1}`);
-          // Prepare request data
-          const requestData = {
-            quizId: parseInt(id), // Add quizId as a number
-            answers: JSON.stringify(answers),
-            score: Math.round(scorePercentage),
-            timeTaken: Math.floor(submitTime / 1000),
-            correctAnswers: correctCount,
-            wrongAnswers: wrongCount,
-            totalQuestions: questions.length,
-          };
-          
-          console.log("Submission data:", requestData);
-          
-          // Submit result - fixed API request format
-          const result = await apiRequest(
-            `/api/quizzes/${id}/results`, 
-            {
-              method: 'POST',
-              data: requestData
-            }
-          );
-          
-          console.log("Submission successful:", result);
-          
-          setQuizResult({
-            score: Math.round(scorePercentage),
-            timeTaken: Math.floor(submitTime / 1000),
-            correctAnswers: correctCount,
-            wrongAnswers: wrongCount,
-            totalQuestions: questions.length,
-            pointsEarned: pointsEarned
-          });
-          
-          if (user && id) {
-            completeAttempt(parseInt(id), user.id);
-            
-            // Clear quiz state from localStorage since we've successfully submitted
-            try {
-              localStorage.removeItem('quiz_state');
-            } catch (err) {
-              console.error("Error clearing quiz state:", err);
-            }
-          }
-          
-          // Success - exit the retry loop
-          break;
-        } catch (apiError) {
-          retryCount++;
-          console.error(`API Error submitting quiz (attempt ${retryCount}/${maxRetries}):`, apiError);
-          
-          if (retryCount > maxRetries) {
-            toast({
-              title: "Error submitting quiz",
-              description: "There was a network error. Please check your connection and try again.",
-              variant: "destructive",
-            });
-            throw apiError;
-          }
-          
-          // Wait before retrying
-          await new Promise(resolve => setTimeout(resolve, 1000));
+      // Submit result
+      const result = await apiRequest(`/api/quizzes/${id}/results`, {
+        method: 'POST',
+        data: {
+          answers: JSON.stringify(answers),
+          score: Math.round(scorePercentage),
+          timeTaken: Math.floor((Date.now() - timeStarted.getTime()) / 1000),
+          correctAnswers: correctCount,
+          wrongAnswers: wrongCount,
+          totalQuestions: questions.length,
         }
-      }
+      });
       
+      setQuizResult({
+        score: Math.round(scorePercentage),
+        timeTaken: Math.floor((Date.now() - timeStarted.getTime()) / 1000),
+        correctAnswers: correctCount,
+        wrongAnswers: wrongCount,
+        totalQuestions: questions.length,
+        pointsEarned: pointsEarned
+      });
+      
+      completeAttempt(parseInt(id), user.id);
       await refetchLeaderboard();
       setQuizCompleted(true);
-      console.log("Quiz submission completed successfully");
-      
     } catch (error) {
       console.error('Error submitting quiz:', error);
       toast({
         title: "Error submitting quiz",
-        description: "There was an error submitting your quiz. Please try again.",
+        description: error.message,
         variant: "destructive",
       });
     } finally {
       setSubmitting(false);
-      // Keep isSubmissionInProgress true if submission was successful
-      // This prevents further changes to the quiz after submission
-      if (!quizCompleted) {
-        setIsSubmissionInProgress(false);
-      }
-      // Small delay before resetting submittingRef to prevent multiple calls
-      setTimeout(() => {
-        submittingRef.current = false;
-      }, 500);
     }
   };
 
   const handleWebcamViolation = useCallback(() => {
-    if (isSubmissionInProgress || submittingRef.current || !isActiveRef.current) return; // Avoid adding violations during submission
-    
-    const newWarnings = warningsRef.current + 1;
-    warningsRef.current = newWarnings;
-    setWarnings(newWarnings);
-    
-    // Update localStorage state
-    if (user && id) {
-      try {
-        localStorage.setItem('quiz_state', JSON.stringify({
-          quizId: id,
-          userId: user.id,
-          warnings: newWarnings,
-          timestamp: new Date().toISOString()
-        }));
-      } catch (err) {
-        console.error("Error saving quiz state:", err);
+    setWarnings(prev => {
+      const newWarnings = prev + 1;
+      
+      if (newWarnings >= 3) {
+        toast({
+          title: "Quiz terminated",
+          description: "Multiple people detected. Your quiz has been automatically submitted.",
+          variant: "destructive",
+        });
+        submitQuiz();
       }
-    }
-    
-    if (newWarnings >= 3) {
-      toast({
-        title: "Quiz terminated",
-        description: "Multiple people detected. Your quiz has been automatically submitted.",
-        variant: "destructive",
-      });
       
-      // Set flags to prevent multiple submissions
-      submittingRef.current = true;
-      setIsSubmissionInProgress(true);
-      
-      // Use setTimeout to ensure state updates before submission
-      setTimeout(() => {
-        if (isActiveRef.current) {
-          submitQuiz();
-        }
-      }, 300);
-    }
-  }, [submitQuiz, toast, id, user, isSubmissionInProgress]);
+      return newWarnings;
+    });
+  }, [submitQuiz, toast]);
 
   useEffect(() => {
     setTimeStarted(new Date());
-    warningsRef.current = warnings;
-    isActiveRef.current = true;
-    
-    let visibilityTimer: number | null = null;
-    let tabSwitchDebounceTimer: number | null = null;
-    let failsafeTimer: number | null = null;
-    
-    // Tab switching detection - completely rewritten for reliability
+
+    // Tab switching detection
     const handleVisibilityChange = () => {
-      // Clear any existing debounce timer
-      if (tabSwitchDebounceTimer !== null) {
-        window.clearTimeout(tabSwitchDebounceTimer);
-      }
-      
-      // Use debounce to prevent rapid visibility changes from causing issues
-      tabSwitchDebounceTimer = window.setTimeout(() => {
-        // Debug visibility change events
-        console.log("Visibility change detected, document.hidden:", document.hidden);
-        
-        // Exit early if not active or quiz already completed
-        if (!isActiveRef.current || quizCompleted || isSubmissionInProgress || submittingRef.current) {
-          console.log("Skipping visibility handling due to state:", {
-            isActive: isActiveRef.current,
-            quizCompleted,
-            isSubmissionInProgress,
-            isSubmitting: submittingRef.current
+      if (document.hidden && !quizCompleted) {
+        setWarnings((w) => {
+          const newWarnings = w + 1;
+          toast({
+            title: `Warning ${newWarnings}/3`,
+            description: `Tab switching detected. ${3 - newWarnings} warnings left before automatic submission.`,
+            variant: "destructive",
           });
-          return;
-        }
-        
-        if (document.hidden) {
-          // When tab becomes hidden - store timestamp and disable hotkey detection
-          console.log("Tab hidden, storing timestamp");
-          setIsProcessingVisibility(true);
-          setTabSwitchTimestamp(Date.now());
           
-          // Set a failsafe to reset tab switch timestamp if the tab is left inactive for too long
-          // (in case visibilitychange event doesn't fire when returning)
-          if (failsafeTimer !== null) {
-            window.clearTimeout(failsafeTimer);
-          }
-          
-          failsafeTimer = window.setTimeout(() => {
-            console.log("Failsafe triggered - resetting tab switch state");
-            setTabSwitchTimestamp(null);
-            setIsProcessingVisibility(false);
-          }, 30000); // 30 seconds failsafe
-          
-        } else if (tabSwitchTimestamp) {
-          // When tab becomes visible again
-          const hiddenDuration = (Date.now() - tabSwitchTimestamp) / 1000;
-          console.log("Tab visible again, hidden duration:", hiddenDuration);
-          
-          // Clear failsafe timer
-          if (failsafeTimer !== null) {
-            window.clearTimeout(failsafeTimer);
-            failsafeTimer = null;
-          }
-          
-          // Only count as violation if hidden for more than 1 second
-          if (hiddenDuration > 1) {
-            const newWarnings = warningsRef.current + 1;
-            warningsRef.current = newWarnings;
-            setWarnings(newWarnings);
-            console.log(`Tab switching violation recorded! Warnings: ${newWarnings}/3`);
-            
+          if (newWarnings >= 3) {
             toast({
-              title: `Tab Switching Warning ${newWarnings}/3`,
-              description: `Tab switching detected. ${3 - newWarnings} warnings left before automatic submission.`,
+              title: "Quiz terminated",
+              description: "Too many tab switches detected. Your quiz has been automatically submitted.",
               variant: "destructive",
             });
-            
-            if (newWarnings >= 3) {
-              console.log("Maximum tab switching violations reached. Submitting quiz...");
-              toast({
-                title: "Quiz terminated",
-                description: "Too many tab switches detected. Your quiz has been automatically submitted.",
-                variant: "destructive",
-              });
-              
-              // Set flags before submission to prevent race conditions
-              submittingRef.current = true;
-              setIsSubmissionInProgress(true);
-              
-              // Use a timeout to ensure state updates before submission
-              visibilityTimer = window.setTimeout(() => {
-                if (isActiveRef.current) {
-                  submitQuiz();
-                }
-              }, 500);
-            }
+            submitQuiz();
           }
-          
-          // Reset tab switch tracking
-          setTabSwitchTimestamp(null);
-          
-          // Add a small delay before enabling hotkey detection again
-          visibilityTimer = window.setTimeout(() => {
-            if (isActiveRef.current) {
-              setIsProcessingVisibility(false);
-            }
-          }, 500);
-        }
-      }, 100); // Debounce for 100ms
+          return newWarnings;
+        });
+      }
     };
 
     // Copy-paste prevention
     const preventCopyPaste = (e: ClipboardEvent) => {
-      if (quizCompleted || isSubmissionInProgress || submittingRef.current || !isActiveRef.current) return;
-      
-      e.preventDefault();
-      setCopyPasteAttempts(prev => {
-        const newAttempts = prev + 1;
-        toast({
-          title: "Copy/Paste Blocked",
-          description: "Copy and paste functionality is disabled during the quiz.",
-          variant: "destructive",
-        });
-        
-        if (newAttempts >= 3) {
+      if (!quizCompleted) {
+        e.preventDefault();
+        setCopyPasteAttempts(prev => {
+          const newAttempts = prev + 1;
           toast({
-            title: "Warning",
-            description: "Multiple copy/paste attempts detected. This will be logged.",
+            title: "Copy/Paste Blocked",
+            description: "Copy and paste functionality is disabled during the quiz.",
             variant: "destructive",
           });
-        }
-        return newAttempts;
-      });
+          
+          if (newAttempts >= 3) {
+            toast({
+              title: "Warning",
+              description: "Multiple copy/paste attempts detected. This will be logged.",
+              variant: "destructive",
+            });
+          }
+          return newAttempts;
+        });
+      }
     };
 
-    // Hotkey blocking - only active when not processing visibility changes
+    // Hotkey blocking
     const preventHotkeys = (e: KeyboardEvent) => {
-      // Skip this check if we're currently processing a visibility change
-      if (isProcessingVisibility) {
-        console.log("Skipping hotkey check during visibility processing");
-        return;
-      }
-      
-      if (quizCompleted || isSubmissionInProgress || submittingRef.current || !isActiveRef.current) {
-        return;
-      }
-      
-      if (e.ctrlKey || e.altKey || e.metaKey) {
+      if (!quizCompleted && (e.ctrlKey || e.altKey || e.metaKey)) {
         // Allow some essential combinations like Ctrl+Home, Ctrl+End for navigation
         const allowedCombinations = ['Home', 'End'];
         if (!allowedCombinations.includes(e.key)) {
@@ -458,67 +256,41 @@ export default function QuizTake() {
       }
     };
 
-    // Full screen handling with improved error handling
+    // Full screen handling
     const enterFullScreen = () => {
-      try {
-        const element = document.documentElement;
-        if (element.requestFullscreen) {
-          element.requestFullscreen().catch(err => {
-            console.error("Error attempting to enable full-screen mode:", err);
-            toast({
-              title: "Full Screen Error",
-              description: "Could not enter full screen mode. Please try manually.",
-              variant: "destructive",
-            });
-          });
-        }
-        setIsFullScreen(true);
-      } catch (err) {
-        console.error("Error in enterFullScreen:", err);
+      const element = document.documentElement;
+      if (element.requestFullscreen) {
+        element.requestFullscreen();
       }
+      setIsFullScreen(true);
     };
 
     const exitHandler = () => {
-      if (!document.fullscreenElement && !quizCompleted && !isSubmissionInProgress && !submittingRef.current && isActiveRef.current) {
+      if (!document.fullscreenElement && !quizCompleted) {
         setIsFullScreen(false);
-        const newWarnings = warningsRef.current + 1;
-        warningsRef.current = newWarnings;
-        setWarnings(newWarnings);
-        
-        toast({
-          title: `Warning ${newWarnings}/3`,
-          description: `Full-screen mode exited. ${3 - newWarnings} warnings left before automatic submission.`,
-          variant: "destructive",
-        });
-        
-        if (newWarnings >= 3) {
+        setWarnings(prev => {
+          const newWarnings = prev + 1;
           toast({
-            title: "Quiz terminated",
-            description: "Too many full-screen exits detected. Your quiz has been automatically submitted.",
+            title: `Warning ${newWarnings}/3`,
+            description: `Full-screen mode exited. ${3 - newWarnings} warnings left before automatic submission.`,
             variant: "destructive",
           });
-          submittingRef.current = true;
-          setIsSubmissionInProgress(true);
           
-          // Use a timeout to avoid race conditions
-          visibilityTimer = window.setTimeout(() => {
-            if (isActiveRef.current) {
-              submitQuiz();
-            }
-          }, 500);
-        } else {
-          // Try to re-enter fullscreen after a brief delay
-          visibilityTimer = window.setTimeout(() => {
-            if (!isSubmissionInProgress && !submittingRef.current && !quizCompleted && isActiveRef.current) {
-              enterFullScreen();
-            }
-          }, 2000);
-        }
+          if (newWarnings >= 3) {
+            toast({
+              title: "Quiz terminated",
+              description: "Too many full-screen exits detected. Your quiz has been automatically submitted.",
+              variant: "destructive",
+            });
+            submitQuiz();
+          }
+          return newWarnings;
+        });
       }
     };
 
     // Enter full screen when starting quiz
-    if (!isFullScreen && !quizCompleted && !isSubmissionInProgress && !submittingRef.current) {
+    if (!isFullScreen && !quizCompleted) {
       enterFullScreen();
     }
 
@@ -530,37 +302,7 @@ export default function QuizTake() {
     document.addEventListener("keydown", preventHotkeys);
     document.addEventListener("fullscreenchange", exitHandler);
 
-    // Save initial state to localStorage as a backup
-    if (user && id) {
-      try {
-        localStorage.setItem('quiz_state', JSON.stringify({
-          quizId: id,
-          userId: user.id,
-          warnings: warnings,
-          timestamp: new Date().toISOString()
-        }));
-      } catch (err) {
-        console.error("Error saving quiz state:", err);
-      }
-    }
-
     return () => {
-      // Set isActive to false to prevent callbacks from running after unmount
-      isActiveRef.current = false;
-      
-      // Clear any pending timers
-      if (visibilityTimer !== null) {
-        window.clearTimeout(visibilityTimer);
-      }
-      
-      if (tabSwitchDebounceTimer !== null) {
-        window.clearTimeout(tabSwitchDebounceTimer);
-      }
-      
-      if (failsafeTimer !== null) {
-        window.clearTimeout(failsafeTimer);
-      }
-      
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       document.removeEventListener("copy", preventCopyPaste);
       document.removeEventListener("cut", preventCopyPaste);
@@ -568,17 +310,7 @@ export default function QuizTake() {
       document.removeEventListener("keydown", preventHotkeys);
       document.removeEventListener("fullscreenchange", exitHandler);
     };
-  }, [
-    quizCompleted, 
-    isFullScreen, 
-    id, 
-    user, 
-    warnings, 
-    submitQuiz, 
-    isSubmissionInProgress, 
-    isProcessingVisibility,
-    tabSwitchTimestamp
-  ]);
+  }, [quizCompleted, isFullScreen]);
 
   if (isLoading) {
     return (
@@ -833,7 +565,7 @@ export default function QuizTake() {
               <p className="text-muted-foreground mb-4">{quiz.description}</p>
               {warnings > 0 && (
                 <p className="text-red-500 mb-2">
-                  Tab Switching Warning! ({warnings}/3)
+                  Warning: Tab switching detected! ({warnings}/3)
                 </p>
               )}
               <Progress
@@ -944,7 +676,7 @@ export default function QuizTake() {
             <p className="text-muted-foreground mb-4">{quiz.description}</p>
             {warnings > 0 && (
               <p className="text-red-500 mb-2">
-                Tab Switching Warning! ({warnings}/3)
+                Warning: Tab switching detected! ({warnings}/3)
               </p>
             )}
             <Progress
