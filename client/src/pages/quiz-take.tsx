@@ -129,6 +129,7 @@ export default function QuizTake() {
     }
     
     try {
+      console.log("Starting quiz submission process");
       submittingRef.current = true;
       setSubmitting(true);
       setIsSubmissionInProgress(true); // Additional flag to prevent race conditions
@@ -164,18 +165,29 @@ export default function QuizTake() {
       
       while (retryCount <= maxRetries) {
         try {
-          // Submit result
-          const result = await apiRequest(`/api/quizzes/${id}/results`, {
-            method: 'POST',
-            data: {
-              answers: JSON.stringify(answers),
-              score: Math.round(scorePercentage),
-              timeTaken: Math.floor(submitTime / 1000),
-              correctAnswers: correctCount,
-              wrongAnswers: wrongCount,
-              totalQuestions: questions.length,
+          console.log(`Submitting quiz, attempt ${retryCount + 1}/${maxRetries + 1}`);
+          // Prepare request data
+          const requestData = {
+            answers: JSON.stringify(answers),
+            score: Math.round(scorePercentage),
+            timeTaken: Math.floor(submitTime / 1000),
+            correctAnswers: correctCount,
+            wrongAnswers: wrongCount,
+            totalQuestions: questions.length,
+          };
+          
+          console.log("Submission data:", requestData);
+          
+          // Submit result - fixed API request format
+          const result = await apiRequest(
+            `/api/quizzes/${id}/results`, 
+            {
+              method: 'POST',
+              data: requestData
             }
-          });
+          );
+          
+          console.log("Submission successful:", result);
           
           setQuizResult({
             score: Math.round(scorePercentage),
@@ -219,6 +231,7 @@ export default function QuizTake() {
       
       await refetchLeaderboard();
       setQuizCompleted(true);
+      console.log("Quiz submission completed successfully");
       
     } catch (error) {
       console.error('Error submitting quiz:', error);
@@ -291,15 +304,29 @@ export default function QuizTake() {
     
     // Tab switching detection - completely rewritten for reliability
     const handleVisibilityChange = () => {
-      if (!isActiveRef.current || quizCompleted || isSubmissionInProgress || submittingRef.current) return;
+      // Debug visibility change events
+      console.log("Visibility change detected, document.hidden:", document.hidden);
+      
+      // Exit early if not active or quiz already completed
+      if (!isActiveRef.current || quizCompleted || isSubmissionInProgress || submittingRef.current) {
+        console.log("Skipping visibility handling due to state:", {
+          isActive: isActiveRef.current,
+          quizCompleted,
+          isSubmissionInProgress,
+          isSubmitting: submittingRef.current
+        });
+        return;
+      }
       
       if (document.hidden) {
-        // When tab becomes hidden - store timestamp
+        // When tab becomes hidden - store timestamp and disable hotkey detection
+        console.log("Tab hidden, storing timestamp");
         setIsProcessingVisibility(true);
         setTabSwitchTimestamp(Date.now());
       } else if (tabSwitchTimestamp) {
         // When tab becomes visible again
         const hiddenDuration = (Date.now() - tabSwitchTimestamp) / 1000;
+        console.log("Tab visible again, hidden duration:", hiddenDuration);
         
         // Only count as violation if hidden for more than 1 second
         if (hiddenDuration > 1) {
@@ -308,7 +335,7 @@ export default function QuizTake() {
           setWarnings(newWarnings);
           
           toast({
-            title: `Warning ${newWarnings}/3`,
+            title: `Tab Switching Warning ${newWarnings}/3`,
             description: `Tab switching detected. ${3 - newWarnings} warnings left before automatic submission.`,
             variant: "destructive",
           });
@@ -371,7 +398,15 @@ export default function QuizTake() {
 
     // Hotkey blocking - only active when not processing visibility changes
     const preventHotkeys = (e: KeyboardEvent) => {
-      if (quizCompleted || isSubmissionInProgress || submittingRef.current || isProcessingVisibility || !isActiveRef.current) return;
+      // Skip this check if we're currently processing a visibility change
+      if (isProcessingVisibility) {
+        console.log("Skipping hotkey check during visibility processing");
+        return;
+      }
+      
+      if (quizCompleted || isSubmissionInProgress || submittingRef.current || !isActiveRef.current) {
+        return;
+      }
       
       if (e.ctrlKey || e.altKey || e.metaKey) {
         // Allow some essential combinations like Ctrl+Home, Ctrl+End for navigation

@@ -3,6 +3,12 @@
 
 Write-Host "Starting Quiz Knight Challenge Application..." -ForegroundColor Green
 
+# This start script includes fixes for the following issues:
+# 1. Fixed quiz submission - the apiRequest function was being called incorrectly
+# 2. Fixed tab switching detection - properly tracking and reporting tab switches
+# 3. Added database schema fixes for achievements table
+# 4. Automatic creation of the theme.json file required by the client
+
 # Check for theme.json and create it if missing
 $themeJsonPath = Join-Path -Path $PWD -ChildPath "client\theme.json"
 if (-not (Test-Path $themeJsonPath)) {
