@@ -117,7 +117,11 @@ export default function QuizTake() {
   }, [user, id, toast]);
 
   const submitQuiz = async () => {
-    if (submitting || isSubmissionInProgress) return; // Prevent double submissions
+    // Use a ref to track submission status to avoid race conditions
+    if (submitting || isSubmissionInProgress) {
+      console.log("Submission already in progress, ignoring duplicate call");
+      return; // Prevent double submissions
+    }
     
     try {
       setSubmitting(true);
@@ -145,51 +149,71 @@ export default function QuizTake() {
       // Points calculation: 2 points per correct answer
       const pointsEarned = correctCount * 2;
       
-      // Submit result
-      try {
-        const result = await apiRequest(`/api/quizzes/${id}/results`, {
-          method: 'POST',
-          data: {
-            answers: JSON.stringify(answers),
+      // Create a timestamp to handle timing issues
+      const submitTime = timeStarted ? (Date.now() - timeStarted.getTime()) : 0;
+      
+      // Submit result with retry mechanism
+      let retryCount = 0;
+      const maxRetries = 2;
+      
+      while (retryCount <= maxRetries) {
+        try {
+          // Submit result
+          const result = await apiRequest(`/api/quizzes/${id}/results`, {
+            method: 'POST',
+            data: {
+              answers: JSON.stringify(answers),
+              score: Math.round(scorePercentage),
+              timeTaken: Math.floor(submitTime / 1000),
+              correctAnswers: correctCount,
+              wrongAnswers: wrongCount,
+              totalQuestions: questions.length,
+            }
+          });
+          
+          setQuizResult({
             score: Math.round(scorePercentage),
-            timeTaken: Math.floor((timeStarted ? (Date.now() - timeStarted.getTime()) : 0) / 1000),
+            timeTaken: Math.floor(submitTime / 1000),
             correctAnswers: correctCount,
             wrongAnswers: wrongCount,
             totalQuestions: questions.length,
-          }
-        });
-        
-        setQuizResult({
-          score: Math.round(scorePercentage),
-          timeTaken: Math.floor((timeStarted ? (Date.now() - timeStarted.getTime()) : 0) / 1000),
-          correctAnswers: correctCount,
-          wrongAnswers: wrongCount,
-          totalQuestions: questions.length,
-          pointsEarned: pointsEarned
-        });
-        
-        if (user && id) {
-          completeAttempt(parseInt(id), user.id);
+            pointsEarned: pointsEarned
+          });
           
-          // Clear quiz state from localStorage since we've successfully submitted
-          try {
-            localStorage.removeItem('quiz_state');
-          } catch (err) {
-            console.error("Error clearing quiz state:", err);
+          if (user && id) {
+            completeAttempt(parseInt(id), user.id);
+            
+            // Clear quiz state from localStorage since we've successfully submitted
+            try {
+              localStorage.removeItem('quiz_state');
+            } catch (err) {
+              console.error("Error clearing quiz state:", err);
+            }
           }
+          
+          // Success - exit the retry loop
+          break;
+        } catch (apiError) {
+          retryCount++;
+          console.error(`API Error submitting quiz (attempt ${retryCount}/${maxRetries}):`, apiError);
+          
+          if (retryCount > maxRetries) {
+            toast({
+              title: "Error submitting quiz",
+              description: "There was a network error. Please check your connection and try again.",
+              variant: "destructive",
+            });
+            throw apiError;
+          }
+          
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
-        
-        await refetchLeaderboard();
-        setQuizCompleted(true);
-      } catch (apiError) {
-        console.error('API Error submitting quiz:', apiError);
-        toast({
-          title: "Error submitting quiz",
-          description: "There was a network error. Please check your connection and try again.",
-          variant: "destructive",
-        });
-        throw apiError;
       }
+      
+      await refetchLeaderboard();
+      setQuizCompleted(true);
+      
     } catch (error) {
       console.error('Error submitting quiz:', error);
       toast({
@@ -199,7 +223,11 @@ export default function QuizTake() {
       });
     } finally {
       setSubmitting(false);
-      setIsSubmissionInProgress(false);
+      // Keep isSubmissionInProgress true if submission was successful
+      // This prevents further changes to the quiz after submission
+      if (!quizCompleted) {
+        setIsSubmissionInProgress(false);
+      }
     }
   };
 
@@ -245,10 +273,12 @@ export default function QuizTake() {
     setTimeStarted(new Date());
     
     let visibilityViolations = warnings;
+    let visibilityTimer: number | null = null;
+    let isActive = true;
     
-    // Tab switching detection - completely revised
+    // Tab switching detection - completely rewritten for reliability
     const handleVisibilityChange = () => {
-      if (isSubmissionInProgress || quizCompleted) return;
+      if (!isActive || quizCompleted || isSubmissionInProgress) return;
       
       if (document.hidden) {
         // When tab becomes hidden - store timestamp
@@ -275,8 +305,16 @@ export default function QuizTake() {
               description: "Too many tab switches detected. Your quiz has been automatically submitted.",
               variant: "destructive",
             });
+            
+            // Set flags before submission to prevent race conditions
             setIsSubmissionInProgress(true);
-            submitQuiz();
+            
+            // Use a timeout to ensure state updates before submission
+            visibilityTimer = window.setTimeout(() => {
+              if (isActive) {
+                submitQuiz();
+              }
+            }, 500);
           }
         }
         
@@ -284,15 +322,17 @@ export default function QuizTake() {
         setTabSwitchTimestamp(null);
         
         // Add a small delay before enabling hotkey detection again
-        setTimeout(() => {
-          setIsProcessingVisibility(false);
+        visibilityTimer = window.setTimeout(() => {
+          if (isActive) {
+            setIsProcessingVisibility(false);
+          }
         }, 500);
       }
     };
 
     // Copy-paste prevention
     const preventCopyPaste = (e: ClipboardEvent) => {
-      if (quizCompleted || isSubmissionInProgress) return;
+      if (quizCompleted || isSubmissionInProgress || !isActive) return;
       
       e.preventDefault();
       setCopyPasteAttempts(prev => {
@@ -316,7 +356,7 @@ export default function QuizTake() {
 
     // Hotkey blocking - only active when not processing visibility changes
     const preventHotkeys = (e: KeyboardEvent) => {
-      if (quizCompleted || isSubmissionInProgress || isProcessingVisibility) return;
+      if (quizCompleted || isSubmissionInProgress || isProcessingVisibility || !isActive) return;
       
       if (e.ctrlKey || e.altKey || e.metaKey) {
         // Allow some essential combinations like Ctrl+Home, Ctrl+End for navigation
@@ -332,7 +372,7 @@ export default function QuizTake() {
       }
     };
 
-    // Full screen handling
+    // Full screen handling with improved error handling
     const enterFullScreen = () => {
       try {
         const element = document.documentElement;
@@ -353,7 +393,7 @@ export default function QuizTake() {
     };
 
     const exitHandler = () => {
-      if (!document.fullscreenElement && !quizCompleted && !isSubmissionInProgress) {
+      if (!document.fullscreenElement && !quizCompleted && !isSubmissionInProgress && isActive) {
         setIsFullScreen(false);
         visibilityViolations += 1;
         setWarnings(visibilityViolations);
@@ -371,11 +411,17 @@ export default function QuizTake() {
             variant: "destructive",
           });
           setIsSubmissionInProgress(true);
-          submitQuiz();
+          
+          // Use a timeout to avoid race conditions
+          visibilityTimer = window.setTimeout(() => {
+            if (isActive) {
+              submitQuiz();
+            }
+          }, 500);
         } else {
           // Try to re-enter fullscreen after a brief delay
-          setTimeout(() => {
-            if (!isSubmissionInProgress && !quizCompleted) {
+          visibilityTimer = window.setTimeout(() => {
+            if (!isSubmissionInProgress && !quizCompleted && isActive) {
               enterFullScreen();
             }
           }, 2000);
@@ -411,6 +457,14 @@ export default function QuizTake() {
     }
 
     return () => {
+      // Set isActive to false to prevent callbacks from running after unmount
+      isActive = false;
+      
+      // Clear any pending timers
+      if (visibilityTimer !== null) {
+        window.clearTimeout(visibilityTimer);
+      }
+      
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       document.removeEventListener("copy", preventCopyPaste);
       document.removeEventListener("cut", preventCopyPaste);
