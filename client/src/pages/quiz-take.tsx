@@ -136,9 +136,10 @@ export default function QuizTake() {
       const pointsEarned = correctCount * 2;
       
       // Submit result
-      const result = await apiRequest(`/api/quizzes/${id}/results`, {
-        method: 'POST',
-        data: {
+      const result = await apiRequest(
+        'POST',
+        `/api/quizzes/${id}/results`,
+        {
           answers: JSON.stringify(answers),
           score: Math.round(scorePercentage),
           timeTaken: Math.floor((Date.now() - timeStarted.getTime()) / 1000),
@@ -146,7 +147,7 @@ export default function QuizTake() {
           wrongAnswers: wrongCount,
           totalQuestions: questions.length,
         }
-      });
+      );
       
       setQuizResult({
         score: Math.round(scorePercentage),
