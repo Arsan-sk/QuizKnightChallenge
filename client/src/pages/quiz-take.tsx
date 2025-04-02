@@ -62,6 +62,9 @@ export default function QuizTake() {
   } | null>(null);
   const [hasAttempted, setHasAttempted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [isProcessingVisibility, setIsProcessingVisibility] = useState(false);
+  const [isSubmissionInProgress, setIsSubmissionInProgress] = useState(false);
+  const [tabSwitchTimestamp, setTabSwitchTimestamp] = useState<number | null>(null);
 
   const { data: quiz, isError: quizError, isLoading } = useQuery<Quiz>({
     queryKey: [`/api/quizzes/${id}`],
@@ -114,14 +117,19 @@ export default function QuizTake() {
   }, [user, id, toast]);
 
   const submitQuiz = async () => {
-    if (submitting) return; // Prevent double submissions
+    if (submitting || isSubmissionInProgress) return; // Prevent double submissions
     
     try {
       setSubmitting(true);
+      setIsSubmissionInProgress(true); // Additional flag to prevent race conditions
       
       // Calculate correct answers
       let correctCount = 0;
       let wrongCount = 0;
+      
+      if (!questions || !questions.length) {
+        throw new Error("Questions not loaded properly");
+      }
       
       for (let i = 0; i < questions.length; i++) {
         if (answers[i] === questions[i].correctAnswer) {
@@ -138,38 +146,50 @@ export default function QuizTake() {
       const pointsEarned = correctCount * 2;
       
       // Submit result
-      const result = await apiRequest(`/api/quizzes/${id}/results`, {
-        method: 'POST',
-        data: {
-          answers: JSON.stringify(answers),
+      try {
+        const result = await apiRequest(`/api/quizzes/${id}/results`, {
+          method: 'POST',
+          data: {
+            answers: JSON.stringify(answers),
+            score: Math.round(scorePercentage),
+            timeTaken: Math.floor((timeStarted ? (Date.now() - timeStarted.getTime()) : 0) / 1000),
+            correctAnswers: correctCount,
+            wrongAnswers: wrongCount,
+            totalQuestions: questions.length,
+          }
+        });
+        
+        setQuizResult({
           score: Math.round(scorePercentage),
-          timeTaken: Math.floor((Date.now() - timeStarted.getTime()) / 1000),
+          timeTaken: Math.floor((timeStarted ? (Date.now() - timeStarted.getTime()) : 0) / 1000),
           correctAnswers: correctCount,
           wrongAnswers: wrongCount,
           totalQuestions: questions.length,
+          pointsEarned: pointsEarned
+        });
+        
+        if (user && id) {
+          completeAttempt(parseInt(id), user.id);
+          
+          // Clear quiz state from localStorage since we've successfully submitted
+          try {
+            localStorage.removeItem('quiz_state');
+          } catch (err) {
+            console.error("Error clearing quiz state:", err);
+          }
         }
-      });
-      
-      setQuizResult({
-        score: Math.round(scorePercentage),
-        timeTaken: Math.floor((Date.now() - timeStarted.getTime()) / 1000),
-        correctAnswers: correctCount,
-        wrongAnswers: wrongCount,
-        totalQuestions: questions.length,
-        pointsEarned: pointsEarned
-      });
-      
-      completeAttempt(parseInt(id), user.id);
-      
-      // Clear quiz state from localStorage since we've successfully submitted
-      try {
-        localStorage.removeItem('quiz_state');
-      } catch (err) {
-        console.error("Error clearing quiz state:", err);
+        
+        await refetchLeaderboard();
+        setQuizCompleted(true);
+      } catch (apiError) {
+        console.error('API Error submitting quiz:', apiError);
+        toast({
+          title: "Error submitting quiz",
+          description: "There was a network error. Please check your connection and try again.",
+          variant: "destructive",
+        });
+        throw apiError;
       }
-      
-      await refetchLeaderboard();
-      setQuizCompleted(true);
     } catch (error) {
       console.error('Error submitting quiz:', error);
       toast({
@@ -177,13 +197,15 @@ export default function QuizTake() {
         description: "There was an error submitting your quiz. Please try again.",
         variant: "destructive",
       });
-      
-      // Allow retry after error
+    } finally {
       setSubmitting(false);
+      setIsSubmissionInProgress(false);
     }
   };
 
   const handleWebcamViolation = useCallback(() => {
+    if (isSubmissionInProgress) return; // Avoid adding violations during submission
+    
     setWarnings(prev => {
       const newWarnings = prev + 1;
       
@@ -210,91 +232,93 @@ export default function QuizTake() {
         
         // Use setTimeout to ensure state updates before submission
         setTimeout(() => {
+          setIsSubmissionInProgress(true);
           submitQuiz();
         }, 100);
       }
       
       return newWarnings;
     });
-  }, [submitQuiz, toast, id, user]);
+  }, [submitQuiz, toast, id, user, isSubmissionInProgress]);
 
   useEffect(() => {
     setTimeStarted(new Date());
     
     let visibilityViolations = warnings;
-    let isSubmitting = false;
-
-    // Tab switching detection
+    
+    // Tab switching detection - completely revised
     const handleVisibilityChange = () => {
-      if (document.hidden && !quizCompleted && !isSubmitting) {
-        // Store the current timestamp when tab becomes invisible
-        const hiddenTimestamp = Date.now();
+      if (isSubmissionInProgress || quizCompleted) return;
+      
+      if (document.hidden) {
+        // When tab becomes hidden - store timestamp
+        setIsProcessingVisibility(true);
+        setTabSwitchTimestamp(Date.now());
+      } else if (tabSwitchTimestamp) {
+        // When tab becomes visible again
+        const hiddenDuration = (Date.now() - tabSwitchTimestamp) / 1000;
         
-        // Function to check when tab becomes visible again
-        const handleVisibilityReturn = () => {
-          if (!document.hidden) {
-            document.removeEventListener('visibilitychange', handleVisibilityReturn);
-            
-            // Check how long the tab was hidden (in seconds)
-            const hiddenDuration = (Date.now() - hiddenTimestamp) / 1000;
-            
-            // Only count it as a violation if hidden for more than 1 second
-            // This helps avoid false positives from quick alt-tabs or system notifications
-            if (hiddenDuration > 1) {
-              visibilityViolations += 1;
-              setWarnings(visibilityViolations);
-              
-              toast({
-                title: `Warning ${visibilityViolations}/3`,
-                description: `Tab switching detected. ${3 - visibilityViolations} warnings left before automatic submission.`,
-                variant: "destructive",
-              });
-              
-              if (visibilityViolations >= 3) {
-                toast({
-                  title: "Quiz terminated",
-                  description: "Too many tab switches detected. Your quiz has been automatically submitted.",
-                  variant: "destructive",
-                });
-                isSubmitting = true;
-                submitQuiz();
-              }
-            }
+        // Only count as violation if hidden for more than 1 second
+        if (hiddenDuration > 1) {
+          visibilityViolations += 1;
+          setWarnings(visibilityViolations);
+          
+          toast({
+            title: `Warning ${visibilityViolations}/3`,
+            description: `Tab switching detected. ${3 - visibilityViolations} warnings left before automatic submission.`,
+            variant: "destructive",
+          });
+          
+          if (visibilityViolations >= 3) {
+            toast({
+              title: "Quiz terminated",
+              description: "Too many tab switches detected. Your quiz has been automatically submitted.",
+              variant: "destructive",
+            });
+            setIsSubmissionInProgress(true);
+            submitQuiz();
           }
-        };
+        }
         
-        // Add a one-time listener for when tab becomes visible again
-        document.addEventListener('visibilitychange', handleVisibilityReturn);
+        // Reset tab switch tracking
+        setTabSwitchTimestamp(null);
+        
+        // Add a small delay before enabling hotkey detection again
+        setTimeout(() => {
+          setIsProcessingVisibility(false);
+        }, 500);
       }
     };
 
     // Copy-paste prevention
     const preventCopyPaste = (e: ClipboardEvent) => {
-      if (!quizCompleted && !isSubmitting) {
-        e.preventDefault();
-        setCopyPasteAttempts(prev => {
-          const newAttempts = prev + 1;
+      if (quizCompleted || isSubmissionInProgress) return;
+      
+      e.preventDefault();
+      setCopyPasteAttempts(prev => {
+        const newAttempts = prev + 1;
+        toast({
+          title: "Copy/Paste Blocked",
+          description: "Copy and paste functionality is disabled during the quiz.",
+          variant: "destructive",
+        });
+        
+        if (newAttempts >= 3) {
           toast({
-            title: "Copy/Paste Blocked",
-            description: "Copy and paste functionality is disabled during the quiz.",
+            title: "Warning",
+            description: "Multiple copy/paste attempts detected. This will be logged.",
             variant: "destructive",
           });
-          
-          if (newAttempts >= 3) {
-            toast({
-              title: "Warning",
-              description: "Multiple copy/paste attempts detected. This will be logged.",
-              variant: "destructive",
-            });
-          }
-          return newAttempts;
-        });
-      }
+        }
+        return newAttempts;
+      });
     };
 
-    // Hotkey blocking
+    // Hotkey blocking - only active when not processing visibility changes
     const preventHotkeys = (e: KeyboardEvent) => {
-      if (!quizCompleted && !isSubmitting && (e.ctrlKey || e.altKey || e.metaKey)) {
+      if (quizCompleted || isSubmissionInProgress || isProcessingVisibility) return;
+      
+      if (e.ctrlKey || e.altKey || e.metaKey) {
         // Allow some essential combinations like Ctrl+Home, Ctrl+End for navigation
         const allowedCombinations = ['Home', 'End'];
         if (!allowedCombinations.includes(e.key)) {
@@ -329,7 +353,7 @@ export default function QuizTake() {
     };
 
     const exitHandler = () => {
-      if (!document.fullscreenElement && !quizCompleted && !isSubmitting) {
+      if (!document.fullscreenElement && !quizCompleted && !isSubmissionInProgress) {
         setIsFullScreen(false);
         visibilityViolations += 1;
         setWarnings(visibilityViolations);
@@ -346,12 +370,12 @@ export default function QuizTake() {
             description: "Too many full-screen exits detected. Your quiz has been automatically submitted.",
             variant: "destructive",
           });
-          isSubmitting = true;
+          setIsSubmissionInProgress(true);
           submitQuiz();
         } else {
           // Try to re-enter fullscreen after a brief delay
           setTimeout(() => {
-            if (!isSubmitting && !quizCompleted) {
+            if (!isSubmissionInProgress && !quizCompleted) {
               enterFullScreen();
             }
           }, 2000);
@@ -360,7 +384,7 @@ export default function QuizTake() {
     };
 
     // Enter full screen when starting quiz
-    if (!isFullScreen && !quizCompleted) {
+    if (!isFullScreen && !quizCompleted && !isSubmissionInProgress) {
       enterFullScreen();
     }
 
@@ -394,7 +418,17 @@ export default function QuizTake() {
       document.removeEventListener("keydown", preventHotkeys);
       document.removeEventListener("fullscreenchange", exitHandler);
     };
-  }, [quizCompleted, isFullScreen, id, user, warnings, submitQuiz]);
+  }, [
+    quizCompleted, 
+    isFullScreen, 
+    id, 
+    user, 
+    warnings, 
+    submitQuiz, 
+    isSubmissionInProgress, 
+    isProcessingVisibility,
+    tabSwitchTimestamp
+  ]);
 
   if (isLoading) {
     return (

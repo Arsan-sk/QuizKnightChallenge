@@ -11,6 +11,7 @@ interface QuizAttempt {
 
 const STORAGE_KEY = 'quiz_knight_attempts';
 const SESSION_KEY = 'quiz_knight_current_attempt';
+const SYNC_INTERVAL = 5000; // 5 seconds
 
 /**
  * Get all quiz attempts for the current user
@@ -61,6 +62,9 @@ export function getUserAttempts(userId: number): QuizAttempt[] {
  */
 export function hasAttemptedQuiz(quizId: number, userId: number): boolean {
   try {
+    // Try to synchronize storage first in case of multiple tabs
+    synchronizeStorage();
+    
     const userAttempts = getUserAttempts(userId);
     
     // First check completed attempts
@@ -72,8 +76,19 @@ export function hasAttemptedQuiz(quizId: number, userId: number): boolean {
     
     if (hasCompleted) return true;
     
-    // Check server-side if possible (this would require an API endpoint)
-    // This is a fallback mechanism that could be implemented
+    // Check if there's another active session for this quiz
+    const activeAttempt = getActiveSession(quizId, userId);
+    if (activeAttempt) {
+      // If the attempt is more than 24 hours old, consider it abandoned
+      const attemptTime = new Date(activeAttempt.timestamp).getTime();
+      const currentTime = new Date().getTime();
+      const hoursDiff = (currentTime - attemptTime) / (1000 * 60 * 60);
+      
+      if (hoursDiff < 24) {
+        // Less than 24 hours old - consider it active
+        return true;
+      }
+    }
     
     return false;
   } catch (error) {
@@ -117,6 +132,9 @@ export function registerAttempt(quizId: number, userId: number): QuizAttempt {
     
     // Also save current attempt to sessionStorage for better session handling
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(newAttempt));
+    
+    // Start synchronization interval
+    startSyncInterval();
     
     return newAttempt;
   } catch (error) {
@@ -171,6 +189,9 @@ export function completeAttempt(quizId: number, userId: number): void {
       }
     }
     
+    // Trigger a final sync
+    synchronizeStorage();
+    
     // Optionally, also record this on the server via API call
     // This would be the most reliable approach, but requires backend support
   } catch (error) {
@@ -195,12 +216,160 @@ export function getCurrentAttempt(): QuizAttempt | null {
 }
 
 /**
+ * Get active session for a specific quiz and user
+ */
+export function getActiveSession(quizId: number, userId: number): QuizAttempt | null {
+  try {
+    // First check sessionStorage (current session)
+    const sessionAttempt = sessionStorage.getItem(SESSION_KEY);
+    if (sessionAttempt) {
+      try {
+        const currentAttempt = JSON.parse(sessionAttempt) as QuizAttempt;
+        if (currentAttempt.quizId === quizId && 
+            currentAttempt.userId === userId && 
+            !currentAttempt.completed) {
+          return currentAttempt;
+        }
+      } catch (error) {
+        console.error('Failed to parse session attempt:', error);
+      }
+    }
+    
+    // Then check localStorage for incomplete attempts
+    const storedAttempts = localStorage.getItem(STORAGE_KEY);
+    if (storedAttempts) {
+      try {
+        const attempts = JSON.parse(storedAttempts) as QuizAttempt[];
+        const activeAttempt = attempts.find(attempt => 
+          attempt.quizId === quizId && 
+          attempt.userId === userId && 
+          !attempt.completed
+        );
+        
+        if (activeAttempt) {
+          return activeAttempt;
+        }
+      } catch (error) {
+        console.error('Failed to parse stored quiz attempts:', error);
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error getting active session:', error);
+    return null;
+  }
+}
+
+/**
+ * Start a periodic synchronization interval
+ */
+let syncIntervalId: number | null = null;
+
+function startSyncInterval() {
+  if (syncIntervalId !== null) {
+    return; // Already running
+  }
+  
+  syncIntervalId = window.setInterval(() => {
+    synchronizeStorage();
+  }, SYNC_INTERVAL);
+  
+  // Also listen for beforeunload to sync on page exit
+  window.addEventListener('beforeunload', synchronizeStorage);
+  
+  return () => {
+    if (syncIntervalId !== null) {
+      window.clearInterval(syncIntervalId);
+      syncIntervalId = null;
+    }
+    window.removeEventListener('beforeunload', synchronizeStorage);
+  };
+}
+
+/**
+ * Synchronize session storage with local storage
+ */
+export function synchronizeStorage(): void {
+  try {
+    const sessionAttempt = sessionStorage.getItem(SESSION_KEY);
+    const storedAttempts = localStorage.getItem(STORAGE_KEY);
+    
+    if (!sessionAttempt || !storedAttempts) {
+      return;
+    }
+    
+    const currentAttempt = JSON.parse(sessionAttempt) as QuizAttempt;
+    const attempts = JSON.parse(storedAttempts) as QuizAttempt[];
+    
+    // Update the session attempt in localStorage if it exists
+    const updatedAttempts = attempts.map(attempt => {
+      if (attempt.quizId === currentAttempt.quizId && 
+          attempt.userId === currentAttempt.userId &&
+          attempt.timestamp === currentAttempt.timestamp) {
+        return currentAttempt; // Use the most recent version from sessionStorage
+      }
+      return attempt;
+    });
+    
+    // If the session attempt doesn't exist in localStorage yet, add it
+    if (!attempts.some(attempt => 
+      attempt.quizId === currentAttempt.quizId && 
+      attempt.userId === currentAttempt.userId &&
+      attempt.timestamp === currentAttempt.timestamp
+    )) {
+      updatedAttempts.push(currentAttempt);
+    }
+    
+    // Save back to localStorage
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedAttempts));
+  } catch (error) {
+    console.error('Failed to synchronize storage:', error);
+  }
+}
+
+/**
+ * Clean up stale attempts (older than 24 hours and not completed)
+ */
+export function cleanupStaleAttempts(): void {
+  try {
+    const storedAttempts = localStorage.getItem(STORAGE_KEY);
+    if (!storedAttempts) return;
+    
+    const attempts = JSON.parse(storedAttempts) as QuizAttempt[];
+    const currentTime = new Date().getTime();
+    
+    // Keep completed attempts and those less than 24 hours old
+    const freshAttempts = attempts.filter(attempt => {
+      if (attempt.completed) return true;
+      
+      const attemptTime = new Date(attempt.timestamp).getTime();
+      const hoursDiff = (currentTime - attemptTime) / (1000 * 60 * 60);
+      
+      return hoursDiff < 24;
+    });
+    
+    if (freshAttempts.length !== attempts.length) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(freshAttempts));
+    }
+  } catch (error) {
+    console.error('Failed to cleanup stale attempts:', error);
+  }
+}
+
+/**
  * Clear all attempt data (for testing purposes)
  */
 export function clearAttemptData(): void {
   try {
     localStorage.removeItem(STORAGE_KEY);
     sessionStorage.removeItem(SESSION_KEY);
+    
+    if (syncIntervalId !== null) {
+      window.clearInterval(syncIntervalId);
+      syncIntervalId = null;
+      window.removeEventListener('beforeunload', synchronizeStorage);
+    }
   } catch (error) {
     console.error('Failed to clear attempt data:', error);
   }
