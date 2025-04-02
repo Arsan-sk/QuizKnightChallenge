@@ -36,30 +36,14 @@ if (-not (Test-Path $themeJsonPath)) {
     Write-Host "Theme file created successfully" -ForegroundColor Green
 }
 
-# Check for and run database migrations to fix schema issues
+# Run database migration fixes if needed
 $fixScriptPath = Join-Path -Path $PWD -ChildPath "server\run-fix-schema.js"
 if (Test-Path $fixScriptPath) {
-    try {
-        Write-Host "Running database schema fixes..." -ForegroundColor Yellow
-        
-        # Change to server directory
-        Push-Location -Path "$PWD\server"
-        
-        # Run the fix script using node
-        & node run-fix-schema.js
-        
-        # Check exit code
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "Database schema fixes completed successfully" -ForegroundColor Green
-        } else {
-            Write-Host "Database schema fix encountered issues. Exit code: $LASTEXITCODE" -ForegroundColor Red
-        }
-        
-        # Return to previous directory
-        Pop-Location
-    } catch {
-        Write-Host "Error running database fixes: $_" -ForegroundColor Red
-    }
+    Write-Host "Running database schema fixes..." -ForegroundColor Yellow
+    Set-Location -Path "$PWD\server"
+    node run-fix-schema.js
+    Set-Location -Path $PWD
+    Write-Host "Database schema fixes completed" -ForegroundColor Green
 }
 
 # Kill any processes that might be using port 5000 (server) or 3000 (client)
@@ -83,20 +67,16 @@ try {
     # No process on port 3000, which is fine
 }
 
-# Add a 2-second delay to ensure ports are fully released
-Write-Host "Waiting for ports to be released..." -ForegroundColor Yellow
-Start-Sleep -Seconds 2
+# Add a 1-second delay to ensure ports are fully released
+Start-Sleep -Seconds 1
 
 # Start the server in a new PowerShell window
 Write-Host "Starting server..." -ForegroundColor Cyan
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PWD'; npm run dev"
-
-# Add a short delay to allow server to start before client
-Start-Sleep -Seconds 3
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd $PWD; npm run dev"
 
 # Start the client in a new PowerShell window
 Write-Host "Starting client..." -ForegroundColor Cyan
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$PWD\client'; npm run dev"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd $PWD\client; npm run dev"
 
 Write-Host "Application started successfully!" -ForegroundColor Green
 Write-Host "Server is running at: http://localhost:5000" -ForegroundColor Green

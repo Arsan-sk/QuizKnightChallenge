@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Quiz, Question as QuestionType } from "@shared/schema";
@@ -65,6 +65,11 @@ export default function QuizTake() {
   const [isProcessingVisibility, setIsProcessingVisibility] = useState(false);
   const [isSubmissionInProgress, setIsSubmissionInProgress] = useState(false);
   const [tabSwitchTimestamp, setTabSwitchTimestamp] = useState<number | null>(null);
+  
+  // Use refs to prevent race conditions
+  const submittingRef = useRef(false);
+  const warningsRef = useRef(0);
+  const isActiveRef = useRef(true);
 
   const { data: quiz, isError: quizError, isLoading } = useQuery<Quiz>({
     queryKey: [`/api/quizzes/${id}`],
@@ -117,13 +122,14 @@ export default function QuizTake() {
   }, [user, id, toast]);
 
   const submitQuiz = async () => {
-    // Use a ref to track submission status to avoid race conditions
-    if (submitting || isSubmissionInProgress) {
+    // Use refs to track submission status to avoid race conditions
+    if (submittingRef.current || isSubmissionInProgress) {
       console.log("Submission already in progress, ignoring duplicate call");
       return; // Prevent double submissions
     }
     
     try {
+      submittingRef.current = true;
       setSubmitting(true);
       setIsSubmissionInProgress(true); // Additional flag to prevent race conditions
       
@@ -228,57 +234,64 @@ export default function QuizTake() {
       if (!quizCompleted) {
         setIsSubmissionInProgress(false);
       }
+      // Small delay before resetting submittingRef to prevent multiple calls
+      setTimeout(() => {
+        submittingRef.current = false;
+      }, 500);
     }
   };
 
   const handleWebcamViolation = useCallback(() => {
-    if (isSubmissionInProgress) return; // Avoid adding violations during submission
+    if (isSubmissionInProgress || submittingRef.current || !isActiveRef.current) return; // Avoid adding violations during submission
     
-    setWarnings(prev => {
-      const newWarnings = prev + 1;
-      
-      // Update localStorage state
-      if (user && id) {
-        try {
-          localStorage.setItem('quiz_state', JSON.stringify({
-            quizId: id,
-            userId: user.id,
-            warnings: newWarnings,
-            timestamp: new Date().toISOString()
-          }));
-        } catch (err) {
-          console.error("Error saving quiz state:", err);
-        }
+    const newWarnings = warningsRef.current + 1;
+    warningsRef.current = newWarnings;
+    setWarnings(newWarnings);
+    
+    // Update localStorage state
+    if (user && id) {
+      try {
+        localStorage.setItem('quiz_state', JSON.stringify({
+          quizId: id,
+          userId: user.id,
+          warnings: newWarnings,
+          timestamp: new Date().toISOString()
+        }));
+      } catch (err) {
+        console.error("Error saving quiz state:", err);
       }
+    }
+    
+    if (newWarnings >= 3) {
+      toast({
+        title: "Quiz terminated",
+        description: "Multiple people detected. Your quiz has been automatically submitted.",
+        variant: "destructive",
+      });
       
-      if (newWarnings >= 3) {
-        toast({
-          title: "Quiz terminated",
-          description: "Multiple people detected. Your quiz has been automatically submitted.",
-          variant: "destructive",
-        });
-        
-        // Use setTimeout to ensure state updates before submission
-        setTimeout(() => {
-          setIsSubmissionInProgress(true);
+      // Set flags to prevent multiple submissions
+      submittingRef.current = true;
+      setIsSubmissionInProgress(true);
+      
+      // Use setTimeout to ensure state updates before submission
+      setTimeout(() => {
+        if (isActiveRef.current) {
           submitQuiz();
-        }, 100);
-      }
-      
-      return newWarnings;
-    });
+        }
+      }, 300);
+    }
   }, [submitQuiz, toast, id, user, isSubmissionInProgress]);
 
   useEffect(() => {
     setTimeStarted(new Date());
+    warningsRef.current = warnings;
+    isActiveRef.current = true;
     
-    let visibilityViolations = warnings;
     let visibilityTimer: number | null = null;
-    let isActive = true;
     
     // Tab switching detection - completely rewritten for reliability
     const handleVisibilityChange = () => {
-      if (!isActive || quizCompleted || isSubmissionInProgress) return;
+      if (!isActiveRef.current || quizCompleted || isSubmissionInProgress || submittingRef.current) return;
       
       if (document.hidden) {
         // When tab becomes hidden - store timestamp
@@ -290,16 +303,17 @@ export default function QuizTake() {
         
         // Only count as violation if hidden for more than 1 second
         if (hiddenDuration > 1) {
-          visibilityViolations += 1;
-          setWarnings(visibilityViolations);
+          const newWarnings = warningsRef.current + 1;
+          warningsRef.current = newWarnings;
+          setWarnings(newWarnings);
           
           toast({
-            title: `Warning ${visibilityViolations}/3`,
-            description: `Tab switching detected. ${3 - visibilityViolations} warnings left before automatic submission.`,
+            title: `Warning ${newWarnings}/3`,
+            description: `Tab switching detected. ${3 - newWarnings} warnings left before automatic submission.`,
             variant: "destructive",
           });
           
-          if (visibilityViolations >= 3) {
+          if (newWarnings >= 3) {
             toast({
               title: "Quiz terminated",
               description: "Too many tab switches detected. Your quiz has been automatically submitted.",
@@ -307,11 +321,12 @@ export default function QuizTake() {
             });
             
             // Set flags before submission to prevent race conditions
+            submittingRef.current = true;
             setIsSubmissionInProgress(true);
             
             // Use a timeout to ensure state updates before submission
             visibilityTimer = window.setTimeout(() => {
-              if (isActive) {
+              if (isActiveRef.current) {
                 submitQuiz();
               }
             }, 500);
@@ -323,7 +338,7 @@ export default function QuizTake() {
         
         // Add a small delay before enabling hotkey detection again
         visibilityTimer = window.setTimeout(() => {
-          if (isActive) {
+          if (isActiveRef.current) {
             setIsProcessingVisibility(false);
           }
         }, 500);
@@ -332,7 +347,7 @@ export default function QuizTake() {
 
     // Copy-paste prevention
     const preventCopyPaste = (e: ClipboardEvent) => {
-      if (quizCompleted || isSubmissionInProgress || !isActive) return;
+      if (quizCompleted || isSubmissionInProgress || submittingRef.current || !isActiveRef.current) return;
       
       e.preventDefault();
       setCopyPasteAttempts(prev => {
@@ -356,7 +371,7 @@ export default function QuizTake() {
 
     // Hotkey blocking - only active when not processing visibility changes
     const preventHotkeys = (e: KeyboardEvent) => {
-      if (quizCompleted || isSubmissionInProgress || isProcessingVisibility || !isActive) return;
+      if (quizCompleted || isSubmissionInProgress || submittingRef.current || isProcessingVisibility || !isActiveRef.current) return;
       
       if (e.ctrlKey || e.altKey || e.metaKey) {
         // Allow some essential combinations like Ctrl+Home, Ctrl+End for navigation
@@ -393,35 +408,37 @@ export default function QuizTake() {
     };
 
     const exitHandler = () => {
-      if (!document.fullscreenElement && !quizCompleted && !isSubmissionInProgress && isActive) {
+      if (!document.fullscreenElement && !quizCompleted && !isSubmissionInProgress && !submittingRef.current && isActiveRef.current) {
         setIsFullScreen(false);
-        visibilityViolations += 1;
-        setWarnings(visibilityViolations);
+        const newWarnings = warningsRef.current + 1;
+        warningsRef.current = newWarnings;
+        setWarnings(newWarnings);
         
         toast({
-          title: `Warning ${visibilityViolations}/3`,
-          description: `Full-screen mode exited. ${3 - visibilityViolations} warnings left before automatic submission.`,
+          title: `Warning ${newWarnings}/3`,
+          description: `Full-screen mode exited. ${3 - newWarnings} warnings left before automatic submission.`,
           variant: "destructive",
         });
         
-        if (visibilityViolations >= 3) {
+        if (newWarnings >= 3) {
           toast({
             title: "Quiz terminated",
             description: "Too many full-screen exits detected. Your quiz has been automatically submitted.",
             variant: "destructive",
           });
+          submittingRef.current = true;
           setIsSubmissionInProgress(true);
           
           // Use a timeout to avoid race conditions
           visibilityTimer = window.setTimeout(() => {
-            if (isActive) {
+            if (isActiveRef.current) {
               submitQuiz();
             }
           }, 500);
         } else {
           // Try to re-enter fullscreen after a brief delay
           visibilityTimer = window.setTimeout(() => {
-            if (!isSubmissionInProgress && !quizCompleted && isActive) {
+            if (!isSubmissionInProgress && !submittingRef.current && !quizCompleted && isActiveRef.current) {
               enterFullScreen();
             }
           }, 2000);
@@ -430,7 +447,7 @@ export default function QuizTake() {
     };
 
     // Enter full screen when starting quiz
-    if (!isFullScreen && !quizCompleted && !isSubmissionInProgress) {
+    if (!isFullScreen && !quizCompleted && !isSubmissionInProgress && !submittingRef.current) {
       enterFullScreen();
     }
 
@@ -458,7 +475,7 @@ export default function QuizTake() {
 
     return () => {
       // Set isActive to false to prevent callbacks from running after unmount
-      isActive = false;
+      isActiveRef.current = false;
       
       // Clear any pending timers
       if (visibilityTimer !== null) {
