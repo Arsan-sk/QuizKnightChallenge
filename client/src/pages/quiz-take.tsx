@@ -142,6 +142,10 @@ export default function QuizTake() {
         throw new Error("Questions not loaded properly");
       }
       
+      if (!id) {
+        throw new Error("Quiz ID is missing");
+      }
+      
       for (let i = 0; i < questions.length; i++) {
         if (answers[i] === questions[i].correctAnswer) {
           correctCount++;
@@ -168,6 +172,7 @@ export default function QuizTake() {
           console.log(`Submitting quiz, attempt ${retryCount + 1}/${maxRetries + 1}`);
           // Prepare request data
           const requestData = {
+            quizId: parseInt(id), // Add quizId as a number
             answers: JSON.stringify(answers),
             score: Math.round(scorePercentage),
             timeTaken: Math.floor(submitTime / 1000),
@@ -301,75 +306,106 @@ export default function QuizTake() {
     isActiveRef.current = true;
     
     let visibilityTimer: number | null = null;
+    let tabSwitchDebounceTimer: number | null = null;
+    let failsafeTimer: number | null = null;
     
     // Tab switching detection - completely rewritten for reliability
     const handleVisibilityChange = () => {
-      // Debug visibility change events
-      console.log("Visibility change detected, document.hidden:", document.hidden);
-      
-      // Exit early if not active or quiz already completed
-      if (!isActiveRef.current || quizCompleted || isSubmissionInProgress || submittingRef.current) {
-        console.log("Skipping visibility handling due to state:", {
-          isActive: isActiveRef.current,
-          quizCompleted,
-          isSubmissionInProgress,
-          isSubmitting: submittingRef.current
-        });
-        return;
+      // Clear any existing debounce timer
+      if (tabSwitchDebounceTimer !== null) {
+        window.clearTimeout(tabSwitchDebounceTimer);
       }
       
-      if (document.hidden) {
-        // When tab becomes hidden - store timestamp and disable hotkey detection
-        console.log("Tab hidden, storing timestamp");
-        setIsProcessingVisibility(true);
-        setTabSwitchTimestamp(Date.now());
-      } else if (tabSwitchTimestamp) {
-        // When tab becomes visible again
-        const hiddenDuration = (Date.now() - tabSwitchTimestamp) / 1000;
-        console.log("Tab visible again, hidden duration:", hiddenDuration);
+      // Use debounce to prevent rapid visibility changes from causing issues
+      tabSwitchDebounceTimer = window.setTimeout(() => {
+        // Debug visibility change events
+        console.log("Visibility change detected, document.hidden:", document.hidden);
         
-        // Only count as violation if hidden for more than 1 second
-        if (hiddenDuration > 1) {
-          const newWarnings = warningsRef.current + 1;
-          warningsRef.current = newWarnings;
-          setWarnings(newWarnings);
-          
-          toast({
-            title: `Tab Switching Warning ${newWarnings}/3`,
-            description: `Tab switching detected. ${3 - newWarnings} warnings left before automatic submission.`,
-            variant: "destructive",
+        // Exit early if not active or quiz already completed
+        if (!isActiveRef.current || quizCompleted || isSubmissionInProgress || submittingRef.current) {
+          console.log("Skipping visibility handling due to state:", {
+            isActive: isActiveRef.current,
+            quizCompleted,
+            isSubmissionInProgress,
+            isSubmitting: submittingRef.current
           });
+          return;
+        }
+        
+        if (document.hidden) {
+          // When tab becomes hidden - store timestamp and disable hotkey detection
+          console.log("Tab hidden, storing timestamp");
+          setIsProcessingVisibility(true);
+          setTabSwitchTimestamp(Date.now());
           
-          if (newWarnings >= 3) {
+          // Set a failsafe to reset tab switch timestamp if the tab is left inactive for too long
+          // (in case visibilitychange event doesn't fire when returning)
+          if (failsafeTimer !== null) {
+            window.clearTimeout(failsafeTimer);
+          }
+          
+          failsafeTimer = window.setTimeout(() => {
+            console.log("Failsafe triggered - resetting tab switch state");
+            setTabSwitchTimestamp(null);
+            setIsProcessingVisibility(false);
+          }, 30000); // 30 seconds failsafe
+          
+        } else if (tabSwitchTimestamp) {
+          // When tab becomes visible again
+          const hiddenDuration = (Date.now() - tabSwitchTimestamp) / 1000;
+          console.log("Tab visible again, hidden duration:", hiddenDuration);
+          
+          // Clear failsafe timer
+          if (failsafeTimer !== null) {
+            window.clearTimeout(failsafeTimer);
+            failsafeTimer = null;
+          }
+          
+          // Only count as violation if hidden for more than 1 second
+          if (hiddenDuration > 1) {
+            const newWarnings = warningsRef.current + 1;
+            warningsRef.current = newWarnings;
+            setWarnings(newWarnings);
+            console.log(`Tab switching violation recorded! Warnings: ${newWarnings}/3`);
+            
             toast({
-              title: "Quiz terminated",
-              description: "Too many tab switches detected. Your quiz has been automatically submitted.",
+              title: `Tab Switching Warning ${newWarnings}/3`,
+              description: `Tab switching detected. ${3 - newWarnings} warnings left before automatic submission.`,
               variant: "destructive",
             });
             
-            // Set flags before submission to prevent race conditions
-            submittingRef.current = true;
-            setIsSubmissionInProgress(true);
-            
-            // Use a timeout to ensure state updates before submission
-            visibilityTimer = window.setTimeout(() => {
-              if (isActiveRef.current) {
-                submitQuiz();
-              }
-            }, 500);
+            if (newWarnings >= 3) {
+              console.log("Maximum tab switching violations reached. Submitting quiz...");
+              toast({
+                title: "Quiz terminated",
+                description: "Too many tab switches detected. Your quiz has been automatically submitted.",
+                variant: "destructive",
+              });
+              
+              // Set flags before submission to prevent race conditions
+              submittingRef.current = true;
+              setIsSubmissionInProgress(true);
+              
+              // Use a timeout to ensure state updates before submission
+              visibilityTimer = window.setTimeout(() => {
+                if (isActiveRef.current) {
+                  submitQuiz();
+                }
+              }, 500);
+            }
           }
+          
+          // Reset tab switch tracking
+          setTabSwitchTimestamp(null);
+          
+          // Add a small delay before enabling hotkey detection again
+          visibilityTimer = window.setTimeout(() => {
+            if (isActiveRef.current) {
+              setIsProcessingVisibility(false);
+            }
+          }, 500);
         }
-        
-        // Reset tab switch tracking
-        setTabSwitchTimestamp(null);
-        
-        // Add a small delay before enabling hotkey detection again
-        visibilityTimer = window.setTimeout(() => {
-          if (isActiveRef.current) {
-            setIsProcessingVisibility(false);
-          }
-        }, 500);
-      }
+      }, 100); // Debounce for 100ms
     };
 
     // Copy-paste prevention
@@ -515,6 +551,14 @@ export default function QuizTake() {
       // Clear any pending timers
       if (visibilityTimer !== null) {
         window.clearTimeout(visibilityTimer);
+      }
+      
+      if (tabSwitchDebounceTimer !== null) {
+        window.clearTimeout(tabSwitchDebounceTimer);
+      }
+      
+      if (failsafeTimer !== null) {
+        window.clearTimeout(failsafeTimer);
       }
       
       document.removeEventListener("visibilitychange", handleVisibilityChange);
@@ -789,7 +833,7 @@ export default function QuizTake() {
               <p className="text-muted-foreground mb-4">{quiz.description}</p>
               {warnings > 0 && (
                 <p className="text-red-500 mb-2">
-                  Warning: Tab switching detected! ({warnings}/3)
+                  Tab Switching Warning! ({warnings}/3)
                 </p>
               )}
               <Progress
@@ -900,7 +944,7 @@ export default function QuizTake() {
             <p className="text-muted-foreground mb-4">{quiz.description}</p>
             {warnings > 0 && (
               <p className="text-red-500 mb-2">
-                Warning: Tab switching detected! ({warnings}/3)
+                Tab Switching Warning! ({warnings}/3)
               </p>
             )}
             <Progress
