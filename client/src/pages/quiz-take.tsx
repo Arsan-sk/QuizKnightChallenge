@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useLocation } from "wouter";
-import { useQuery, useMutation, UseQueryOptions } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { Quiz, Question as QuestionType, User } from "@shared/schema";
 import { Question } from "@/components/quiz/Question";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { QuizProgress } from "@/components/ui/quiz-progress";
 import { CountdownTimer } from "@/components/ui/countdown-timer";
 import { QuestionTransition } from "@/components/ui/question-transition";
-import { apiRequest, queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 import { Loader2, Trophy, Clock, CheckCircle, XCircle, Search } from "lucide-react";
 import { motion } from "framer-motion";
 import { NavBar } from "@/components/layout/nav-bar";
@@ -63,37 +63,30 @@ export default function QuizTake() {
   const [hasAttempted, setHasAttempted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const { data: quiz, isError: quizError, isLoading } = useQuery<Quiz>({
+  const { 
+    data: quiz, 
+    isError: quizError, 
+    isLoading 
+  } = useQuery({
     queryKey: [`/api/quizzes/${id}`],
-    onSuccess: () => {},
-    onError: (error: Error) => {
-      toast({
-        title: "Error loading quiz",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
   });
 
-  const { data: questions, isError: questionsError } = useQuery<QuestionType[]>({
+  const { 
+    data: questions, 
+    isError: questionsError 
+  } = useQuery({
     queryKey: [`/api/quizzes/${id}/questions`],
-    onSuccess: () => {},
-    onError: (error: Error) => {
-      toast({
-        title: "Error loading questions",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
   });
 
-  const { data: leaderboard, refetch: refetchLeaderboard } = useQuery<LeaderboardEntry[]>({
+  const { 
+    data: leaderboard, 
+    refetch: refetchLeaderboard 
+  } = useQuery({
     queryKey: [`/api/quizzes/${id}/leaderboard`],
     enabled: quizCompleted,
   });
 
-  // Check if user has already attempted this quiz
-  const { data: user } = useQuery<User>({
+  const { data: user } = useQuery({
     queryKey: ['/api/user'],
   });
 
@@ -109,7 +102,6 @@ export default function QuizTake() {
           variant: "destructive",
         });
       } else {
-        // Register a new attempt
         registerAttempt(parseInt(id), user.id);
       }
     }
@@ -117,30 +109,31 @@ export default function QuizTake() {
 
   const submitQuiz = async () => {
     try {
-      if (!questions || !timeStarted || !user?.id) return;
+      if (!questions || !Array.isArray(questions) || questions.length === 0 || !timeStarted || !user?.id) {
+        console.error("Missing required data for quiz submission");
+        return;
+      }
       
       setSubmitting(true);
       
-      // Calculate correct answers
       let correctCount = 0;
       let wrongCount = 0;
       
-      for (let i = 0; i < questions.length; i++) {
-        if (answers[i] === questions[i].correctAnswer) {
+      const questionsArray = questions as QuestionType[];
+      
+      for (let i = 0; i < questionsArray.length; i++) {
+        if (answers[i] === questionsArray[i].correctAnswer) {
           correctCount++;
         } else if (answers[i]) {
           wrongCount++;
         }
       }
       
-      // Calculate score as percentage
-      const scorePercentage = (correctCount / questions.length) * 100;
+      const scorePercentage = (correctCount / questionsArray.length) * 100;
       
-      // Points calculation: 2 points per correct answer
       const pointsEarned = correctCount * 2;
       
-      // Submit result
-      const result = await apiRequest(
+      await apiRequest(
         'POST',
         `/api/quizzes/${id}/results`,
         {
@@ -149,7 +142,7 @@ export default function QuizTake() {
           timeTaken: Math.floor((Date.now() - timeStarted.getTime()) / 1000),
           correctAnswers: correctCount,
           wrongAnswers: wrongCount,
-          totalQuestions: questions.length,
+          totalQuestions: questionsArray.length,
         }
       );
       
@@ -158,7 +151,7 @@ export default function QuizTake() {
         timeTaken: Math.floor((Date.now() - timeStarted.getTime()) / 1000),
         correctAnswers: correctCount,
         wrongAnswers: wrongCount,
-        totalQuestions: questions.length,
+        totalQuestions: questionsArray.length,
         pointsEarned: pointsEarned
       });
       
@@ -200,7 +193,6 @@ export default function QuizTake() {
   useEffect(() => {
     setTimeStarted(new Date());
 
-    // Tab switching detection
     const handleVisibilityChange = () => {
       if (document.hidden && !quizCompleted) {
         setWarnings((w) => {
@@ -224,7 +216,6 @@ export default function QuizTake() {
       }
     };
 
-    // Copy-paste prevention
     const preventCopyPaste = (e: ClipboardEvent) => {
       if (!quizCompleted) {
         e.preventDefault();
@@ -248,10 +239,8 @@ export default function QuizTake() {
       }
     };
 
-    // Hotkey blocking
     const preventHotkeys = (e: KeyboardEvent) => {
       if (!quizCompleted && (e.ctrlKey || e.altKey || e.metaKey)) {
-        // Allow some essential combinations like Ctrl+Home, Ctrl+End for navigation
         const allowedCombinations = ['Home', 'End'];
         if (!allowedCombinations.includes(e.key)) {
           e.preventDefault();
@@ -264,7 +253,6 @@ export default function QuizTake() {
       }
     };
 
-    // Full screen handling
     const enterFullScreen = () => {
       const element = document.documentElement;
       if (element.requestFullscreen) {
@@ -297,12 +285,10 @@ export default function QuizTake() {
       }
     };
 
-    // Enter full screen when starting quiz
     if (!isFullScreen && !quizCompleted) {
       enterFullScreen();
     }
 
-    // Event listeners
     document.addEventListener("visibilitychange", handleVisibilityChange);
     document.addEventListener("copy", preventCopyPaste);
     document.addEventListener("cut", preventCopyPaste);
@@ -318,7 +304,7 @@ export default function QuizTake() {
       document.removeEventListener("keydown", preventHotkeys);
       document.removeEventListener("fullscreenchange", exitHandler);
     };
-  }, [quizCompleted, isFullScreen]);
+  }, [quizCompleted, isFullScreen, toast, submitQuiz]);
 
   if (isLoading) {
     return (
@@ -376,13 +362,16 @@ export default function QuizTake() {
     );
   }
 
-  if (!quiz || !questions) {
+  if (!quiz || !questions || !Array.isArray(questions) || questions.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     );
   }
+
+  const typedQuiz = quiz as Quiz;
+  const typedQuestions = questions as QuestionType[];
 
   if (hasAttempted) {
     return (
@@ -408,7 +397,7 @@ export default function QuizTake() {
   };
 
   const next = () => {
-    if (currentQuestion < questions.length - 1) {
+    if (currentQuestion < typedQuestions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
     }
   };
@@ -440,7 +429,7 @@ export default function QuizTake() {
             </p>
           </motion.div>
 
-          {leaderboard && leaderboard.length > 0 && (
+          {leaderboard && Array.isArray(leaderboard) && leaderboard.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -456,7 +445,7 @@ export default function QuizTake() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {leaderboard.map((entry, index) => (
+                    {(leaderboard as LeaderboardEntry[]).map((entry, index) => (
                       <div 
                         key={entry.id} 
                         className={`flex items-center justify-between p-3 rounded-lg ${
@@ -503,9 +492,9 @@ export default function QuizTake() {
           </div>
         </div>
 
-        {showReview && questions && (
+        {showReview && (
           <QuizReview 
-            questions={questions} 
+            questions={typedQuestions} 
             userAnswers={answers} 
             onClose={() => setShowReview(false)} 
           />
@@ -514,7 +503,7 @@ export default function QuizTake() {
     );
   }
 
-  if (!isLoading && quiz && questions && quiz.quizType === "live" && quiz.isActive) {
+  if (typedQuiz.quizType === "live" && typedQuiz.isActive) {
     return (
       <div className="min-h-screen bg-background">
         <NavBar />
@@ -532,14 +521,14 @@ export default function QuizTake() {
             className="max-w-3xl mx-auto"
           >
             <div className="mb-6">
-              <h1 className="text-3xl font-bold">{quiz.title}</h1>
-              <p className="text-muted-foreground">{quiz.description}</p>
+              <h1 className="text-3xl font-bold">{typedQuiz.title}</h1>
+              <p className="text-muted-foreground">{typedQuiz.description}</p>
             </div>
             
             <div className="bg-card rounded-lg shadow-sm p-6 border">
               <LiveQuizController 
-                questions={questions}
-                duration={quiz.duration || 30}
+                questions={typedQuestions}
+                duration={typedQuiz.duration || 30}
                 onAnswer={handleAnswer}
                 onComplete={submitQuiz}
                 userAnswers={answers}
@@ -551,8 +540,7 @@ export default function QuizTake() {
     );
   }
   
-  // Regular quiz rendering for non-live quizzes
-  if (!isLoading && !quizCompleted && quiz) {
+  if (!quizCompleted) {
     return (
       <div className="min-h-screen bg-background">
         <NavBar />
@@ -569,23 +557,23 @@ export default function QuizTake() {
             transition={{ duration: 0.5 }}
           >
             <div className="mb-8">
-              <h1 className="text-3xl font-bold mb-2">{quiz.title}</h1>
-              <p className="text-muted-foreground mb-4">{quiz.description}</p>
+              <h1 className="text-3xl font-bold mb-2">{typedQuiz.title}</h1>
+              <p className="text-muted-foreground mb-4">{typedQuiz.description}</p>
               {warnings > 0 && (
                 <p className="text-red-500 mb-2">
                   Warning: Tab switching detected! ({warnings}/3)
                 </p>
               )}
               <Progress
-                value={((currentQuestion + 1) / questions.length) * 100}
+                value={((currentQuestion + 1) / typedQuestions.length) * 100}
                 className="h-2"
               />
             </div>
 
-            {quiz.timeLimit > 0 && (
+            {typedQuiz.duration && typedQuiz.duration > 0 && (
               <div className="flex justify-end mb-4">
                 <CountdownTimer 
-                  duration={quiz.timeLimit * 60} 
+                  duration={typedQuiz.duration * 60} 
                   onTimeUp={() => {
                     toast({
                       title: "Time's up!",
@@ -600,33 +588,35 @@ export default function QuizTake() {
             
             <QuizProgress 
               currentQuestion={currentQuestion + 1} 
-              totalQuestions={questions.length}
+              totalQuestions={typedQuestions.length}
               className="mb-6" 
             />
             
-            <QuestionTransition 
-              id={currentQuestion}
-              direction={currentQuestion > 0 ? "right" : "left"}
-            >
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>
-                    Question {currentQuestion + 1}
-                  </CardTitle>
-                  <CardDescription>
-                    {quiz.title} - {quiz.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Question
-                    question={questions[currentQuestion]}
-                    userAnswer={answers[currentQuestion] || ""}
-                    onChange={handleAnswer}
-                    showResult={false}
-                  />
-                </CardContent>
-              </Card>
-            </QuestionTransition>
+            {typedQuestions.length > 0 && currentQuestion < typedQuestions.length && (
+              <QuestionTransition 
+                id={currentQuestion}
+                direction={currentQuestion > 0 ? "right" : "left"}
+              >
+                <Card className="mb-6">
+                  <CardHeader>
+                    <CardTitle>
+                      Question {currentQuestion + 1}
+                    </CardTitle>
+                    <CardDescription>
+                      {typedQuiz.title} - {typedQuiz.description}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Question
+                      question={typedQuestions[currentQuestion]}
+                      userAnswer={answers[currentQuestion] || ""}
+                      onChange={handleAnswer}
+                      showResult={false}
+                    />
+                  </CardContent>
+                </Card>
+              </QuestionTransition>
+            )}
             
             <div className="flex justify-between mt-4">
               <Button
@@ -637,13 +627,13 @@ export default function QuizTake() {
                 Previous
               </Button>
               
-              {currentQuestion < questions.length - 1 ? (
+              {currentQuestion < typedQuestions.length - 1 ? (
                 <Button onClick={next}>Next</Button>
               ) : (
                 <Button 
                   onClick={() => {
-                    if (answers.filter(Boolean).length < questions.length) {
-                      const unanswered = questions.length - answers.filter(Boolean).length;
+                    if (answers.filter(Boolean).length < typedQuestions.length) {
+                      const unanswered = typedQuestions.length - answers.filter(Boolean).length;
                       
                       if (window.confirm(`You have ${unanswered} unanswered question(s). Are you sure you want to submit?`)) {
                         submitQuiz();
@@ -667,111 +657,12 @@ export default function QuizTake() {
   return (
     <div className="min-h-screen bg-background">
       <NavBar />
-      
-      <WebcamMonitor 
-        enabled={enableWebcam && !quizCompleted} 
-        onViolationDetected={handleWebcamViolation} 
-      />
-      
-      <div className="container mx-auto px-4 py-8">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">{quiz?.title}</h1>
-            <p className="text-muted-foreground mb-4">{quiz?.description}</p>
-            {warnings > 0 && (
-              <p className="text-red-500 mb-2">
-                Warning: Tab switching detected! ({warnings}/3)
-              </p>
-            )}
-            <Progress
-              value={((currentQuestion + 1) / (questions?.length || 1)) * 100}
-              className="h-2"
-            />
-          </div>
-
-          {quiz?.timeLimit > 0 && (
-            <div className="flex justify-end mb-4">
-              <CountdownTimer 
-                duration={quiz.timeLimit * 60} 
-                onTimeUp={() => {
-                  toast({
-                    title: "Time's up!",
-                    description: "Your quiz has been automatically submitted.",
-                  });
-                  submitQuiz();
-                }}
-                className="mb-4"
-              />
-            </div>
-          )}
-          
-          <QuizProgress 
-            currentQuestion={currentQuestion + 1} 
-            totalQuestions={questions?.length || 0}
-            className="mb-6" 
-          />
-          
-          {questions && questions[currentQuestion] && (
-            <QuestionTransition 
-              id={currentQuestion}
-              direction={currentQuestion > 0 ? "right" : "left"}
-            >
-              <Card className="mb-6">
-                <CardHeader>
-                  <CardTitle>
-                    Question {currentQuestion + 1}
-                  </CardTitle>
-                  <CardDescription>
-                    {quiz?.title} - {quiz?.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Question
-                    question={questions[currentQuestion]}
-                    userAnswer={answers[currentQuestion] || ""}
-                    onChange={handleAnswer}
-                    showResult={false}
-                  />
-                </CardContent>
-              </Card>
-            </QuestionTransition>
-          )}
-          
-          <div className="flex justify-between mt-4">
-            <Button
-              variant="outline"
-              onClick={previous}
-              disabled={currentQuestion === 0}
-            >
-              Previous
-            </Button>
-            
-            {questions && currentQuestion < questions.length - 1 ? (
-              <Button onClick={next}>Next</Button>
-            ) : (
-              <Button 
-                onClick={() => {
-                  if (questions && answers.filter(Boolean).length < questions.length) {
-                    const unanswered = questions.length - answers.filter(Boolean).length;
-                    
-                    if (window.confirm(`You have ${unanswered} unanswered question(s). Are you sure you want to submit?`)) {
-                      submitQuiz();
-                    }
-                  } else {
-                    submitQuiz();
-                  }
-                }}
-                disabled={submitting}
-              >
-                {submitting ? "Submitting..." : "Submit Quiz"}
-              </Button>
-            )}
-          </div>
-        </motion.div>
+      <div className="container mx-auto p-8 text-center">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+        <h1 className="text-2xl font-bold mb-4">Loading Quiz</h1>
+        <p className="text-muted-foreground">
+          Please wait while we load your quiz...
+        </p>
       </div>
     </div>
   );
