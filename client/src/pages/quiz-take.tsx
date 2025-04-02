@@ -114,6 +114,8 @@ export default function QuizTake() {
   }, [user, id, toast]);
 
   const submitQuiz = async () => {
+    if (submitting) return; // Prevent double submissions
+    
     try {
       setSubmitting(true);
       
@@ -158,16 +160,25 @@ export default function QuizTake() {
       });
       
       completeAttempt(parseInt(id), user.id);
+      
+      // Clear quiz state from localStorage since we've successfully submitted
+      try {
+        localStorage.removeItem('quiz_state');
+      } catch (err) {
+        console.error("Error clearing quiz state:", err);
+      }
+      
       await refetchLeaderboard();
       setQuizCompleted(true);
     } catch (error) {
       console.error('Error submitting quiz:', error);
       toast({
         title: "Error submitting quiz",
-        description: error.message,
+        description: "There was an error submitting your quiz. Please try again.",
         variant: "destructive",
       });
-    } finally {
+      
+      // Allow retry after error
       setSubmitting(false);
     }
   };
@@ -176,49 +187,90 @@ export default function QuizTake() {
     setWarnings(prev => {
       const newWarnings = prev + 1;
       
+      // Update localStorage state
+      if (user && id) {
+        try {
+          localStorage.setItem('quiz_state', JSON.stringify({
+            quizId: id,
+            userId: user.id,
+            warnings: newWarnings,
+            timestamp: new Date().toISOString()
+          }));
+        } catch (err) {
+          console.error("Error saving quiz state:", err);
+        }
+      }
+      
       if (newWarnings >= 3) {
         toast({
           title: "Quiz terminated",
           description: "Multiple people detected. Your quiz has been automatically submitted.",
           variant: "destructive",
         });
-        submitQuiz();
+        
+        // Use setTimeout to ensure state updates before submission
+        setTimeout(() => {
+          submitQuiz();
+        }, 100);
       }
       
       return newWarnings;
     });
-  }, [submitQuiz, toast]);
+  }, [submitQuiz, toast, id, user]);
 
   useEffect(() => {
     setTimeStarted(new Date());
+    
+    let visibilityViolations = warnings;
+    let isSubmitting = false;
 
     // Tab switching detection
     const handleVisibilityChange = () => {
-      if (document.hidden && !quizCompleted) {
-        setWarnings((w) => {
-          const newWarnings = w + 1;
-          toast({
-            title: `Warning ${newWarnings}/3`,
-            description: `Tab switching detected. ${3 - newWarnings} warnings left before automatic submission.`,
-            variant: "destructive",
-          });
-          
-          if (newWarnings >= 3) {
-            toast({
-              title: "Quiz terminated",
-              description: "Too many tab switches detected. Your quiz has been automatically submitted.",
-              variant: "destructive",
-            });
-            submitQuiz();
+      if (document.hidden && !quizCompleted && !isSubmitting) {
+        // Store the current timestamp when tab becomes invisible
+        const hiddenTimestamp = Date.now();
+        
+        // Function to check when tab becomes visible again
+        const handleVisibilityReturn = () => {
+          if (!document.hidden) {
+            document.removeEventListener('visibilitychange', handleVisibilityReturn);
+            
+            // Check how long the tab was hidden (in seconds)
+            const hiddenDuration = (Date.now() - hiddenTimestamp) / 1000;
+            
+            // Only count it as a violation if hidden for more than 1 second
+            // This helps avoid false positives from quick alt-tabs or system notifications
+            if (hiddenDuration > 1) {
+              visibilityViolations += 1;
+              setWarnings(visibilityViolations);
+              
+              toast({
+                title: `Warning ${visibilityViolations}/3`,
+                description: `Tab switching detected. ${3 - visibilityViolations} warnings left before automatic submission.`,
+                variant: "destructive",
+              });
+              
+              if (visibilityViolations >= 3) {
+                toast({
+                  title: "Quiz terminated",
+                  description: "Too many tab switches detected. Your quiz has been automatically submitted.",
+                  variant: "destructive",
+                });
+                isSubmitting = true;
+                submitQuiz();
+              }
+            }
           }
-          return newWarnings;
-        });
+        };
+        
+        // Add a one-time listener for when tab becomes visible again
+        document.addEventListener('visibilitychange', handleVisibilityReturn);
       }
     };
 
     // Copy-paste prevention
     const preventCopyPaste = (e: ClipboardEvent) => {
-      if (!quizCompleted) {
+      if (!quizCompleted && !isSubmitting) {
         e.preventDefault();
         setCopyPasteAttempts(prev => {
           const newAttempts = prev + 1;
@@ -242,7 +294,7 @@ export default function QuizTake() {
 
     // Hotkey blocking
     const preventHotkeys = (e: KeyboardEvent) => {
-      if (!quizCompleted && (e.ctrlKey || e.altKey || e.metaKey)) {
+      if (!quizCompleted && !isSubmitting && (e.ctrlKey || e.altKey || e.metaKey)) {
         // Allow some essential combinations like Ctrl+Home, Ctrl+End for navigation
         const allowedCombinations = ['Home', 'End'];
         if (!allowedCombinations.includes(e.key)) {
@@ -258,34 +310,52 @@ export default function QuizTake() {
 
     // Full screen handling
     const enterFullScreen = () => {
-      const element = document.documentElement;
-      if (element.requestFullscreen) {
-        element.requestFullscreen();
+      try {
+        const element = document.documentElement;
+        if (element.requestFullscreen) {
+          element.requestFullscreen().catch(err => {
+            console.error("Error attempting to enable full-screen mode:", err);
+            toast({
+              title: "Full Screen Error",
+              description: "Could not enter full screen mode. Please try manually.",
+              variant: "destructive",
+            });
+          });
+        }
+        setIsFullScreen(true);
+      } catch (err) {
+        console.error("Error in enterFullScreen:", err);
       }
-      setIsFullScreen(true);
     };
 
     const exitHandler = () => {
-      if (!document.fullscreenElement && !quizCompleted) {
+      if (!document.fullscreenElement && !quizCompleted && !isSubmitting) {
         setIsFullScreen(false);
-        setWarnings(prev => {
-          const newWarnings = prev + 1;
+        visibilityViolations += 1;
+        setWarnings(visibilityViolations);
+        
+        toast({
+          title: `Warning ${visibilityViolations}/3`,
+          description: `Full-screen mode exited. ${3 - visibilityViolations} warnings left before automatic submission.`,
+          variant: "destructive",
+        });
+        
+        if (visibilityViolations >= 3) {
           toast({
-            title: `Warning ${newWarnings}/3`,
-            description: `Full-screen mode exited. ${3 - newWarnings} warnings left before automatic submission.`,
+            title: "Quiz terminated",
+            description: "Too many full-screen exits detected. Your quiz has been automatically submitted.",
             variant: "destructive",
           });
-          
-          if (newWarnings >= 3) {
-            toast({
-              title: "Quiz terminated",
-              description: "Too many full-screen exits detected. Your quiz has been automatically submitted.",
-              variant: "destructive",
-            });
-            submitQuiz();
-          }
-          return newWarnings;
-        });
+          isSubmitting = true;
+          submitQuiz();
+        } else {
+          // Try to re-enter fullscreen after a brief delay
+          setTimeout(() => {
+            if (!isSubmitting && !quizCompleted) {
+              enterFullScreen();
+            }
+          }, 2000);
+        }
       }
     };
 
@@ -302,6 +372,20 @@ export default function QuizTake() {
     document.addEventListener("keydown", preventHotkeys);
     document.addEventListener("fullscreenchange", exitHandler);
 
+    // Save initial state to localStorage as a backup
+    if (user && id) {
+      try {
+        localStorage.setItem('quiz_state', JSON.stringify({
+          quizId: id,
+          userId: user.id,
+          warnings: warnings,
+          timestamp: new Date().toISOString()
+        }));
+      } catch (err) {
+        console.error("Error saving quiz state:", err);
+      }
+    }
+
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       document.removeEventListener("copy", preventCopyPaste);
@@ -310,7 +394,7 @@ export default function QuizTake() {
       document.removeEventListener("keydown", preventHotkeys);
       document.removeEventListener("fullscreenchange", exitHandler);
     };
-  }, [quizCompleted, isFullScreen]);
+  }, [quizCompleted, isFullScreen, id, user, warnings, submitQuiz]);
 
   if (isLoading) {
     return (
