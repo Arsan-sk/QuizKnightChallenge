@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useLocation } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Quiz, Question as QuestionType } from "@shared/schema";
+import { useQuery, useMutation, UseQueryOptions } from "@tanstack/react-query";
+import { Quiz, Question as QuestionType, User } from "@shared/schema";
 import { Question } from "@/components/quiz/Question";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -45,7 +45,7 @@ export default function QuizTake() {
   const { toast } = useToast();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
-  const [timeStarted, setTimeStarted] = useState<Date>();
+  const [timeStarted, setTimeStarted] = useState<Date>(new Date());
   const [warnings, setWarnings] = useState(0);
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [showReview, setShowReview] = useState(false);
@@ -65,7 +65,8 @@ export default function QuizTake() {
 
   const { data: quiz, isError: quizError, isLoading } = useQuery<Quiz>({
     queryKey: [`/api/quizzes/${id}`],
-    onError: (error) => {
+    onSuccess: () => {},
+    onError: (error: Error) => {
       toast({
         title: "Error loading quiz",
         description: error.message,
@@ -76,7 +77,8 @@ export default function QuizTake() {
 
   const { data: questions, isError: questionsError } = useQuery<QuestionType[]>({
     queryKey: [`/api/quizzes/${id}/questions`],
-    onError: (error) => {
+    onSuccess: () => {},
+    onError: (error: Error) => {
       toast({
         title: "Error loading questions",
         description: error.message,
@@ -91,12 +93,12 @@ export default function QuizTake() {
   });
 
   // Check if user has already attempted this quiz
-  const { data: user } = useQuery({
+  const { data: user } = useQuery<User>({
     queryKey: ['/api/user'],
   });
 
   useEffect(() => {
-    if (user && id) {
+    if (user && id && user.id) {
       const attempted = hasAttemptedQuiz(parseInt(id), user.id);
       setHasAttempted(attempted);
       
@@ -115,6 +117,8 @@ export default function QuizTake() {
 
   const submitQuiz = async () => {
     try {
+      if (!questions || !timeStarted || !user?.id) return;
+      
       setSubmitting(true);
       
       // Calculate correct answers
@@ -158,14 +162,17 @@ export default function QuizTake() {
         pointsEarned: pointsEarned
       });
       
-      completeAttempt(parseInt(id), user.id);
+      if (id) {
+        completeAttempt(parseInt(id), user.id);
+      }
+      
       await refetchLeaderboard();
       setQuizCompleted(true);
     } catch (error) {
       console.error('Error submitting quiz:', error);
       toast({
         title: "Error submitting quiz",
-        description: error.message,
+        description: error instanceof Error ? error.message : "An unknown error occurred",
         variant: "destructive",
       });
     } finally {
@@ -607,7 +614,7 @@ export default function QuizTake() {
                     Question {currentQuestion + 1}
                   </CardTitle>
                   <CardDescription>
-                    {quiz.name} - {quiz.description}
+                    {quiz.title} - {quiz.description}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -673,20 +680,20 @@ export default function QuizTake() {
           transition={{ duration: 0.5 }}
         >
           <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">{quiz.title}</h1>
-            <p className="text-muted-foreground mb-4">{quiz.description}</p>
+            <h1 className="text-3xl font-bold mb-2">{quiz?.title}</h1>
+            <p className="text-muted-foreground mb-4">{quiz?.description}</p>
             {warnings > 0 && (
               <p className="text-red-500 mb-2">
                 Warning: Tab switching detected! ({warnings}/3)
               </p>
             )}
             <Progress
-              value={((currentQuestion + 1) / questions.length) * 100}
+              value={((currentQuestion + 1) / (questions?.length || 1)) * 100}
               className="h-2"
             />
           </div>
 
-          {quiz.timeLimit > 0 && (
+          {quiz?.timeLimit > 0 && (
             <div className="flex justify-end mb-4">
               <CountdownTimer 
                 duration={quiz.timeLimit * 60} 
@@ -704,33 +711,35 @@ export default function QuizTake() {
           
           <QuizProgress 
             currentQuestion={currentQuestion + 1} 
-            totalQuestions={questions.length}
+            totalQuestions={questions?.length || 0}
             className="mb-6" 
           />
           
-          <QuestionTransition 
-            id={currentQuestion}
-            direction={currentQuestion > 0 ? "right" : "left"}
-          >
-            <Card className="mb-6">
-              <CardHeader>
-                <CardTitle>
-                  Question {currentQuestion + 1}
-                </CardTitle>
-                <CardDescription>
-                  {quiz.name} - {quiz.description}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Question
-                  question={questions[currentQuestion]}
-                  userAnswer={answers[currentQuestion] || ""}
-                  onChange={handleAnswer}
-                  showResult={false}
-                />
-              </CardContent>
-            </Card>
-          </QuestionTransition>
+          {questions && questions[currentQuestion] && (
+            <QuestionTransition 
+              id={currentQuestion}
+              direction={currentQuestion > 0 ? "right" : "left"}
+            >
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle>
+                    Question {currentQuestion + 1}
+                  </CardTitle>
+                  <CardDescription>
+                    {quiz?.title} - {quiz?.description}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Question
+                    question={questions[currentQuestion]}
+                    userAnswer={answers[currentQuestion] || ""}
+                    onChange={handleAnswer}
+                    showResult={false}
+                  />
+                </CardContent>
+              </Card>
+            </QuestionTransition>
+          )}
           
           <div className="flex justify-between mt-4">
             <Button
@@ -741,12 +750,12 @@ export default function QuizTake() {
               Previous
             </Button>
             
-            {currentQuestion < questions.length - 1 ? (
+            {questions && currentQuestion < questions.length - 1 ? (
               <Button onClick={next}>Next</Button>
             ) : (
               <Button 
                 onClick={() => {
-                  if (answers.filter(Boolean).length < questions.length) {
+                  if (questions && answers.filter(Boolean).length < questions.length) {
                     const unanswered = questions.length - answers.filter(Boolean).length;
                     
                     if (window.confirm(`You have ${unanswered} unanswered question(s). Are you sure you want to submit?`)) {
