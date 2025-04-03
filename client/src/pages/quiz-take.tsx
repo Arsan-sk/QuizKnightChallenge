@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, ReactNode } from "react";
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Quiz, Question as QuestionType, User } from "@shared/schema";
@@ -81,18 +81,21 @@ export default function QuizTake() {
   const { 
     data: leaderboard, 
     refetch: refetchLeaderboard 
-  } = useQuery({
+  } = useQuery<LeaderboardEntry[]>({
     queryKey: [`/api/quizzes/${id}/leaderboard`],
     enabled: quizCompleted,
   });
 
-  const { data: user } = useQuery({
+  const { data: user } = useQuery<User>({
     queryKey: ['/api/user'],
   });
 
+  const typedUser = user as User;
+
   useEffect(() => {
-    if (user && id && user.id) {
-      const attempted = hasAttemptedQuiz(parseInt(id), user.id);
+    if (user && 'id' in user && id) {
+      const userId = (user as User).id;
+      const attempted = hasAttemptedQuiz(parseInt(id), userId);
       setHasAttempted(attempted);
       
       if (attempted) {
@@ -102,14 +105,14 @@ export default function QuizTake() {
           variant: "destructive",
         });
       } else {
-        registerAttempt(parseInt(id), user.id);
+        registerAttempt(parseInt(id), userId);
       }
     }
   }, [user, id, toast]);
 
   const submitQuiz = async () => {
     try {
-      if (!questions || !Array.isArray(questions) || questions.length === 0 || !timeStarted || !user?.id) {
+      if (!questions || !Array.isArray(questions) || questions.length === 0 || !timeStarted || !user || !('id' in user)) {
         console.error("Missing required data for quiz submission");
         return;
       }
@@ -129,38 +132,45 @@ export default function QuizTake() {
         }
       }
       
-      const scorePercentage = (correctCount / questionsArray.length) * 100;
+      const totalQuestions = questionsArray.length;
+      const scorePercentage = (correctCount / totalQuestions) * 100;
+      const timeTaken = Math.floor((Date.now() - timeStarted.getTime()) / 1000);
       
       const pointsEarned = correctCount * 2;
       
-      await apiRequest(
-        'POST',
-        `/api/quizzes/${id}/results`,
-        {
-          answers: JSON.stringify(answers),
+      try {
+        await apiRequest(
+          'POST',
+          `/api/quizzes/${id}/results`,
+          {
+            quizId: parseInt(id as string),
+            score: Math.round(scorePercentage),
+            timeTaken: timeTaken,
+            correctAnswers: correctCount,
+            wrongAnswers: wrongCount,
+            totalQuestions: totalQuestions
+          }
+        );
+        
+        setQuizResult({
           score: Math.round(scorePercentage),
-          timeTaken: Math.floor((Date.now() - timeStarted.getTime()) / 1000),
+          timeTaken: timeTaken,
           correctAnswers: correctCount,
           wrongAnswers: wrongCount,
-          totalQuestions: questionsArray.length,
+          totalQuestions: totalQuestions,
+          pointsEarned: pointsEarned
+        });
+        
+        if (id) {
+          completeAttempt(parseInt(id), (user as User).id);
         }
-      );
-      
-      setQuizResult({
-        score: Math.round(scorePercentage),
-        timeTaken: Math.floor((Date.now() - timeStarted.getTime()) / 1000),
-        correctAnswers: correctCount,
-        wrongAnswers: wrongCount,
-        totalQuestions: questionsArray.length,
-        pointsEarned: pointsEarned
-      });
-      
-      if (id) {
-        completeAttempt(parseInt(id), user.id);
+        
+        await refetchLeaderboard();
+        setQuizCompleted(true);
+      } catch (error) {
+        console.error('Error submitting quiz:', error);
+        throw error; // Rethrow to be caught by the outer catch block
       }
-      
-      await refetchLeaderboard();
-      setQuizCompleted(true);
     } catch (error) {
       console.error('Error submitting quiz:', error);
       toast({
@@ -414,21 +424,87 @@ export default function QuizTake() {
         <NavBar />
         <div className="container max-w-6xl mx-auto p-6">
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="text-center mb-12"
+            className="mb-8 text-center"
           >
             <h1 className="text-3xl font-bold mb-2">Quiz Completed!</h1>
             <p className="text-xl text-muted-foreground">
               Your score: {quizResult.score}% ({quizResult.correctAnswers} of {quizResult.totalQuestions} correct)
             </p>
-            <p className="text-md text-muted-foreground mt-1">
-              <Trophy className="inline-block mr-1 h-4 w-4 text-yellow-500" />
-              You earned {quizResult.pointsEarned} points!
-            </p>
           </motion.div>
 
+          {/* Statistics Cards */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
+          >
+            <Card className="relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full bg-green-100/50"></div>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center">
+                  <Trophy className="mr-2 h-5 w-5 text-yellow-500" />
+                  Points Earned
+                </CardTitle>
+                <CardDescription>2 points per correct answer</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-4xl font-bold">{quizResult.pointsEarned}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Added to your total score
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full bg-blue-100/50"></div>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center">
+                  <Clock className="mr-2 h-5 w-5 text-blue-500" />
+                  Time Taken
+                </CardTitle>
+                <CardDescription>Total completion time</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-4xl font-bold">
+                  {Math.floor(quizResult.timeTaken / 60)}:{(quizResult.timeTaken % 60).toString().padStart(2, '0')}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {quizResult.timeTaken < 120 ? 'Great speed!' : quizResult.timeTaken < 300 ? 'Good pace!' : 'Take your time!'}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="relative overflow-hidden cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => setShowReview(true)}>
+              <div className="absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full bg-purple-100/50"></div>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center">
+                  <Search className="mr-2 h-5 w-5 text-purple-500" />
+                  Review Answers
+                </CardTitle>
+                <CardDescription>See what you got right and wrong</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-4xl font-bold text-green-500">{quizResult.correctAnswers}</p>
+                    <p className="text-sm text-muted-foreground">Correct</p>
+                  </div>
+                  <div className="text-4xl font-bold">|</div>
+                  <div>
+                    <p className="text-4xl font-bold text-red-500">{quizResult.wrongAnswers}</p>
+                    <p className="text-sm text-muted-foreground">Wrong</p>
+                  </div>
+                </div>
+                <Button className="w-full mt-4">Review Questions</Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Leaderboard Section */}
           {leaderboard && Array.isArray(leaderboard) && leaderboard.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -445,7 +521,7 @@ export default function QuizTake() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {(leaderboard as LeaderboardEntry[]).map((entry, index) => (
+                    {leaderboard.map((entry, index) => (
                       <div 
                         key={entry.id} 
                         className={`flex items-center justify-between p-3 rounded-lg ${
