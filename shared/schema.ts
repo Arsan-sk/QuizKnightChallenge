@@ -62,6 +62,8 @@ export const questions = pgTable("questions", {
   options: text("options").array(),
   correctAnswer: text("correct_answer").notNull(),
   points: integer("points").default(1),  // Points awarded for correct answer
+  imageUrl: text("image_url"),  // URL for question image
+  optionImages: text("option_images").array(),  // URLs for option images
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -158,6 +160,8 @@ export const insertQuestionSchema = createInsertSchema(questions).pick({
   correctAnswer: true,
   quizId: true,
   points: true,
+  imageUrl: true,
+  optionImages: true,
 });
 
 export const updateQuestionSchema = createInsertSchema(questions).pick({
@@ -166,6 +170,8 @@ export const updateQuestionSchema = createInsertSchema(questions).pick({
   options: true,
   correctAnswer: true,
   points: true,
+  imageUrl: true,
+  optionImages: true,
 });
 
 export const insertResultSchema = createInsertSchema(results).pick({
