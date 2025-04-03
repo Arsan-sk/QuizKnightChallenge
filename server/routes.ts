@@ -1,4 +1,5 @@
 import type { Express, Request, Response } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
@@ -10,6 +11,45 @@ import {
   updateQuestionSchema,
   updateUserProfileSchema
 } from "@shared/schema";
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+// ES Module equivalent for __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Set up storage for image uploads
+const uploadDir = path.join(__dirname, '../uploads');
+
+// Ensure uploads directory exists
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage_upload = multer.diskStorage({
+  destination: uploadDir,
+  filename: (req, file, cb) => {
+    // Generate unique filename
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, `quiz-image-${uniqueSuffix}${ext}`);
+  }
+});
+
+const upload = multer({ 
+  storage: storage_upload,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  fileFilter: (req, file, cb) => {
+    // Accept only images
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed') as any);
+    }
+  }
+});
 
 // Helper middleware to check if user is authenticated with specific role
 const requireAuth = (req: Request, res: Response, next: Function, role?: "teacher" | "student") => {
@@ -26,6 +66,31 @@ const requireAuth = (req: Request, res: Response, next: Function, role?: "teache
 
 export function registerRoutes(app: Express): Server {
   setupAuth(app);
+
+  // Serve static files from uploads directory
+  app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+  
+  // Image upload endpoint
+  app.post('/api/upload', upload.single('image'), (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      
+      if (!req.file) {
+        return res.status(400).json({ error: 'No file uploaded' });
+      }
+      
+      // Create URL for the uploaded file
+      const fileUrl = `/uploads/${req.file.filename}`;
+      return res.json({ url: fileUrl });
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      return res.status(500).json({ 
+        error: error.message || 'Failed to upload image' 
+      });
+    }
+  });
 
   // User profile routes
   app.get("/api/users/me", async (req, res) => {

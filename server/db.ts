@@ -87,6 +87,16 @@ async function applySchemaChanges() {
       END $$;
     `);
 
+    // Add new columns to questions table if they don't exist
+    await client.query(`
+      DO $$ BEGIN
+        ALTER TABLE "questions" ADD COLUMN "image_url" text;
+        ALTER TABLE "questions" ADD COLUMN "option_images" text[];
+      EXCEPTION
+        WHEN duplicate_column THEN null;
+      END $$;
+    `);
+
     // Create achievements table if it doesn't exist
     await client.query(`
       CREATE TABLE IF NOT EXISTS "achievements" (
