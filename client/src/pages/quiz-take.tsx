@@ -419,9 +419,9 @@ export default function QuizTake() {
   };
 
   if (quizCompleted && quizResult) {
-    return (
-      <div>
-        <NavBar />
+  return (
+    <div>
+      <NavBar />
         <div className="container max-w-6xl mx-auto p-6">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -627,24 +627,24 @@ export default function QuizTake() {
         />
         
         <div className="container mx-auto px-4 py-8">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="mb-8">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="mb-8">
               <h1 className="text-3xl font-bold mb-2">{typedQuiz.title}</h1>
               <p className="text-muted-foreground mb-4">{typedQuiz.description}</p>
-              {warnings > 0 && (
-                <p className="text-red-500 mb-2">
+            {warnings > 0 && (
+              <p className="text-red-500 mb-2">
                   Warning: Tab switching detected! ({warnings}/3)
-                </p>
-              )}
-              <Progress
+              </p>
+            )}
+            <Progress
                 value={((currentQuestion + 1) / typedQuestions.length) * 100}
-                className="h-2"
-              />
-            </div>
+              className="h-2"
+            />
+          </div>
 
             {typedQuiz.duration && typedQuiz.duration > 0 && (
               <div className="flex justify-end mb-4">
@@ -683,7 +683,7 @@ export default function QuizTake() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <Question
+              <Question
                       question={typedQuestions[currentQuestion]}
                       userAnswer={answers[currentQuestion] || ""}
                       onChange={handleAnswer}
@@ -705,8 +705,8 @@ export default function QuizTake() {
               
               {currentQuestion < typedQuestions.length - 1 ? (
                 <Button onClick={next}>Next</Button>
-              ) : (
-                <Button 
+            ) : (
+              <Button
                   onClick={() => {
                     if (answers.filter(Boolean).length < typedQuestions.length) {
                       const unanswered = typedQuestions.length - answers.filter(Boolean).length;
@@ -721,10 +721,10 @@ export default function QuizTake() {
                   disabled={submitting}
                 >
                   {submitting ? "Submitting..." : "Submit Quiz"}
-                </Button>
-              )}
-            </div>
-          </motion.div>
+              </Button>
+            )}
+          </div>
+        </motion.div>
         </div>
       </div>
     );
