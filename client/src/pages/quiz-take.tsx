@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, ReactNode } from "react";
-import { useParams, useLocation } from "wouter";
+import { useParams, useLocation, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Quiz, Question as QuestionType, User } from "@shared/schema";
 import { Question } from "@/components/quiz/Question";
@@ -9,7 +9,7 @@ import { QuizProgress } from "@/components/ui/quiz-progress";
 import { CountdownTimer } from "@/components/ui/countdown-timer";
 import { QuestionTransition } from "@/components/ui/question-transition";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, Trophy, Clock, CheckCircle, XCircle, Search, FileQuestion, ArrowLeft, ArrowRight, Send, HelpCircle, Keyboard } from "lucide-react";
+import { Loader2, Trophy, Clock, CheckCircle, XCircle, Search, FileQuestion, ArrowLeft, ArrowRight, Send, HelpCircle, Keyboard, Award, ClipboardCheck, ListChecks, Medal, Home, X, Circle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { NavBar } from "@/components/layout/nav-bar";
 import { useToast } from "@/hooks/use-toast";
@@ -67,6 +67,7 @@ export default function QuizTake() {
   const [hasAttempted, setHasAttempted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [direction, setDirection] = useState<"left" | "right">("right");
+  const [showQuestionDetails, setShowQuestionDetails] = useState(false);
 
   const { 
     data: quiz, 
@@ -601,162 +602,443 @@ export default function QuizTake() {
   }
 
   if (quizCompleted && quizResult) {
-  return (
-    <div>
-      <NavBar />
-        <div className="container max-w-6xl mx-auto p-6">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
+    const toggleQuestionDetails = () => {
+      setShowQuestionDetails(!showQuestionDetails);
+    };
+    
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
+        <NavBar />
+        <div className="container mx-auto px-4 py-8">
+          <motion.div 
+            className="max-w-4xl mx-auto"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
-            className="mb-8 text-center"
           >
-            <h1 className="text-3xl font-bold mb-2">Quiz Completed!</h1>
-            <p className="text-xl text-muted-foreground">
-              Your score: {quizResult.score}% ({quizResult.correctAnswers} of {quizResult.totalQuestions} correct)
-            </p>
-          </motion.div>
-
-          {/* Statistics Cards */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
-          >
-            <Card className="relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full bg-green-100/50"></div>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center">
-                  <Trophy className="mr-2 h-5 w-5 text-yellow-500" />
-                  Points Earned
-                </CardTitle>
-                <CardDescription>2 points per correct answer</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-4xl font-bold">{quizResult.pointsEarned}</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Added to your total score
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full bg-blue-100/50"></div>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center">
-                  <Clock className="mr-2 h-5 w-5 text-blue-500" />
-                  Time Taken
-                </CardTitle>
-                <CardDescription>Total completion time</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-4xl font-bold">
-                  {formatTimeTaken(quizResult.timeTaken)}
-                </p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {quizResult.timeTaken < 120 ? 'Great speed!' : quizResult.timeTaken < 300 ? 'Good pace!' : 'Take your time!'}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="relative overflow-hidden cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => setShowReview(true)}>
-              <div className="absolute top-0 right-0 w-24 h-24 -mr-8 -mt-8 rounded-full bg-purple-100/50"></div>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg flex items-center">
-                  <Search className="mr-2 h-5 w-5 text-purple-500" />
-                  Review Answers
-                </CardTitle>
-                <CardDescription>See what you got right and wrong</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-4xl font-bold text-green-500">{quizResult.correctAnswers}</p>
-                    <p className="text-sm text-muted-foreground">Correct</p>
-                  </div>
-                  <div className="text-4xl font-bold">|</div>
-                  <div>
-                    <p className="text-4xl font-bold text-red-500">{quizResult.wrongAnswers}</p>
-                    <p className="text-sm text-muted-foreground">Wrong</p>
-                  </div>
-                </div>
-                <Button className="w-full mt-4">Review Questions</Button>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Leaderboard Section */}
-          {leaderboard && Array.isArray(leaderboard) && leaderboard.length > 0 && (
             <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.2 }}
+              className="mb-8 text-center"
+            >
+              <motion.div 
+                className="inline-flex items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30 p-4 mb-4"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 300, damping: 25, delay: 0.3 }}
+              >
+                <Trophy className="h-12 w-12 text-green-600 dark:text-green-400" />
+              </motion.div>
+              <h1 className="text-3xl font-bold mb-2">Quiz Completed!</h1>
+              <p className="text-muted-foreground">
+                Great job! You've completed the quiz. Here's your performance.
+              </p>
+            </motion.div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                whileHover={{ scale: 1.03 }}
+                className="h-full"
+              >
+                <Card className="overflow-hidden border-t-4 border-primary h-full flex flex-col shadow-md hover:shadow-lg transition-all duration-300">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center text-lg">
+                      <Award className="mr-2 h-5 w-5 text-primary" />
+                      Your Score
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-center flex-grow flex flex-col justify-center pb-6">
+                    <motion.div
+                      initial={{ scale: 0.5 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 25, delay: 0.5 }}
+                      className="relative"
+                    >
+                      <div className="relative inline-flex mb-1">
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-4xl font-bold">{quizResult.score}%</span>
+                        </div>
+                        <svg className="w-28 h-28 transform -rotate-90" viewBox="0 0 100 100">
+                          <circle
+                            className="text-muted/20 stroke-current"
+                            strokeWidth="10"
+                            cx="50"
+                            cy="50"
+                            r="40"
+                            fill="transparent"
+                          />
+                          <motion.circle
+                            className="text-primary stroke-current"
+                            strokeWidth="10"
+                            strokeLinecap="round"
+                            cx="50"
+                            cy="50"
+                            r="40"
+                            fill="transparent"
+                            strokeDasharray="251.2"
+                            initial={{ strokeDashoffset: 251.2 }}
+                            animate={{ strokeDashoffset: 251.2 - (251.2 * quizResult.score) / 100 }}
+                            transition={{ duration: 1.5, delay: 0.7, ease: "easeOut" }}
+                          />
+                        </svg>
+                        <motion.div 
+                          className="absolute w-3 h-3 bg-primary rounded-full" 
+                          style={{ 
+                            top: "50%", 
+                            left: "50%", 
+                            x: "-50%", 
+                            y: "-50%",
+                            rotate: -90 + ((quizResult.score / 100) * 360) + "deg",
+                            transformOrigin: "40px 0px"
+                          }}
+                          initial={{ opacity: 0 }}
+                          animate={{ 
+                            opacity: 1,
+                            scale: [1, 1.2, 1],
+                          }}
+                          transition={{
+                            delay: 2.2,
+                            duration: 1.5,
+                            repeat: Infinity,
+                            repeatType: "reverse"
+                          }}
+                        />
+                      </div>
+                    </motion.div>
+                    <p className="text-muted-foreground text-sm mt-2">
+                      {quizResult.correctAnswers} correct out of {quizResult.totalQuestions} questions
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+              
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                whileHover={{ scale: 1.03 }}
+                className="h-full"
+              >
+                <Card className="overflow-hidden border-t-4 border-amber-500 h-full flex flex-col shadow-md hover:shadow-lg transition-all duration-300">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center text-lg">
+                      <Clock className="mr-2 h-5 w-5 text-amber-500" />
+                      Time Taken
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-center flex-grow flex flex-col justify-center pb-6">
+                    <motion.div className="relative mb-1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}>
+                      <motion.p 
+                        className="text-4xl font-bold mb-1"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.8 }}
+                      >
+                        {formatTimeTaken(quizResult.timeTaken)}
+                      </motion.p>
+                      <motion.div
+                        className="absolute -right-1 -top-1 w-2 h-2 bg-amber-400 rounded-full"
+                        animate={{
+                          scale: [1, 1.5, 1],
+                          opacity: [0.7, 1, 0.7]
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          repeatType: "reverse"
+                        }}
+                      />
+                    </motion.div>
+                    <p className="text-muted-foreground text-sm">
+                      {quizResult.timeTaken < 60 
+                        ? "That was quick!" 
+                        : quizResult.timeTaken < 180 
+                          ? "Good timing!" 
+                          : "Take your time, accuracy matters!"
+                      }
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+              
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.6 }}
+                whileHover={{ scale: 1.03 }}
+                className="h-full"
+              >
+                <Card 
+                  className="overflow-hidden border-t-4 border-blue-500 cursor-pointer hover:shadow-lg transition-all duration-300 h-full flex flex-col shadow-md relative"
+                  onClick={toggleQuestionDetails}
+                >
+                  <motion.div 
+                    className="absolute right-3 top-3 w-2 h-2 bg-blue-500 rounded-full"
+                    animate={{
+                      scale: [1, 1.5, 1],
+                      opacity: [0.7, 1, 0.7]
+                    }}
+                    transition={{
+                      duration: 1.5,
+                      repeat: Infinity,
+                      repeatType: "reverse"
+                    }}
+                  />
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center text-lg">
+                      <ClipboardCheck className="mr-2 h-5 w-5 text-blue-500" />
+                      Question Review
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-center flex-grow flex flex-col justify-center pb-6">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.9 }}
+                    >
+                      <div className="flex items-center justify-center gap-3 mb-2">
+                        <div className="bg-green-50 px-3 py-1 rounded-full flex items-center relative">
+                          <CheckCircle className="h-4 w-4 text-green-600 mr-1" />
+                          <span className="text-green-700 font-medium">{quizResult.correctAnswers}</span>
+                          <motion.div 
+                            className="absolute -right-0.5 -top-0.5 w-1.5 h-1.5 bg-green-500 rounded-full"
+                            animate={{
+                              scale: [1, 1.5, 1],
+                              opacity: [0.7, 1, 0.7]
+                            }}
+                            transition={{
+                              duration: 1.8,
+                              repeat: Infinity,
+                              repeatType: "reverse",
+                              delay: 0.5
+                            }}
+                          />
+                        </div>
+                        <div className="bg-red-50 px-3 py-1 rounded-full flex items-center relative">
+                          <XCircle className="h-4 w-4 text-red-600 mr-1" />
+                          <span className="text-red-700 font-medium">{quizResult.wrongAnswers}</span>
+                          <motion.div 
+                            className="absolute -right-0.5 -top-0.5 w-1.5 h-1.5 bg-red-500 rounded-full"
+                            animate={{
+                              scale: [1, 1.5, 1],
+                              opacity: [0.7, 1, 0.7]
+                            }}
+                            transition={{
+                              duration: 1.8,
+                              repeat: Infinity,
+                              repeatType: "reverse",
+                              delay: 1
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <p className="text-muted-foreground text-sm mt-1">
+                        Click to {showQuestionDetails ? "hide" : "review"} answers
+                      </p>
+                    </motion.div>
+                  </CardContent>
+                  <motion.div
+                    className="absolute inset-0 border-2 border-blue-400 rounded-lg pointer-events-none opacity-0"
+                    animate={{
+                      opacity: [0, 0.2, 0],
+                      scale: [0.95, 1, 0.95]
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      repeatType: "loop"
+                    }}
+                  />
+                </Card>
+              </motion.div>
+            </div>
+
+            {leaderboard && leaderboard.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                className="mb-8"
+              >
+                <Card className="bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
+                  <CardHeader className="border-b bg-muted/30">
+                    <CardTitle className="text-xl flex items-center gap-2">
+                      <ListChecks className="h-5 w-5 text-primary" />
+                      Leaderboard
+                    </CardTitle>
+                    <CardDescription>
+                      See how you compare with other participants
+                    </CardDescription>
+                  </CardHeader>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b bg-muted/20">
+                          <th className="text-left px-4 py-3 font-medium">Rank</th>
+                          <th className="text-left px-4 py-3 font-medium">Student</th>
+                          <th className="text-center px-4 py-3 font-medium">Score</th>
+                          <th className="text-center px-4 py-3 font-medium">Time</th>
+                          <th className="text-center px-4 py-3 font-medium">Correct</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {leaderboard.map((entry, index) => {
+                          const isCurrentUser = entry.userId === typedUser?.id;
+                          
+                          return (
+                            <motion.tr 
+                              key={entry.id}
+                              className={cn(
+                                "border-b border-muted/40",
+                                isCurrentUser ? "bg-primary/5 font-medium" : ""
+                              )}
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: 0.8 + (index * 0.05) }}
+                            >
+                              <td className="px-4 py-3">
+                                {index === 0 ? (
+                                  <div className="inline-flex items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30 h-7 w-7">
+                                    <Trophy className="h-4 w-4 text-amber-600" />
+                                  </div>
+                                ) : index === 1 ? (
+                                  <div className="inline-flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 h-7 w-7">
+                                    <Medal className="h-4 w-4 text-gray-600 dark:text-gray-400" />
+                                  </div>
+                                ) : index === 2 ? (
+                                  <div className="inline-flex items-center justify-center rounded-full bg-amber-50 dark:bg-amber-950/50 h-7 w-7">
+                                    <Medal className="h-4 w-4 text-amber-800 dark:text-amber-600" />
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">{index + 1}</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="h-7 w-7">
+                                    <AvatarFallback className={isCurrentUser ? "bg-primary text-white" : ""}>{entry.username[0].toUpperCase()}</AvatarFallback>
+                                  </Avatar>
+                                  <span>{entry.username}</span>
+                                  {isCurrentUser && (
+                                    <span className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">You</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="text-center px-4 py-3">{entry.score}%</td>
+                              <td className="text-center px-4 py-3">{formatTimeTaken(entry.timeTaken)}</td>
+                              <td className="text-center px-4 py-3">{entry.correctAnswers}/{entry.totalQuestions}</td>
+                            </motion.tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              </motion.div>
+            )}
+
+            {showQuestionDetails && (
+              <motion.div 
+                className="space-y-4 mb-8"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-bold">Question Review</h2>
+                  <Button variant="outline" size="sm" onClick={toggleQuestionDetails}>
+                    <X className="h-4 w-4 mr-2" />
+                    Close Review
+                  </Button>
+                </div>
+                
+                {questions.map((question, index) => {
+                  const userAnswer = answers[index] || "";
+                  const isCorrect = userAnswer === question.correctAnswer;
+                  
+                  return (
+                    <motion.div 
+                      key={question.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 * index }}
+                    >
+                      <Card className={cn(
+                        "overflow-hidden border-l-4", 
+                        isCorrect ? "border-l-green-500" : "border-l-red-500"
+                      )}>
+                        <CardContent className="p-4 relative">
+                          <div className="absolute top-2 right-2">
+                            {isCorrect ? (
+                              <span className="bg-green-100 text-green-800 font-medium px-3 py-1 rounded-full text-xs flex items-center">
+                                +2
+                              </span>
+                            ) : (
+                              <span className="bg-red-100 text-red-800 font-medium px-3 py-1 rounded-full text-xs flex items-center">
+                                0
+                              </span>
+                            )}
+                          </div>
+                          
+                          <h3 className="text-base font-medium mt-1 mb-3 pr-12">
+                            Question {index + 1}: {question.questionText}
+                          </h3>
+                          
+                          <div className="space-y-2">
+                            {question.options.map(option => {
+                              const isUserChoice = option === userAnswer;
+                              const isCorrectOption = option === question.correctAnswer;
+                              
+                              return (
+                                <div 
+                                  key={option}
+                                  className={cn(
+                                    "p-2 rounded-md flex items-center",
+                                    isCorrectOption ? "bg-green-50 border border-green-200" : "",
+                                    isUserChoice && !isCorrectOption ? "bg-red-50 border border-red-200" : "",
+                                    !isUserChoice && !isCorrectOption ? "bg-muted/30 border border-muted" : ""
+                                  )}
+                                >
+                                  {isCorrectOption && <CheckCircle className="h-4 w-4 mr-2 text-green-600" />}
+                                  {isUserChoice && !isCorrectOption && <XCircle className="h-4 w-4 mr-2 text-red-600" />}
+                                  {!isUserChoice && !isCorrectOption && <Circle className="h-4 w-4 mr-2 text-muted-foreground" />}
+                                  
+                                  <span className={isCorrectOption ? "font-medium" : ""}>{option}</span>
+                                  
+                                  {isUserChoice && (
+                                    <span className="ml-auto text-xs font-medium">Your choice</span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+            )}
+
+            <motion.div 
+              className="flex justify-center"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
+              transition={{ delay: 1 }}
             >
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <Trophy className="mr-2 h-5 w-5 text-yellow-500" />
-                    Leaderboard
-                  </CardTitle>
-                  <CardDescription>Top performers on this quiz</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {leaderboard.map((entry, index) => (
-                      <div 
-                        key={entry.id} 
-                        className={`flex items-center justify-between p-3 rounded-lg ${
-                          index === 0 
-                            ? 'bg-yellow-100 dark:bg-yellow-900/20' 
-                            : index === 1 
-                              ? 'bg-gray-100 dark:bg-gray-800/50' 
-                              : index === 2 
-                                ? 'bg-amber-100 dark:bg-amber-900/20' 
-                                : ''
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="font-bold w-6 text-center">{index + 1}</div>
-                          <Avatar>
-                            <AvatarFallback>
-                              {entry.username.substring(0, 2).toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{entry.username}</p>
-                            <div className="flex items-center text-sm text-muted-foreground">
-                              <CheckCircle className="h-3 w-3 mr-1 text-green-500" />
-                              <span>{entry.correctAnswers} correct</span>
-                              <span className="mx-1">•</span>
-                              <Clock className="h-3 w-3 mr-1" />
-                              <span>{formatTimeTaken(entry.timeTaken)}</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="text-2xl font-bold">{entry.score}%</div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              <Button asChild size="lg" variant="outline" className="gap-2">
+                <Link href="/dashboard">
+                  <Home className="h-4 w-4 mr-2" />
+                  Back to Dashboard
+                </Link>
+              </Button>
             </motion.div>
-          )}
-          
-          <div className="flex justify-center mt-8">
-            <Button onClick={() => setLocation("/student")}>
-              Return to Dashboard
-            </Button>
-          </div>
+          </motion.div>
         </div>
-
-        {showReview && (
-          <QuizReview 
-            questions={typedQuestions} 
-            userAnswers={answers} 
-            onClose={() => setShowReview(false)} 
-          />
-        )}
       </div>
     );
   }
@@ -1074,60 +1356,44 @@ export default function QuizTake() {
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-2 text-sm">
-                  <div className="flex items-center gap-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-2 py-1 rounded">
-                    <CheckCircle className="h-3 w-3" /> 
-                    <span>{answeredQuestions} Answered</span>
-                  </div>
-                  
-                  <div className="flex items-center gap-1 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 px-2 py-1 rounded">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="12" x2="12" y1="8" y2="12" />
-                      <line x1="12" x2="12.01" y1="16" y2="16" />
-                    </svg>
-                    <span>{remainingQuestions} Remaining</span>
-                  </div>
+                {/* Progress Bar */}
+                <div className="w-full bg-muted rounded-full h-2.5 mb-6">
+                  <motion.div 
+                    className="bg-primary h-2.5 rounded-full"
+                    initial={{ width: `${(currentQuestion / (typedQuestions?.length || 1)) * 100}%` }}
+                    animate={{ width: `${((currentQuestion + 1) / (typedQuestions?.length || 1)) * 100}%` }}
+                    transition={{ type: "spring", stiffness: 100, damping: 20 }}
+                  ></motion.div>
                 </div>
-              </div>
-              
-              {/* Progress Bar */}
-              <div className="w-full bg-muted rounded-full h-2.5 mb-6">
-                <motion.div 
-                  className="bg-primary h-2.5 rounded-full"
-                  initial={{ width: `${(currentQuestion / (typedQuestions?.length || 1)) * 100}%` }}
-                  animate={{ width: `${((currentQuestion + 1) / (typedQuestions?.length || 1)) * 100}%` }}
-                  transition={{ type: "spring", stiffness: 100, damping: 20 }}
-                ></motion.div>
-              </div>
-              
-              {/* Question Navigation Dots */}
-              <div className="flex flex-wrap gap-2">
-                {typedQuestions?.map((_, index) => (
-                  <motion.button
-                    key={`nav-${index}`}
-                    onClick={() => {
-                      setDirection(index > currentQuestion ? "right" : "left");
-                      setCurrentQuestion(index);
-                    }}
-                    className={cn(
-                      "flex items-center justify-center w-8 h-8 rounded-full text-xs transition-all",
-                      currentQuestion === index 
-                        ? "bg-primary text-white" 
-                        : answers[index] 
-                          ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800" 
-                          : "bg-muted text-muted-foreground hover:bg-muted/70"
-                    )}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
-                    animate={currentQuestion === index ? { 
-                      scale: [1, 1.1, 1], 
-                      transition: { duration: 0.5, repeat: 3, repeatType: "mirror" } 
-                    } : {}}
-                  >
-                    {index + 1}
-                  </motion.button>
-                ))}
+                
+                {/* Question Navigation Dots */}
+                <div className="flex flex-wrap gap-2">
+                  {typedQuestions?.map((_, index) => (
+                    <motion.button
+                      key={`nav-${index}`}
+                      onClick={() => {
+                        setDirection(index > currentQuestion ? "right" : "left");
+                        setCurrentQuestion(index);
+                      }}
+                      className={cn(
+                        "flex items-center justify-center w-8 h-8 rounded-full text-xs transition-all",
+                        currentQuestion === index 
+                          ? "bg-primary text-white" 
+                          : answers[index] 
+                            ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800" 
+                            : "bg-muted text-muted-foreground hover:bg-muted/70"
+                      )}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.95 }}
+                      animate={currentQuestion === index ? { 
+                        scale: [1, 1.1, 1], 
+                        transition: { duration: 0.5, repeat: 3, repeatType: "mirror" } 
+                      } : {}}
+                    >
+                      {index + 1}
+                    </motion.button>
+                  ))}
+                </div>
               </div>
             </motion.div>
             
