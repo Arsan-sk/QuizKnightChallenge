@@ -9,8 +9,8 @@ import { QuizProgress } from "@/components/ui/quiz-progress";
 import { CountdownTimer } from "@/components/ui/countdown-timer";
 import { QuestionTransition } from "@/components/ui/question-transition";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, Trophy, Clock, CheckCircle, XCircle, Search } from "lucide-react";
-import { motion } from "framer-motion";
+import { Loader2, Trophy, Clock, CheckCircle, XCircle, Search, FileQuestion, ArrowLeft, ArrowRight, Send, HelpCircle, Keyboard } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { NavBar } from "@/components/layout/nav-bar";
 import { useToast } from "@/hooks/use-toast";
 import { QuizReview } from "@/components/quiz/QuizReview";
@@ -66,6 +66,7 @@ export default function QuizTake() {
   } | null>(null);
   const [hasAttempted, setHasAttempted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [direction, setDirection] = useState<"left" | "right">("right");
 
   const { 
     data: quiz, 
@@ -105,11 +106,11 @@ export default function QuizTake() {
       setHasAttempted(attempted);
       
       if (attempted) {
-        toast({
+      toast({
           title: "Quiz already attempted",
           description: "You have already completed this quiz. Multiple attempts are not allowed.",
-          variant: "destructive",
-        });
+        variant: "destructive",
+      });
       } else {
         registerAttempt(parseInt(id), userId);
       }
@@ -249,8 +250,8 @@ export default function QuizTake() {
   // Memoize the handleVisibilityChange function to prevent re-renders
   const handleVisibilityChange = useCallback(() => {
     if (document.hidden && !quizCompleted) {
-      setWarnings((w) => {
-        const newWarnings = w + 1;
+        setWarnings((w) => {
+          const newWarnings = w + 1;
         toast({
           title: `Warning ${newWarnings}/3`,
           description: `Tab switching detected. ${3 - newWarnings} warnings left before automatic submission.`,
@@ -258,14 +259,14 @@ export default function QuizTake() {
         });
         
         if (newWarnings >= 3) {
-          toast({
-            title: "Quiz terminated",
+            toast({
+              title: "Quiz terminated",
             description: "Too many tab switches detected. Your quiz has been automatically submitted.",
-            variant: "destructive",
-          });
+              variant: "destructive",
+            });
           submitQuiz();
-        }
-        return newWarnings;
+          }
+          return newWarnings;
       });
     }
   }, [quizCompleted, toast, submitQuiz]);
@@ -393,12 +394,14 @@ export default function QuizTake() {
     if (!typedQuestions) return;
     
     if (currentQuestion < typedQuestions.length - 1) {
+      setDirection("right");
       setCurrentQuestion(prev => prev + 1);
     }
   }, [currentQuestion, typedQuestions]);
 
   const previous = useCallback(() => {
     if (currentQuestion > 0) {
+      setDirection("left");
       setCurrentQuestion(prev => prev - 1);
     }
   }, [currentQuestion]);
@@ -508,6 +511,13 @@ export default function QuizTake() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
+
+  // Add this before the return statement to track user progress
+  const answeredQuestions = answers.filter(Boolean).length;
+  const remainingQuestions = (typedQuestions?.length || 0) - answeredQuestions;
+  const percentComplete = (typedQuestions?.length || 1) > 0 
+    ? Math.round((answeredQuestions / (typedQuestions?.length || 1)) * 100) 
+    : 0;
 
   if (isLoading) {
     return (
@@ -753,7 +763,7 @@ export default function QuizTake() {
 
   if (typedQuiz.quizType === "live" && typedQuiz.isActive) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
         <NavBar />
         
         <WebcamMonitor 
@@ -761,7 +771,7 @@ export default function QuizTake() {
           onViolationDetected={handleWebcamViolation} 
         />
         
-        <div className="container mx-auto px-4 py-8">
+        <div className="container max-w-5xl mx-auto px-4 py-6">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -791,17 +801,23 @@ export default function QuizTake() {
   if (!quizCompleted) {
     if (showRules) {
       return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
           <NavBar />
-          <div className="container mx-auto px-4 py-8">
+          <div className="container mx-auto px-4 py-12">
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
               className="max-w-3xl mx-auto"
             >
-              <Card className="mb-6 border-2 border-primary/20">
-                <CardHeader className="border-b bg-muted/50">
+              <Card className="mb-6 border-2 border-primary/20 overflow-hidden">
+                <CardHeader className="border-b bg-muted/50 relative">
+                  <motion.div 
+                    className="absolute top-0 left-0 h-1 bg-primary" 
+                    initial={{ width: 0 }}
+                    animate={{ width: readyToStart ? "100%" : `${(5 - rulesTimer) * 20}%` }}
+                    transition={{ duration: 0.5 }}
+                  />
                   <CardTitle className="text-2xl text-center">
                     Quiz Rules & Instructions
                   </CardTitle>
@@ -811,51 +827,146 @@ export default function QuizTake() {
                 </CardHeader>
                 <CardContent className="p-6">
                   <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">{typedQuiz.title}</h3>
-                    <p className="text-muted-foreground">{typedQuiz.description}</p>
+                    <motion.div 
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.1 }}
+                    >
+                      <h3 className="text-lg font-semibold">{typedQuiz.title}</h3>
+                      <p className="text-muted-foreground">{typedQuiz.description}</p>
+                    </motion.div>
 
-                    <div className="my-6">
-                      <h4 className="font-medium mb-3">Important Rules:</h4>
-                      <ul className="list-disc space-y-3 pl-5">
-                        <li>You will have {typedQuiz.duration ? `${typedQuiz.duration} minutes` : "unlimited time"} to complete this quiz.</li>
-                        <li>There are {typedQuestions.length} questions in total.</li>
-                        <li>You must remain in full-screen mode throughout the quiz.</li>
-                        <li>Switching tabs or windows will result in warnings.</li>
-                        <li>After 3 violations, your quiz will be automatically submitted.</li>
-                        <li>You may navigate between questions using the Next and Previous buttons.</li>
-                        <li>Click anywhere on an answer to select it - not just the radio button.</li>
-                        <li>Your answers are saved as you navigate between questions.</li>
-                        <li>Use keyboard shortcuts: Left/Right arrows to navigate, number keys (1-4) to select options, Enter to continue</li>
+                    <motion.div 
+                      className="my-6"
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.2 }}
+                    >
+                      <h4 className="font-medium mb-3 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
+                          <circle cx="12" cy="12" r="10"></circle>
+                          <line x1="12" x2="12" y1="8" y2="12"></line>
+                          <line x1="12" x2="12.01" y1="16" y2="16"></line>
+                        </svg>
+                        Important Rules:
+                      </h4>
+                      <ul className="space-y-3 pl-5">
+                        {[
+                          `You will have ${typedQuiz.duration ? `${typedQuiz.duration} minutes` : "unlimited time"} to complete this quiz.`,
+                          `There are ${typedQuestions.length} questions in total.`,
+                          "You must remain in full-screen mode throughout the quiz.",
+                          "Switching tabs or windows will result in warnings.",
+                          "After 3 violations, your quiz will be automatically submitted.",
+                          "You may navigate between questions using the Next and Previous buttons.",
+                          "Click anywhere on an answer to select it - not just the radio button.",
+                          "Your answers are saved as you navigate between questions.",
+                          "Use keyboard shortcuts: Left/Right arrows to navigate, number keys (1-4) to select options, Enter to continue"
+                        ].map((rule, index) => (
+                          <motion.li 
+                            key={index}
+                            className="flex items-center gap-2"
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.3 + (index * 0.05) }}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
+                              <polyline points="9 11 12 14 22 4"></polyline>
+                              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                            </svg>
+                            {rule}
+                          </motion.li>
+                        ))}
                       </ul>
-                    </div>
+                    </motion.div>
 
-                    <div className="my-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                    <motion.div 
+                      className="my-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.6 }}
+                    >
                       <h4 className="font-medium flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-600 mr-2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-600 mr-2">
+                          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+                          <path d="M12 9v4"></path>
+                          <path d="M12 17h.01"></path>
+                        </svg>
                         Academic Integrity Notice
                       </h4>
                       <p className="mt-2 text-sm">
                         This quiz uses advanced proctoring technology. Attempts to cheat, copy content, or seek outside help may result in disciplinary action.
                       </p>
-                    </div>
+                    </motion.div>
                   </div>
                 </CardContent>
                 <CardFooter className="border-t py-4 bg-muted/30 flex justify-between items-center">
-                  <div className="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary mr-2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                    <span className="text-sm font-medium">
+                  <div className="flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    <motion.span 
+                      className="text-sm font-medium"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.3 }}
+                    >
                       {readyToStart ? "Ready to begin" : `Please wait: ${rulesTimer} seconds remaining`}
-                    </span>
+                    </motion.span>
                   </div>
-                  <Button 
-                    onClick={() => setShowRules(false)} 
-                    disabled={!readyToStart}
-                    className="w-32"
+                  <motion.div
+                    whileHover={readyToStart ? { scale: 1.05 } : {}}
+                    whileTap={readyToStart ? { scale: 0.95 } : {}}
                   >
-                    {readyToStart ? "Start Quiz" : "Please Wait..."}
-                  </Button>
+                    <Button 
+                      onClick={() => setShowRules(false)} 
+                      disabled={!readyToStart}
+                      className="w-32 relative overflow-hidden group"
+                    >
+                      {readyToStart && (
+                        <motion.div 
+                          className="absolute inset-0 bg-primary/20"
+                          initial={{ x: '-100%' }}
+                          animate={{ x: '100%' }}
+                          transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                        />
+                      )}
+                      {readyToStart ? "Start Quiz" : "Please Wait..."}
+                    </Button>
+                  </motion.div>
                 </CardFooter>
               </Card>
+              
+              <motion.div 
+                className="mt-8 text-center text-sm text-muted-foreground"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.7 }}
+              >
+                <p>By starting this quiz, you agree to the academic integrity guidelines of your institution.</p>
+                <p className="mt-2">Need help? Contact your instructor for assistance.</p>
+                
+                <div className="mt-6 flex justify-center gap-4">
+                  <div className="p-3 rounded-full bg-muted/30 text-muted-foreground">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 3c.53 0 1.04.21 1.41.59L21 11a2 2 0 0 1 0 2.82L13.4 21.41a2 2 0 0 1-2.82 0L3 13.82a2 2 0 0 1 0-2.82L10.6 3.59a1.99 1.99 0 0 1 1.4-.59Z"></path>
+                      <path d="m8 12 2 2 6-6"></path>
+                    </svg>
+                  </div>
+                  <div className="p-3 rounded-full bg-muted/30 text-muted-foreground">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <path d="m8 12 2 2 6-6"></path>
+                    </svg>
+                  </div>
+                  <div className="p-3 rounded-full bg-muted/30 text-muted-foreground">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
+                      <path d="m9 12 2 2 4-4"></path>
+                    </svg>
+                  </div>
+                </div>
+              </motion.div>
             </motion.div>
           </div>
         </div>
@@ -863,7 +974,7 @@ export default function QuizTake() {
     }
 
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
         <NavBar />
         
         <WebcamMonitor 
@@ -871,117 +982,294 @@ export default function QuizTake() {
           onViolationDetected={handleWebcamViolation} 
         />
         
-        <div className="container mx-auto px-4 py-8">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold mb-2">{typedQuiz.title}</h1>
-              <p className="text-muted-foreground mb-4">{typedQuiz.description}</p>
-              {warnings > 0 && (
-                <p className="text-red-500 mb-2">
-                  Warning: Tab switching detected! ({warnings}/3)
-                </p>
-              )}
-              <div className="flex justify-between items-center mb-4">
-                <motion.span
-                  key={currentQuestion}
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="text-sm font-medium"
-                >
-                  Question {currentQuestion + 1} of {typedQuestions.length}
-                  <span className="ml-2 text-muted-foreground">
-                    ({Math.round(((currentQuestion + 1) / typedQuestions.length) * 100)}% Complete)
-                  </span>
-                </motion.span>
-                
-                {typedQuiz.duration && typedQuiz.duration > 0 && (
-                  <CountdownTimer 
-                    duration={typedQuiz.duration * 60} 
-                    onTimeUp={() => {
-                      toast({
-                        title: "Time's up!",
-                        description: "Your quiz has been automatically submitted.",
-                      });
-                      submitQuiz();
-                    }}
-                  />
-                )}
+        <div className="container max-w-5xl mx-auto px-4 py-8">
+          <div className="max-w-5xl mx-auto">
+            {/* Quiz Header */}
+            <motion.div 
+              className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+            >
+              <div>
+                <h1 className="text-3xl font-bold mb-1">{typedQuiz?.title}</h1>
+                <p className="text-muted-foreground">{typedQuiz?.description}</p>
               </div>
-              <Progress
-                value={((currentQuestion + 1) / typedQuestions.length) * 100}
-                className="h-2"
-              />
-            </div>
+              
+              <div className="flex flex-wrap items-center gap-3">
+                {typedQuiz?.duration && typedQuiz.duration > 0 && (
+                  <div className="bg-white dark:bg-slate-950 shadow-sm rounded-lg p-2 px-3 flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-primary" />
+                    <CountdownTimer 
+                      duration={typedQuiz.duration * 60} 
+                      onTimeUp={() => {
+                        toast({
+                          title: "Time's up!",
+                          description: "Your quiz has been automatically submitted.",
+                        });
+                        submitQuiz();
+                      }}
+                    />
+                  </div>
+                )}
+                
+                <div className="bg-white dark:bg-slate-950 shadow-sm rounded-lg p-2 px-3 flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <line x1="9" y1="8" x2="15" y2="8" />
+                    <line x1="12" y1="16" x2="12" y2="16.01" />
+                  </svg>
+                  <span className="text-sm font-medium">
+                    {typedQuestions?.length || 0} Questions
+                  </span>
+                </div>
+                
+                <div className="bg-white dark:bg-slate-950 shadow-sm rounded-lg p-2 px-3 flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                  </svg>
+                  <span className="text-sm font-medium">
+                    {percentComplete}% Complete
+                  </span>
+                </div>
+              </div>
+            </motion.div>
             
-            {typedQuestions.length > 0 && currentQuestion < typedQuestions.length && (
-              <QuestionTransition 
+            {/* Progress Indicator */}
+            <motion.div 
+              className="bg-white dark:bg-slate-950 rounded-xl shadow-sm mb-6 p-5"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3">
+                <div className="flex items-center gap-3">
+                  <motion.div 
+                    className="flex items-center justify-center bg-primary/10 text-primary w-10 h-10 rounded-full"
+                    animate={{ 
+                      scale: [1, 1.05, 1],
+                      backgroundColor: percentComplete === 100 ? ["rgba(22, 163, 74, 0.1)", "rgba(22, 163, 74, 0.2)", "rgba(22, 163, 74, 0.1)"] : undefined 
+                    }}
+                    transition={{ 
+                      duration: 2, 
+                      repeat: Infinity,
+                      repeatType: "reverse"
+                    }}
+                  >
+                    <span className="font-medium">{currentQuestion + 1}</span>
+                  </motion.div>
+                  
+                  <div>
+                    <h2 className="font-medium text-sm">
+                      Question {currentQuestion + 1} of {typedQuestions?.length || 0}
+                    </h2>
+                    <div className="text-xs text-muted-foreground">
+                      {remainingQuestions === 0 ? (
+                        <span className="text-green-600 dark:text-green-400 font-medium">All questions answered</span>
+                      ) : (
+                        <span>{remainingQuestions} question{remainingQuestions !== 1 ? 's' : ''} remaining</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-2 text-sm">
+                  <div className="flex items-center gap-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-2 py-1 rounded">
+                    <CheckCircle className="h-3 w-3" /> 
+                    <span>{answeredQuestions} Answered</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-1 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 px-2 py-1 rounded">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10" />
+                      <line x1="12" x2="12" y1="8" y2="12" />
+                      <line x1="12" x2="12.01" y1="16" y2="16" />
+                    </svg>
+                    <span>{remainingQuestions} Remaining</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Progress Bar */}
+              <div className="w-full bg-muted rounded-full h-2.5 mb-6">
+                <motion.div 
+                  className="bg-primary h-2.5 rounded-full"
+                  initial={{ width: `${(currentQuestion / (typedQuestions?.length || 1)) * 100}%` }}
+                  animate={{ width: `${((currentQuestion + 1) / (typedQuestions?.length || 1)) * 100}%` }}
+                  transition={{ type: "spring", stiffness: 100, damping: 20 }}
+                ></motion.div>
+              </div>
+              
+              {/* Question Navigation Dots */}
+              <div className="flex flex-wrap gap-2">
+                {typedQuestions?.map((_, index) => (
+                  <motion.button
+                    key={`nav-${index}`}
+                    onClick={() => {
+                      setDirection(index > currentQuestion ? "right" : "left");
+                      setCurrentQuestion(index);
+                    }}
+                    className={cn(
+                      "flex items-center justify-center w-8 h-8 rounded-full text-xs transition-all",
+                      currentQuestion === index 
+                        ? "bg-primary text-white" 
+                        : answers[index] 
+                          ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800" 
+                          : "bg-muted text-muted-foreground hover:bg-muted/70"
+                    )}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.95 }}
+                    animate={currentQuestion === index ? { 
+                      scale: [1, 1.1, 1], 
+                      transition: { duration: 0.5, repeat: 3, repeatType: "mirror" } 
+                    } : {}}
+                  >
+                    {index + 1}
+                  </motion.button>
+                ))}
+              </div>
+            </motion.div>
+            
+            {/* Main Question Content */}
+            <AnimatePresence mode="wait">
+              <QuestionTransition
+                key={currentQuestion}
                 id={currentQuestion}
-                direction={currentQuestion > 0 ? "right" : "left"}
+                direction={direction}
               >
-                <Card className="mb-6">
-                  <CardHeader>
-                    <CardTitle>
-                      Question {currentQuestion + 1}
-                    </CardTitle>
-                    <CardDescription>
-                      {typedQuiz.title} - {typedQuiz.description}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+                <motion.div 
+                  className="bg-white dark:bg-slate-950 rounded-xl shadow-sm p-6 md:p-8 mb-6 relative"
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  {typedQuestions && typedQuestions[currentQuestion] ? (
                     <Question
                       question={typedQuestions[currentQuestion]}
-                      userAnswer={answers[currentQuestion] || ""}
+                      mode="take"
                       onChange={handleAnswer}
-                      showResult={false}
+                      userAnswer={answers[currentQuestion] || ""}
                     />
-                  </CardContent>
-                </Card>
-              </QuestionTransition>
-            )}
-            
-            <div className="flex justify-between mt-4">
-              <Button
-                variant="outline"
-                onClick={previous}
-                disabled={currentQuestion === 0}
-              >
-                Previous
-              </Button>
-              
-              {currentQuestion < typedQuestions.length - 1 ? (
-                <Button onClick={next}>Next</Button>
-              ) : (
-                <Button
-                  onClick={handleQuizSubmission}
-                  disabled={submitting}
-                  className="bg-primary hover:bg-primary/90"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Submitting...
-                    </>
                   ) : (
-                    <>
-                      Submit Quiz
-                    </>
+                    <div className="py-12 text-center">
+                      <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+                      <p>Loading question...</p>
+                    </div>
                   )}
+                </motion.div>
+              </QuestionTransition>
+            </AnimatePresence>
+            
+            {/* Navigation Controls */}
+            <motion.div 
+              className="flex items-center justify-between mt-6 mb-10"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                <Button
+                  onClick={previous}
+                  disabled={currentQuestion === 0}
+                  variant="outline"
+                  size="lg"
+                  className="gap-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Previous
                 </Button>
-              )}
-            </div>
-          </motion.div>
+              </motion.div>
+              
+              <div className="text-sm text-muted-foreground hidden md:block">
+                {currentQuestion < (typedQuestions?.length || 0) - 1 ? (
+                  <span>Press <kbd className="px-2 py-1 bg-muted rounded border text-xs">→</kbd> for next question</span>
+                ) : (
+                  <span>Last question! Ready to submit?</span>
+                )}
+              </div>
+              
+              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                {currentQuestion < (typedQuestions?.length || 0) - 1 ? (
+                  <Button
+                    onClick={next}
+                    size="lg"
+                    className="gap-2"
+                  >
+                    Next
+                    <ArrowRight className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleQuizSubmission}
+                    disabled={submitting}
+                    size="lg"
+                    className="gap-2 bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        Submit Quiz
+                        <Send className="h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                )}
+              </motion.div>
+            </motion.div>
+            
+            {/* Keyboard Shortcuts Guide */}
+            <motion.div 
+              className="bg-muted/40 border rounded-lg p-4 mt-4 text-xs text-muted-foreground"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+            >
+              <div className="flex items-center mb-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                  <rect width="20" height="16" x="2" y="4" rx="2" ry="2" />
+                  <path d="M6 8h.001" />
+                  <path d="M10 8h.001" />
+                  <path d="M14 8h.001" />
+                  <path d="M18 8h.001" />
+                  <path d="M8 12h.001" />
+                  <path d="M12 12h.001" />
+                  <path d="M16 12h.001" />
+                  <path d="M7 16h10" />
+                </svg>
+                <span className="font-medium">Keyboard Shortcuts:</span>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div className="flex items-center">
+                  <kbd className="px-1.5 py-0.5 bg-background rounded border shadow-sm text-[10px] mr-1.5">←</kbd>
+                  <span>Previous</span>
+                </div>
+                <div className="flex items-center">
+                  <kbd className="px-1.5 py-0.5 bg-background rounded border shadow-sm text-[10px] mr-1.5">→</kbd>
+                  <span>Next</span>
+                </div>
+                <div className="flex items-center">
+                  <kbd className="px-1.5 py-0.5 bg-background rounded border shadow-sm text-[10px] mr-1.5">1-4</kbd>
+                  <span>Select option</span>
+                </div>
+                <div className="flex items-center">
+                  <kbd className="px-1.5 py-0.5 bg-background rounded border shadow-sm text-[10px] mr-1.5">Enter</kbd>
+                  <span>Next/Submit</span>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
       <NavBar />
       <div className="container mx-auto p-8 text-center">
         <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
