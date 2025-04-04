@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
+import { cn, formatTimeTaken } from "@/lib/utils";
 import { motion } from "framer-motion";
 
 interface CountdownTimerProps {
@@ -14,8 +14,6 @@ export function CountdownTimer({
   className,
 }: CountdownTimerProps) {
   const [timeLeft, setTimeLeft] = useState(duration);
-  const minutes = Math.floor(timeLeft / 60);
-  const seconds = timeLeft % 60;
   
   // Determine color based on time left
   const getColorClass = () => {
@@ -50,7 +48,7 @@ export function CountdownTimer({
           getColorClass()
         )}
       >
-        {minutes.toString().padStart(2, "0")}:{seconds.toString().padStart(2, "0")}
+        {formatTimeTaken(timeLeft)}
       </motion.div>
       
       <svg className="h-5 w-5" viewBox="0 0 24 24">

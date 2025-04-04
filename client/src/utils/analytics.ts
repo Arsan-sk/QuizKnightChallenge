@@ -1,3 +1,5 @@
+import { formatTimeTaken } from "@/lib/utils";
+
 // Format number to 1 decimal place with fallback
 export function formatNumber(value: number | null, decimals = 1): string {
   if (value === null || value === undefined || isNaN(Number(value))) {
@@ -6,12 +8,13 @@ export function formatNumber(value: number | null, decimals = 1): string {
   return Number(value).toFixed(decimals);
 }
 
-// Format time (seconds) to minutes and seconds
+// Format time (seconds) to minutes and seconds with labels
 export function formatTime(seconds: number | null): string {
   if (seconds === null || seconds === undefined || isNaN(Number(seconds))) {
     return 'N/A';
   }
   
+  // Create a more readable format for analytics with "m" and "s" suffixes
   const mins = Math.floor(Number(seconds) / 60);
   const secs = Math.floor(Number(seconds) % 60);
   return `${mins}m ${secs}s`;

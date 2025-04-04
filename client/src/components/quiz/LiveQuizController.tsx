@@ -4,6 +4,7 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { Camera, Clock } from "lucide-react";
 import { motion } from "framer-motion";
+import { formatTimeTaken } from "@/lib/utils";
 
 interface LiveQuizControllerProps {
   questions: QuestionType[];
@@ -111,11 +112,9 @@ export function LiveQuizController({
     }
   }, [currentQuestionIndex, onAnswer, onComplete, questions, randomizedQuestions, timePerQuestion]);
   
-  // Format seconds to MM:SS
+  // Format seconds to MM:SS - using the centralized utility
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    return formatTimeTaken(seconds);
   };
   
   // If questions haven't been randomized yet, show loading

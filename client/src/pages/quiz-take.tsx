@@ -26,6 +26,7 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { hasAttemptedQuiz, registerAttempt, completeAttempt } from "@/lib/attemptManager";
 import { LiveQuizController } from "@/components/quiz/LiveQuizController";
+import { formatTimeTaken, cn } from "@/lib/utils";
 
 type LeaderboardEntry = {
   id: number;
@@ -45,7 +46,7 @@ export default function QuizTake() {
   const { toast } = useToast();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
-  const [timeStarted, setTimeStarted] = useState<Date>(new Date());
+  const [timeStarted, setTimeStarted] = useState<Date | null>(null);
   const [warnings, setWarnings] = useState(0);
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [showReview, setShowReview] = useState(false);
@@ -110,10 +111,23 @@ export default function QuizTake() {
     }
   }, [user, id, toast]);
 
+  useEffect(() => {
+    if (!timeStarted && questions && Array.isArray(questions) && questions.length > 0) {
+      console.log('Quiz started at:', new Date());
+      setTimeStarted(new Date());
+    }
+  }, [timeStarted, questions]);
+
   const submitQuiz = async () => {
     try {
       if (!questions || !Array.isArray(questions) || questions.length === 0 || !timeStarted || !user || !('id' in user)) {
-        console.error("Missing required data for quiz submission");
+        console.error("Missing required data for quiz submission", { 
+          hasQuestions: !!questions && Array.isArray(questions), 
+          questionsLength: questions?.length || 0,
+          hasTimeStarted: !!timeStarted,
+          timeStarted: timeStarted?.toISOString(),
+          hasUser: !!user
+        });
         return;
       }
       
@@ -134,7 +148,11 @@ export default function QuizTake() {
       
       const totalQuestions = questionsArray.length;
       const scorePercentage = (correctCount / totalQuestions) * 100;
-      const timeTaken = Math.floor((Date.now() - timeStarted.getTime()) / 1000);
+      
+      const endTime = new Date();
+      const timeTaken = Math.max(1, Math.floor((endTime.getTime() - timeStarted.getTime()) / 1000));
+      console.log('Quiz completed at:', endTime);
+      console.log('Time taken (seconds):', timeTaken);
       
       const pointsEarned = correctCount * 2;
       
@@ -201,8 +219,6 @@ export default function QuizTake() {
   }, [submitQuiz, toast]);
 
   useEffect(() => {
-    setTimeStarted(new Date());
-
     const handleVisibilityChange = () => {
       if (document.hidden && !quizCompleted) {
         setWarnings((w) => {
@@ -470,7 +486,7 @@ export default function QuizTake() {
               </CardHeader>
               <CardContent>
                 <p className="text-4xl font-bold">
-                  {Math.floor(quizResult.timeTaken / 60)}:{(quizResult.timeTaken % 60).toString().padStart(2, '0')}
+                  {formatTimeTaken(quizResult.timeTaken)}
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
                   {quizResult.timeTaken < 120 ? 'Great speed!' : quizResult.timeTaken < 300 ? 'Good pace!' : 'Take your time!'}
@@ -548,7 +564,7 @@ export default function QuizTake() {
                               <span>{entry.correctAnswers} correct</span>
                               <span className="mx-1">•</span>
                               <Clock className="h-3 w-3 mr-1" />
-                              <span>{Math.floor(entry.timeTaken / 60)}:{(entry.timeTaken % 60).toString().padStart(2, '0')}</span>
+                              <span>{formatTimeTaken(entry.timeTaken)}</span>
                             </div>
                           </div>
                         </div>
