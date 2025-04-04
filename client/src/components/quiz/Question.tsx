@@ -368,43 +368,57 @@ function QuestionTake({
   userAnswer = "",
   showResult = false
 }: QuestionTakeProps) {
+  // Add safety check for question options
+  const options = question?.options || [];
+  const correctAnswer = question?.correctAnswer || "";
+  const questionText = question?.questionText || "";
+  const imageUrl = question?.imageUrl;
+  const optionImages = question?.optionImages || [];
+
   return (
     <div className="space-y-4">
-      <h3 className="text-xl font-medium mb-4">{question?.questionText}</h3>
+      <h3 className="text-xl font-medium mb-4">{questionText}</h3>
       
-      {question?.imageUrl && (
+      {imageUrl && (
         <div className="mb-4">
           <img 
-            src={question.imageUrl} 
+            src={imageUrl} 
             alt="Question" 
             className="max-w-full h-auto rounded-md border"
           />
         </div>
       )}
       
+      <div className="text-xs text-muted-foreground mb-2 italic">
+        Select an answer by clicking anywhere on the option or using number keys (1-{options.length || 4})
+      </div>
+      
       <RadioGroup
         value={userAnswer}
         onValueChange={onChange}
         className="space-y-3"
       >
-        {question?.options?.map((option, index) => {
-          const isCorrect = showResult && option === question.correctAnswer;
-          const isIncorrect = showResult && userAnswer === option && option !== question.correctAnswer;
-          const optionImage = question?.optionImages?.[index];
+        {options.map((option, index) => {
+          const isCorrect = showResult && option === correctAnswer;
+          const isIncorrect = showResult && userAnswer === option && option !== correctAnswer;
+          const isSelected = userAnswer === option;
+          const optionImage = optionImages[index];
 
           return (
             <motion.div
               key={`take-option-${index}`}
               className={cn(
-                "border rounded-md p-3 relative transition-all",
+                "border rounded-md p-3 relative transition-all cursor-pointer",
                 isCorrect && "bg-green-50 dark:bg-green-900/20 border-green-300",
                 isIncorrect && "bg-red-50 dark:bg-red-900/20 border-red-300",
+                isSelected && !showResult && "bg-primary/5 border-primary",
                 !showResult && "hover:border-primary/50 hover:bg-muted/10"
               )}
-              whileHover={!showResult ? { scale: 1.005 } : {}}
+              whileHover={!showResult ? { scale: 1.005, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" } : {}}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
+              onClick={() => !showResult && onChange(option)}
             >
               {isCorrect && (
                 <motion.div 
@@ -419,37 +433,46 @@ function QuestionTake({
               
               <div className="flex items-center space-x-2">
                 <div className={cn(
-                  "flex items-center gap-2",
+                  "flex items-center gap-2 flex-1",
                   isCorrect && "text-green-600 dark:text-green-400 font-medium",
                   isIncorrect && "text-red-600 dark:text-red-400 font-medium"
                 )}>
                   <div className={cn(
                     "font-medium text-sm w-7 h-7 flex items-center justify-center rounded-full transition-colors",
+                    isSelected && !showResult && "bg-primary text-white",
                     isCorrect 
                       ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300" 
                       : isIncorrect 
                         ? "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300"
-                        : "bg-muted text-muted-foreground"
+                        : !isSelected && "bg-muted text-muted-foreground"
                   )}>
                     {index + 1}
                   </div>
+                  
                   <RadioGroupItem
                     value={option}
                     id={`option-take-${index}`}
                     disabled={showResult}
-                    className="mr-2"
+                    className="sr-only" // Visually hide but keep accessible
                   />
                   <Label
                     htmlFor={`option-take-${index}`}
                     className={cn(
-                      "flex items-center w-full text-base",
+                      "flex items-center w-full text-base cursor-pointer",
                       isCorrect && "text-green-600 dark:text-green-400 font-medium",
-                      isIncorrect && "text-red-600 dark:text-red-400 font-medium"
+                      isIncorrect && "text-red-600 dark:text-red-400 font-medium",
+                      isSelected && !showResult && "font-medium text-primary"
                     )}
                   >
                     {option}
                   </Label>
                 </div>
+                
+                {isSelected && !showResult && (
+                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10">
+                    <CheckIcon className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                )}
               </div>
               
               {optionImage && (
@@ -470,7 +493,7 @@ function QuestionTake({
         <motion.div 
           className={cn(
             "mt-4 p-3 rounded-md border",
-            userAnswer === question?.correctAnswer 
+            userAnswer === correctAnswer 
               ? "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
               : "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
           )}
@@ -478,14 +501,14 @@ function QuestionTake({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          {userAnswer === question?.correctAnswer ? (
+          {userAnswer === correctAnswer ? (
             <p className="text-green-600 dark:text-green-400 font-medium flex items-center gap-2">
               <CheckCircle className="h-4 w-4" />
               Correct!
             </p>
           ) : (
             <p className="text-red-600 dark:text-red-400 font-medium">
-              Incorrect. The correct answer is: {question?.correctAnswer}
+              Incorrect. The correct answer is: {correctAnswer}
             </p>
           )}
         </motion.div>
