@@ -382,13 +382,11 @@ export default function QuizTake() {
 
   // Memoize all key functions that are used in useEffect dependencies
   const handleAnswer = useCallback((answer: string) => {
-    if (answer) {
-      setAnswers(prev => {
-        const newAnswers = [...prev];
-        newAnswers[currentQuestion] = answer;
-        return newAnswers;
-      });
-    }
+    setAnswers(prev => {
+      const newAnswers = [...prev];
+      newAnswers[currentQuestion] = answer;
+      return newAnswers;
+    });
   }, [currentQuestion]);
 
   const next = useCallback(() => {

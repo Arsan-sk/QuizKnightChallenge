@@ -421,16 +421,27 @@ function QuestionTake({
               onClick={() => !showResult && onChange(option)}
             >
               {isCorrect && (
-                <motion.div 
-                  className="absolute -right-2 -top-2 bg-green-600 rounded-full p-1 shadow-sm"
+                <motion.div
+                  className="absolute -right-3 -top-3 bg-green-500 rounded-full p-1 text-white border-2 border-white dark:border-gray-900"
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 30, delay: 0.2 }}
+                  transition={{ delay: 0.2 }}
                 >
-                  <CheckCircle className="h-3 w-3 text-white" />
+                  <CheckIcon className="h-4 w-4" />
                 </motion.div>
               )}
-              
+
+              {isIncorrect && (
+                <motion.div
+                  className="absolute -right-3 -top-3 bg-red-500 rounded-full p-1 text-white border-2 border-white dark:border-gray-900"
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <X className="h-4 w-4" />
+                </motion.div>
+              )}
+
               <div className="flex items-center space-x-2">
                 <div className={cn(
                   "flex items-center gap-2 flex-1",
@@ -440,9 +451,9 @@ function QuestionTake({
                   <div className={cn(
                     "font-medium text-sm w-7 h-7 flex items-center justify-center rounded-full transition-colors",
                     isSelected && !showResult && "bg-primary text-white",
-                    isCorrect 
-                      ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300" 
-                      : isIncorrect 
+                    isCorrect
+                      ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
+                      : isIncorrect
                         ? "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300"
                         : !isSelected && "bg-muted text-muted-foreground"
                   )}>
@@ -469,18 +480,18 @@ function QuestionTake({
                 </div>
                 
                 {isSelected && !showResult && (
-                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10">
+                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10"> 
                     <CheckIcon className="h-3.5 w-3.5 text-primary" />
                   </div>
                 )}
               </div>
               
               {optionImage && (
-                <div className="mt-3 ml-9">
-                  <img 
-                    src={optionImage} 
-                    alt={`Option ${index + 1}`} 
-                    className="max-w-full max-h-32 h-auto rounded-md border"
+                <div className="mt-3">
+                  <img
+                    src={optionImage}
+                    alt={`Option ${index + 1}`}
+                    className="max-w-full h-auto rounded-md border mt-2"
                   />
                 </div>
               )}
@@ -489,15 +500,15 @@ function QuestionTake({
         })}
       </RadioGroup>
 
-      {showResult && userAnswer && (
-        <motion.div 
+      {showResult && (
+        <motion.div
           className={cn(
             "mt-4 p-3 rounded-md border",
             userAnswer === correctAnswer 
               ? "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
               : "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
           )}
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >

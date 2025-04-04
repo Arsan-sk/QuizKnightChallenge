@@ -1,33 +1,33 @@
+import { motion } from "framer-motion";
 import { ReactNode } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 
-interface QuestionTransitionProps {
+type QuestionTransitionProps = {
   children: ReactNode;
-  id: string | number;
-  direction?: "left" | "right"; // Direction of travel
-}
+  id: number | string;
+  direction: "left" | "right";
+};
 
 export function QuestionTransition({
   children,
   id,
-  direction = "right",
+  direction,
 }: QuestionTransitionProps) {
   return (
-    <AnimatePresence mode="wait">
+    <>
       <motion.div
         key={id}
-        initial={{ 
-          opacity: 0, 
+        initial={{
+          opacity: 0,
           x: direction === "right" ? 50 : -50,
           scale: 0.98
         }}
-        animate={{ 
-          opacity: 1, 
+        animate={{
+          opacity: 1,
           x: 0,
           scale: 1
         }}
-        exit={{ 
-          opacity: 0, 
+        exit={{
+          opacity: 0,
           x: direction === "right" ? -50 : 50,
           scale: 0.98
         }}
@@ -42,6 +42,6 @@ export function QuestionTransition({
       >
         {children}
       </motion.div>
-    </AnimatePresence>
+    </>
   );
 } 
