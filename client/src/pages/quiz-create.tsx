@@ -124,10 +124,10 @@ export default function QuizCreate() {
     }
     
     const newQuestion = {
-      questionText: "",
-      questionType: "mcq",
-      options: ["", "", "", ""],
-      correctAnswer: "",
+        questionText: "",
+        questionType: "mcq",
+        options: ["", "", "", ""],
+        correctAnswer: "",
       points: 1,
     };
     
@@ -316,7 +316,7 @@ export default function QuizCreate() {
   // Memoized render functions to prevent unnecessary re-renders
   const renderQuizDetails = useCallback(() => (
     <AnimatePresence mode="wait">
-      <motion.div 
+      <motion.div
         key="details-form"
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
@@ -347,7 +347,7 @@ export default function QuizCreate() {
               {form.formState.errors.title && (
                 <p className="text-sm text-red-500">{form.formState.errors.title.message?.toString()}</p>
               )}
-            </div>
+              </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2">
@@ -359,7 +359,7 @@ export default function QuizCreate() {
                 placeholder="Describe what this quiz is about and what students will learn"
                 className="min-h-24 transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
-            </div>
+              </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -573,13 +573,13 @@ export default function QuizCreate() {
             ) : (
               <div className="space-y-6">
                 <AnimatePresence mode="popLayout">
-                  {questions.map((question, index) => (
-                    <motion.div
+              {questions.map((question, index) => (
+                <motion.div
                       key={`question-wrapper-${index}`}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                      transition={{ duration: 0.3 }}
+                  transition={{ duration: 0.3 }}
                       layout
                       layoutId={`question-${index}`}
                     >
@@ -589,13 +589,13 @@ export default function QuizCreate() {
                         {question.questionType === "true_false" && <Badge variant="outline">True/False</Badge>}
                       </div>
                       <MemoizedQuestion
-                        question={question}
-                        onChange={(q) => updateQuestion(index, q)}
-                        onRemove={() => removeQuestion(index)}
-                        mode="edit"
-                      />
-                    </motion.div>
-                  ))}
+                    question={question}
+                    onChange={(q) => updateQuestion(index, q)}
+                    onRemove={() => removeQuestion(index)}
+                    mode="edit"
+                  />
+                </motion.div>
+              ))}
                 </AnimatePresence>
 
                 {questions.length > 0 && (
@@ -617,7 +617,7 @@ export default function QuizCreate() {
                     </Button>
                   </motion.div>
                 )}
-              </div>
+            </div>
             )}
           </CardContent>
           <AnimatedCardFooter>

@@ -45,7 +45,7 @@ export default function QuizTake() {
   const { toast } = useToast();
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
-  const [timeStarted, setTimeStarted] = useState<Date | null>(null);
+  const [timeStarted, setTimeStarted] = useState<Date>(new Date());
   const [warnings, setWarnings] = useState(0);
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [showReview, setShowReview] = useState(false);
@@ -110,29 +110,14 @@ export default function QuizTake() {
     }
   }, [user, id, toast]);
 
-  // Initialize time tracking when the component loads
-  useEffect(() => {
-    // Only set the start time if it hasn't been set yet
-    if (!timeStarted) {
-      setTimeStarted(new Date());
-      console.log("Quiz start time set:", new Date().toISOString());
-    }
-  }, [timeStarted]);
-
   const submitQuiz = async () => {
     try {
-      if (!questions || !Array.isArray(questions) || questions.length === 0 || !user || !('id' in user)) {
+      if (!questions || !Array.isArray(questions) || questions.length === 0 || !timeStarted || !user || !('id' in user)) {
         console.error("Missing required data for quiz submission");
         return;
       }
       
       setSubmitting(true);
-      
-      // Check if timeStarted is valid
-      if (!timeStarted) {
-        console.error("Time started is null, using current time");
-        setTimeStarted(new Date());
-      }
       
       let correctCount = 0;
       let wrongCount = 0;
@@ -149,19 +134,7 @@ export default function QuizTake() {
       
       const totalQuestions = questionsArray.length;
       const scorePercentage = (correctCount / totalQuestions) * 100;
-      
-      // Calculate time taken, ensuring we have a valid start time
-      const startTime = timeStarted || new Date();
-      const endTime = new Date();
-      const timeTakenMs = endTime.getTime() - startTime.getTime();
-      const timeTaken = Math.max(1, Math.floor(timeTakenMs / 1000)); // Convert to seconds, minimum 1 second
-      
-      console.log("Quiz submission - Time calculation:", {
-        startTime: startTime.toISOString(),
-        endTime: endTime.toISOString(),
-        timeTakenMs,
-        timeTakenSeconds: timeTaken
-      });
+      const timeTaken = Math.floor((Date.now() - timeStarted.getTime()) / 1000);
       
       const pointsEarned = correctCount * 2;
       
@@ -228,8 +201,8 @@ export default function QuizTake() {
   }, [submitQuiz, toast]);
 
   useEffect(() => {
-    // Don't set the time here, we handle this in a separate effect
-    
+    setTimeStarted(new Date());
+
     const handleVisibilityChange = () => {
       if (document.hidden && !quizCompleted) {
         setWarnings((w) => {
@@ -502,11 +475,6 @@ export default function QuizTake() {
                 <p className="text-sm text-muted-foreground mt-1">
                   {quizResult.timeTaken < 120 ? 'Great speed!' : quizResult.timeTaken < 300 ? 'Good pace!' : 'Take your time!'}
                 </p>
-                {process.env.NODE_ENV === 'development' && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Raw seconds: {quizResult.timeTaken}
-                  </p>
-                )}
               </CardContent>
             </Card>
 
@@ -556,4 +524,222 @@ export default function QuizTake() {
                     {leaderboard.map((entry, index) => (
                       <div 
                         key={entry.id} 
-                        className={`
+                        className={`flex items-center justify-between p-3 rounded-lg ${
+                          index === 0 
+                            ? 'bg-yellow-100 dark:bg-yellow-900/20' 
+                            : index === 1 
+                              ? 'bg-gray-100 dark:bg-gray-800/50' 
+                              : index === 2 
+                                ? 'bg-amber-100 dark:bg-amber-900/20' 
+                                : ''
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="font-bold w-6 text-center">{index + 1}</div>
+                          <Avatar>
+                            <AvatarFallback>
+                              {entry.username.substring(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{entry.username}</p>
+                            <div className="flex items-center text-sm text-muted-foreground">
+                              <CheckCircle className="h-3 w-3 mr-1 text-green-500" />
+                              <span>{entry.correctAnswers} correct</span>
+                              <span className="mx-1">•</span>
+                              <Clock className="h-3 w-3 mr-1" />
+                              <span>{Math.floor(entry.timeTaken / 60)}:{(entry.timeTaken % 60).toString().padStart(2, '0')}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-2xl font-bold">{entry.score}%</div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+          
+          <div className="flex justify-center mt-8">
+            <Button onClick={() => setLocation("/student")}>
+              Return to Dashboard
+            </Button>
+          </div>
+        </div>
+
+        {showReview && (
+          <QuizReview 
+            questions={typedQuestions} 
+            userAnswers={answers} 
+            onClose={() => setShowReview(false)} 
+          />
+        )}
+      </div>
+    );
+  }
+
+  if (typedQuiz.quizType === "live" && typedQuiz.isActive) {
+    return (
+      <div className="min-h-screen bg-background">
+        <NavBar />
+        
+        <WebcamMonitor 
+          enabled={enableWebcam && !quizCompleted} 
+          onViolationDetected={handleWebcamViolation} 
+        />
+        
+        <div className="container mx-auto px-4 py-8">
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="max-w-3xl mx-auto"
+          >
+            <div className="mb-6">
+              <h1 className="text-3xl font-bold">{typedQuiz.title}</h1>
+              <p className="text-muted-foreground">{typedQuiz.description}</p>
+            </div>
+            
+            <div className="bg-card rounded-lg shadow-sm p-6 border">
+              <LiveQuizController 
+                questions={typedQuestions}
+                duration={typedQuiz.duration || 30}
+                onAnswer={handleAnswer}
+                onComplete={submitQuiz}
+                userAnswers={answers}
+              />
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!quizCompleted) {
+    return (
+      <div className="min-h-screen bg-background">
+        <NavBar />
+        
+        <WebcamMonitor 
+          enabled={enableWebcam && !quizCompleted} 
+          onViolationDetected={handleWebcamViolation} 
+        />
+        
+        <div className="container mx-auto px-4 py-8">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="mb-8">
+              <h1 className="text-3xl font-bold mb-2">{typedQuiz.title}</h1>
+              <p className="text-muted-foreground mb-4">{typedQuiz.description}</p>
+            {warnings > 0 && (
+              <p className="text-red-500 mb-2">
+                  Warning: Tab switching detected! ({warnings}/3)
+              </p>
+            )}
+            <Progress
+                value={((currentQuestion + 1) / typedQuestions.length) * 100}
+              className="h-2"
+            />
+          </div>
+
+            {typedQuiz.duration && typedQuiz.duration > 0 && (
+              <div className="flex justify-end mb-4">
+                <CountdownTimer 
+                  duration={typedQuiz.duration * 60} 
+                  onTimeUp={() => {
+                    toast({
+                      title: "Time's up!",
+                      description: "Your quiz has been automatically submitted.",
+                    });
+                    submitQuiz();
+                  }}
+                  className="mb-4"
+                />
+              </div>
+            )}
+            
+            <QuizProgress 
+              currentQuestion={currentQuestion + 1} 
+              totalQuestions={typedQuestions.length}
+              className="mb-6" 
+            />
+            
+            {typedQuestions.length > 0 && currentQuestion < typedQuestions.length && (
+              <QuestionTransition 
+                id={currentQuestion}
+                direction={currentQuestion > 0 ? "right" : "left"}
+              >
+                <Card className="mb-6">
+                  <CardHeader>
+                    <CardTitle>
+                      Question {currentQuestion + 1}
+                    </CardTitle>
+                    <CardDescription>
+                      {typedQuiz.title} - {typedQuiz.description}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+              <Question
+                      question={typedQuestions[currentQuestion]}
+                      userAnswer={answers[currentQuestion] || ""}
+                      onChange={handleAnswer}
+                      showResult={false}
+                    />
+                  </CardContent>
+                </Card>
+              </QuestionTransition>
+            )}
+            
+            <div className="flex justify-between mt-4">
+              <Button
+                variant="outline"
+                onClick={previous}
+                disabled={currentQuestion === 0}
+              >
+                Previous
+              </Button>
+              
+              {currentQuestion < typedQuestions.length - 1 ? (
+                <Button onClick={next}>Next</Button>
+            ) : (
+              <Button
+                  onClick={() => {
+                    if (answers.filter(Boolean).length < typedQuestions.length) {
+                      const unanswered = typedQuestions.length - answers.filter(Boolean).length;
+                      
+                      if (window.confirm(`You have ${unanswered} unanswered question(s). Are you sure you want to submit?`)) {
+                        submitQuiz();
+                      }
+                    } else {
+                      submitQuiz();
+                    }
+                  }}
+                  disabled={submitting}
+                >
+                  {submitting ? "Submitting..." : "Submit Quiz"}
+              </Button>
+            )}
+          </div>
+        </motion.div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <NavBar />
+      <div className="container mx-auto p-8 text-center">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+        <h1 className="text-2xl font-bold mb-4">Loading Quiz</h1>
+        <p className="text-muted-foreground">
+          Please wait while we load your quiz...
+        </p>
+      </div>
+    </div>
+  );
+}
