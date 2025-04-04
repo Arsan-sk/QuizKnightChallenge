@@ -1,65 +1,40 @@
 import { useState, useEffect } from "react";
 import { useParams, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { Question as QuestionType, Result } from "@shared/schema";
+import { Quiz, Question as QuestionType, Result } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Clock, CheckCircle, XCircle, ArrowLeft } from "lucide-react";
 import { NavBar } from "@/components/layout/nav-bar";
 import { useToast } from "@/hooks/use-toast";
 import { formatTime } from "@/utils/analytics";
+import { formatTimeTaken } from "@/lib/utils";
+
+// Add Result with answers type
+interface ResultWithAnswers extends Result {
+  answers: string;
+}
 
 export default function QuizReviewPage() {
   const { quizId, userId } = useParams();
   const { toast } = useToast();
   const [userAnswers, setUserAnswers] = useState<string[]>([]);
   
-  // Fetch quiz details
-  const { data: quiz, isLoading: loadingQuiz } = useQuery({
-    queryKey: [`/api/quizzes/${quizId}`],
-    onError: (error) => {
-      toast({
-        title: "Error loading quiz",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
+  // Simplified query calls without onError
+  const { data: quiz, isLoading: loadingQuiz } = useQuery<Quiz>({
+    queryKey: [`/api/quizzes/${quizId}`]
   });
   
-  // Fetch questions
   const { data: questions, isLoading: loadingQuestions } = useQuery<QuestionType[]>({
-    queryKey: [`/api/quizzes/${quizId}/questions`],
-    onError: (error) => {
-      toast({
-        title: "Error loading questions",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
+    queryKey: [`/api/quizzes/${quizId}/questions`]
   });
   
-  // Fetch user's result/attempt
-  const { data: userResult, isLoading: loadingResult } = useQuery<Result>({
-    queryKey: [`/api/quizzes/${quizId}/results/${userId}`],
-    onError: (error) => {
-      toast({
-        title: "Error loading student result",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
+  const { data: userResult, isLoading: loadingResult } = useQuery<ResultWithAnswers>({
+    queryKey: [`/api/quizzes/${quizId}/results/${userId}`]
   });
   
-  // Fetch user details
-  const { data: student, isLoading: loadingStudent } = useQuery({
-    queryKey: [`/api/users/${userId}`],
-    onError: (error) => {
-      toast({
-        title: "Error loading student information",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
+  const { data: student, isLoading: loadingStudent } = useQuery<{ username: string }>({
+    queryKey: [`/api/users/${userId}`]
   });
   
   useEffect(() => {
@@ -153,9 +128,9 @@ export default function QuizReviewPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="text-center">
-              <p className="text-4xl font-bold">{formatTime(userResult.timeTaken)}</p>
+              <p className="text-4xl font-bold">{formatTimeTaken(userResult.timeTaken)}</p>
               <p className="text-muted-foreground mt-1">
-                Completed on {new Date(userResult.completedAt).toLocaleDateString()}
+                Completed on {userResult.completedAt ? new Date(userResult.completedAt).toLocaleDateString() : 'N/A'}
               </p>
             </CardContent>
           </Card>
