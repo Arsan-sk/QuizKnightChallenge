@@ -55,6 +55,16 @@ export function LeaderboardWidget({
       ? data.filter(user => user.role === "student") 
       : data;
     
+    // Sort by points (descending) and then by totalScore as a tiebreaker
+    filteredData = [...filteredData].sort((a, b) => {
+      // First sort by points (descending)
+      if (b.points !== a.points) {
+        return b.points - a.points;
+      }
+      // If points are equal, sort by totalScore (descending)
+      return b.totalScore - a.totalScore;
+    });
+    
     // Limit the number of users
     filteredData = filteredData.slice(0, limit);
     
@@ -124,7 +134,7 @@ export function LeaderboardWidget({
     
     return (
       <motion.div
-        className={`absolute -top-4 ${rank === 1 ? 'left-1/2 -translate-x-1/2' : rank === 2 ? 'left-3' : 'right-3'}`}
+        className={`absolute -top-4 left-1/2 -translate-x-1/2`}
         initial={{ y: -20, opacity: 0 }}
         animate={{ 
           y: 0, 
@@ -140,7 +150,12 @@ export function LeaderboardWidget({
           repeatDelay: 5
         }}
       >
-        <div className={`transform-style-3d shadow-xl rounded-full flex items-center justify-center p-2 ${rank === 1 ? 'bg-yellow-100' : rank === 2 ? 'bg-gray-100' : 'bg-amber-100'}`}>
+        <div className={`transform-style-3d shadow-xl rounded-full flex items-center justify-center p-2 
+          ${rank === 1 
+            ? 'bg-yellow-100 border-2 border-yellow-300 trophy-glow-gold' 
+            : rank === 2 
+              ? 'bg-gray-100 border-2 border-gray-300 trophy-glow-silver' 
+              : 'bg-amber-100 border-2 border-amber-300 trophy-glow-bronze'}`}>
           <div className={trophyColorClass}>
             {trophyIcon}
           </div>
@@ -258,6 +273,18 @@ export function LeaderboardWidget({
       <CardContent className="space-y-6 p-0">
         {/* Top 3 Users section - displayed in parallel */}
         <div className="pb-4 px-6 relative">
+          {/* Decorative background elements */}
+          <motion.div
+            className="absolute inset-0 pointer-events-none"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1 }}
+          >
+            <div className="absolute top-1/4 left-1/4 w-2 h-2 rounded-full bg-yellow-300 opacity-70"></div>
+            <div className="absolute top-1/3 right-1/3 w-1 h-1 rounded-full bg-blue-300 opacity-50"></div>
+            <div className="absolute bottom-1/4 right-1/4 w-1.5 h-1.5 rounded-full bg-green-300 opacity-60"></div>
+          </motion.div>
+          
           <div className="flex justify-center items-end gap-2 md:gap-4 h-40 mb-2">
             {topThreeUsers.map((user, idx) => {
               const rank = user.rank;
@@ -266,19 +293,19 @@ export function LeaderboardWidget({
               const heightPercent = rank === 1 ? '100%' : rank === 2 ? '85%' : '70%';
               const zIndex = rank === 1 ? 'z-30' : rank === 2 ? 'z-20' : 'z-10';
               
-              // Position column based on rank
+              // Position column based on rank - always keep 1st in center
               const positionClass = rank === 1 
                 ? 'order-2' 
                 : rank === 2 
                   ? 'order-1' 
                   : 'order-3';
               
-              // Background color based on rank
+              // Background color based on rank with enhanced gradients
               const bgClass = rank === 1 
-                ? 'bg-gradient-to-t from-yellow-100/80 to-yellow-50/50 border-yellow-300' 
+                ? 'bg-gradient-to-t from-yellow-100 to-yellow-50 border-yellow-300 podium-glow-gold' 
                 : rank === 2 
-                  ? 'bg-gradient-to-t from-gray-100/80 to-gray-50/50 border-gray-300' 
-                  : 'bg-gradient-to-t from-amber-100/80 to-amber-50/50 border-amber-300';
+                  ? 'bg-gradient-to-t from-gray-100 to-gray-50 border-gray-300 podium-glow-silver' 
+                  : 'bg-gradient-to-t from-amber-100 to-amber-50 border-amber-300 podium-glow-bronze';
               
               return (
                 <motion.div 
@@ -293,6 +320,13 @@ export function LeaderboardWidget({
                   }}
                   className={`${positionClass} ${zIndex} relative flex flex-col items-center rounded-t-xl transform transition-all duration-300 hover:scale-105 cursor-pointer w-1/3 border-t-4 ${bgClass}`}
                   style={{ height: heightPercent }}
+                  whileHover={{
+                    boxShadow: rank === 1 
+                      ? "0 0 15px rgba(250, 204, 21, 0.5)" 
+                      : rank === 2 
+                        ? "0 0 15px rgba(156, 163, 175, 0.5)" 
+                        : "0 0 15px rgba(217, 119, 6, 0.5)"
+                  }}
                 >
                   {renderTrophy(rank)}
                   
@@ -303,43 +337,90 @@ export function LeaderboardWidget({
                     transition={{ duration: 0.3 }}
                   >
                     <motion.div 
-                      className={`relative rounded-full p-1 border-2 ${
-                        rank === 1 ? 'border-yellow-500' : 
-                        rank === 2 ? 'border-gray-400' : 'border-amber-600'
+                      className={`relative rounded-full p-1.5 border-2 mx-auto ${
+                        rank === 1 ? 'border-yellow-500 shadow-glow-yellow' : 
+                        rank === 2 ? 'border-gray-400 shadow-glow-gray' : 'border-amber-600 shadow-glow-amber'
                       }`}
                       whileHover={{ scale: 1.05, rotate: 5 }}
                       transition={{ duration: 0.2 }}
                     >
                       <Avatar className={`w-12 h-12 md:w-16 md:h-16 ${
-                        rank === 1 ? 'ring-2 ring-yellow-300 ring-offset-2' : ''
+                        rank === 1 ? 'ring-2 ring-yellow-300 ring-offset-2' : 
+                        rank === 2 ? 'ring-1 ring-gray-300 ring-offset-1' : 
+                        'ring-1 ring-amber-300 ring-offset-1'
                       }`}>
                         <AvatarImage src={user.profilePicture} />
-                        <AvatarFallback className="text-lg bg-primary/10">
+                        <AvatarFallback className={`text-lg ${
+                          rank === 1 ? 'bg-yellow-100 text-yellow-800' : 
+                          rank === 2 ? 'bg-gray-100 text-gray-800' : 
+                          'bg-amber-100 text-amber-800'
+                        }`}>
                           {getInitials(user.name, user.username)}
                         </AvatarFallback>
                       </Avatar>
                       
-                      <div className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold">
+                      <motion.div 
+                        className={`absolute -bottom-1 -right-1 rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold
+                          ${rank === 1 
+                            ? 'bg-yellow-500 text-yellow-50' 
+                            : rank === 2 
+                              ? 'bg-gray-500 text-gray-50' 
+                              : 'bg-amber-600 text-amber-50'
+                          }`}
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        transition={{
+                          type: "spring",
+                          stiffness: 500,
+                          damping: 15,
+                          delay: 0.3 + (rank * 0.1)
+                        }}
+                      >
                         {rank}
-                      </div>
+                      </motion.div>
                     </motion.div>
                     
                     <div className="flex flex-col items-center mt-2 px-1">
                       <motion.div
                         whileHover={{ scale: 1.05 }}
-                        className="font-semibold text-sm md:text-base truncate w-full text-center"
+                        className={`font-semibold text-sm md:text-base truncate w-full text-center ${
+                          rank === 1 ? 'text-yellow-800' : 
+                          rank === 2 ? 'text-gray-800' : 
+                          'text-amber-800'
+                        }`}
                       >
                         {user.username}
                       </motion.div>
                       
                       <motion.div 
                         className="flex items-center gap-1 mt-1"
-                        initial={{ scale: 0.8 }}
-                        animate={{ scale: 1 }}
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
                         transition={{ delay: 0.4 + (0.1 * rank) }}
                       >
-                        <span className="text-sm md:text-base font-bold">{user.points}</span>
-                        <Star className="h-3 w-3 text-yellow-500" />
+                        <motion.span 
+                          className={`text-sm md:text-base font-bold ${
+                            rank === 1 ? 'text-yellow-600' : 
+                            rank === 2 ? 'text-gray-600' : 
+                            'text-amber-600'
+                          }`}
+                          animate={{
+                            scale: [1, 1.1, 1],
+                          }}
+                          transition={{
+                            duration: 1.5,
+                            repeat: 2,
+                            repeatType: "reverse",
+                            delay: 0.6 + (rank * 0.2)
+                          }}
+                        >
+                          {user.points}
+                        </motion.span>
+                        <Star className={`h-3 w-3 ${
+                          rank === 1 ? 'text-yellow-500' : 
+                          rank === 2 ? 'text-gray-500' : 
+                          'text-amber-600'
+                        }`} />
                       </motion.div>
                     </div>
                   </motion.div>
@@ -438,6 +519,45 @@ export function LeaderboardWidget({
         .leaderboard-scroll::-webkit-scrollbar-thumb {
           background-color: rgba(var(--accent), 0.2);
           border-radius: 20px;
+        }
+        
+        /* Podium glow effects */
+        .podium-glow-gold {
+          box-shadow: 0 5px 15px -5px rgba(253, 224, 71, 0.4);
+        }
+        
+        .podium-glow-silver {
+          box-shadow: 0 5px 15px -5px rgba(156, 163, 175, 0.4);
+        }
+        
+        .podium-glow-bronze {
+          box-shadow: 0 5px 15px -5px rgba(217, 119, 6, 0.3);
+        }
+        
+        /* Trophy glow effects */
+        .trophy-glow-gold {
+          box-shadow: 0 0 10px 2px rgba(253, 224, 71, 0.6);
+        }
+        
+        .trophy-glow-silver {
+          box-shadow: 0 0 10px 2px rgba(156, 163, 175, 0.6);
+        }
+        
+        .trophy-glow-bronze {
+          box-shadow: 0 0 10px 2px rgba(217, 119, 6, 0.5);
+        }
+        
+        /* Avatar shadow effects */
+        .shadow-glow-yellow {
+          box-shadow: 0 0 8px 1px rgba(253, 224, 71, 0.5);
+        }
+        
+        .shadow-glow-gray {
+          box-shadow: 0 0 8px 1px rgba(156, 163, 175, 0.5);
+        }
+        
+        .shadow-glow-amber {
+          box-shadow: 0 0 8px 1px rgba(217, 119, 6, 0.4);
         }
       `}</style>
     </Card>
