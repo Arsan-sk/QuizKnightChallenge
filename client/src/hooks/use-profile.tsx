@@ -25,6 +25,12 @@ interface UserProfile {
   createdAt: string;
   updatedAt?: string;
   lastActive?: string;
+  stats?: {
+    quizzesTaken: number;
+    totalScore: number;
+    averageScore: number;
+    globalRank: number | null;
+  };
 }
 
 // Profile update data structure

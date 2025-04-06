@@ -132,6 +132,20 @@ export default function LeaderboardPage() {
           userData.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
           userData.displayName.toLowerCase().includes(searchTerm.toLowerCase())
         )
+        // Sort by points (descending) and then by quizzesTaken as a tiebreaker
+        .sort((a, b) => {
+          // First sort by points (descending)
+          if (b.points !== a.points) {
+            return b.points - a.points;
+          }
+          // If points are equal, use quizzesTaken as a tiebreaker (descending)
+          return b.quizzesTaken - a.quizzesTaken;
+        })
+        // Assign ranks after sorting
+        .map((user, index) => ({
+          ...user,
+          rank: index + 1 // 1-based ranking
+        }))
     : [];
 
   // Find current user in the leaderboard

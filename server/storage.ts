@@ -112,9 +112,21 @@ export class DatabaseStorage implements IStorage {
         ? Math.round(totalScore / quizzesTaken) 
         : 0;
         
-      // Get global rank
+      // Get global rank with improved ranking logic
       const leaderboard = await this.getGlobalLeaderboard(100);
-      const rank = leaderboard.findIndex(entry => entry.id === userId) + 1;
+      
+      // Sort the leaderboard with improved ranking logic
+      const sortedLeaderboard = [...leaderboard].sort((a, b) => {
+        // First sort by points (descending)
+        if (b.points !== a.points) {
+          return b.points - a.points;
+        }
+        // If points are equal, use totalScore as a tiebreaker (descending)
+        return b.totalScore - a.totalScore;
+      });
+      
+      // Find user's position in the sorted leaderboard
+      const rank = sortedLeaderboard.findIndex(entry => entry.id === userId) + 1;
       
       return {
         ...user,
@@ -406,7 +418,8 @@ export class DatabaseStorage implements IStorage {
         .from(users)
         .leftJoin(results, eq(users.id, results.userId))
         .groupBy(users.id, users.username, users.name, users.profilePicture, users.role, users.points)
-        .orderBy(desc(sql`SUM(${results.score})`), desc(users.points))
+        // First sort by points, then by totalScore as a tiebreaker
+        .orderBy(desc(users.points), desc(sql`SUM(${results.score})`))
         .limit(limit);
         
       return leaderboard;

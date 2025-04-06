@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Link } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Trophy, Medal } from "lucide-react";
 
 export default function ProfilePage() {
   const { profile, isLoading, error } = useProfile();
@@ -144,6 +145,38 @@ export default function ProfilePage() {
             </Card>
             <Card>
               <CardHeader>
+                <CardTitle className="text-lg">Global Rank</CardTitle>
+              </CardHeader>
+              <CardContent className="flex items-center">
+                {profile.stats?.globalRank ? (
+                  <div className="flex items-center">
+                    {profile.stats.globalRank === 1 ? (
+                      <Trophy className="h-8 w-8 text-yellow-500 mr-2" />
+                    ) : profile.stats.globalRank === 2 ? (
+                      <Medal className="h-8 w-8 text-gray-400 mr-2" />
+                    ) : profile.stats.globalRank === 3 ? (
+                      <Medal className="h-8 w-8 text-amber-700 mr-2" />
+                    ) : null}
+                    <p className="text-3xl font-bold">
+                      {profile.stats.globalRank}
+                      <span className="text-lg text-muted-foreground ml-1">
+                        {profile.stats.globalRank === 1 
+                          ? "st" 
+                          : profile.stats.globalRank === 2 
+                            ? "nd" 
+                            : profile.stats.globalRank === 3 
+                              ? "rd" 
+                              : "th"}
+                      </span>
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">Not ranked yet</p>
+                )}
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
                 <CardTitle className="text-lg">Achievements</CardTitle>
               </CardHeader>
               <CardContent>
@@ -162,6 +195,16 @@ export default function ProfilePage() {
                 </p>
               </CardContent>
             </Card>
+            {profile.stats?.quizzesTaken ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Quizzes Taken</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-3xl font-bold">{profile.stats.quizzesTaken}</p>
+                </CardContent>
+              </Card>
+            ) : null}
           </div>
         </TabsContent>
         
