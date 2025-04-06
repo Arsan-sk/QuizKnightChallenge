@@ -124,7 +124,7 @@ export default function QuizAnalyticsPage() {
           <p className="text-muted-foreground">Analytics Dashboard</p>
         </div>
         <Button asChild className="mt-4 md:mt-0">
-          <Link href={`/quiz/${id}`}>Back to Quiz</Link>
+          <Link href="/dashboard">Back to Dashboard</Link>
         </Button>
       </div>
 

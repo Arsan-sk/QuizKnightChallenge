@@ -73,7 +73,7 @@ export default function QuizReviewPage() {
             The requested quiz review could not be loaded. The quiz or student attempt may not exist.
           </p>
           <Button asChild>
-            <Link href={`/quiz-analytics/${quizId}`}>Return to Analytics</Link>
+            <Link href="/dashboard">Back to Dashboard</Link>
           </Button>
         </div>
       </div>
@@ -91,8 +91,8 @@ export default function QuizReviewPage() {
         <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
             <Button variant="outline" asChild className="mb-4 md:mb-0">
-              <Link href={`/quiz-analytics/${quizId}`}>
-                <ArrowLeft className="h-4 w-4 mr-2" /> Back to Analytics
+              <Link href="/dashboard">
+                <ArrowLeft className="h-4 w-4 mr-2" /> Back to Dashboard
               </Link>
             </Button>
           </div>

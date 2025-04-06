@@ -568,8 +568,8 @@ export default function QuizTake() {
           <p className="text-muted-foreground">
             There was a problem loading the quiz. Please try again later.
           </p>
-          <Button className="mt-4" onClick={() => setLocation("/student")}>
-            Return to Dashboard
+          <Button className="mt-4" onClick={() => setLocation("/dashboard")}>
+            Back to Dashboard
           </Button>
         </div>
       </div>
@@ -593,8 +593,8 @@ export default function QuizTake() {
           <p className="text-muted-foreground mb-6">
             You have already completed this quiz. Multiple attempts are not allowed.
           </p>
-          <Button onClick={() => setLocation("/student")}>
-            Return to Dashboard
+          <Button onClick={() => setLocation("/dashboard")}>
+            Back to Dashboard
           </Button>
         </div>
       </div>
