@@ -568,7 +568,7 @@ export default function QuizTake() {
           <p className="text-muted-foreground">
             There was a problem loading the quiz. Please try again later.
           </p>
-          <Button className="mt-4" onClick={() => setLocation("/dashboard")}>
+          <Button className="mt-4" onClick={() => setLocation(typedUser?.role === "teacher" ? "/teacher" : "/student")}>
             Back to Dashboard
           </Button>
         </div>
@@ -593,7 +593,7 @@ export default function QuizTake() {
           <p className="text-muted-foreground mb-6">
             You have already completed this quiz. Multiple attempts are not allowed.
           </p>
-          <Button onClick={() => setLocation("/dashboard")}>
+          <Button onClick={() => setLocation(typedUser?.role === "teacher" ? "/teacher" : "/student")}>
             Back to Dashboard
           </Button>
         </div>
@@ -1031,7 +1031,7 @@ export default function QuizTake() {
               transition={{ delay: 1 }}
             >
               <Button asChild size="lg" variant="outline" className="gap-2">
-                <Link href="/dashboard">
+                <Link href={typedUser?.role === "teacher" ? "/teacher" : "/student"}>
                   <Home className="h-4 w-4 mr-2" />
                   Back to Dashboard
                 </Link>

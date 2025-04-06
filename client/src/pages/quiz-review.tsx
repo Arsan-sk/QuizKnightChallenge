@@ -9,6 +9,7 @@ import { NavBar } from "@/components/layout/nav-bar";
 import { useToast } from "@/hooks/use-toast";
 import { formatTime } from "@/utils/analytics";
 import { formatTimeTaken } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
 
 // Add Result with answers type
 interface ResultWithAnswers extends Result {
@@ -18,6 +19,7 @@ interface ResultWithAnswers extends Result {
 export default function QuizReviewPage() {
   const { quizId, userId } = useParams();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [userAnswers, setUserAnswers] = useState<string[]>([]);
   
   // Simplified query calls without onError
@@ -73,7 +75,7 @@ export default function QuizReviewPage() {
             The requested quiz review could not be loaded. The quiz or student attempt may not exist.
           </p>
           <Button asChild>
-            <Link href="/dashboard">Back to Dashboard</Link>
+            <Link href={user?.role === "teacher" ? "/teacher" : "/student"}>Back to Dashboard</Link>
           </Button>
         </div>
       </div>
@@ -91,7 +93,7 @@ export default function QuizReviewPage() {
         <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
             <Button variant="outline" asChild className="mb-4 md:mb-0">
-              <Link href="/dashboard">
+              <Link href={user?.role === "teacher" ? "/teacher" : "/student"}>
                 <ArrowLeft className="h-4 w-4 mr-2" /> Back to Dashboard
               </Link>
             </Button>

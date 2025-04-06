@@ -12,6 +12,7 @@ import { QuizAnalytics } from '@/types/analytics';
 import { formatTime, formatNumber } from '@/utils/analytics';
 import { Users, Target, Trophy, BarChart, Clock, AlertCircle } from 'lucide-react';
 import { StudentReportTable } from '@/components/analytics/StudentReportTable';
+import { useAuth } from "@/hooks/use-auth";
 
 // Default empty analytics state with proper structure
 const emptyAnalytics: QuizAnalytics = {
@@ -34,6 +35,7 @@ const emptyAnalytics: QuizAnalytics = {
 
 export default function QuizAnalyticsPage() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const [analytics, setAnalytics] = useState<QuizAnalytics>(emptyAnalytics);
   const [quizTitle, setQuizTitle] = useState<string>("Quiz Analytics");
   const [activeTab, setActiveTab] = useState("overview");
@@ -105,12 +107,22 @@ export default function QuizAnalyticsPage() {
   if (error) {
     return (
       <div className="container max-w-7xl mx-auto p-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
+          <div>
+            <h1 className="text-3xl font-bold">{quizTitle}</h1>
+            <p className="text-muted-foreground">Analytics Dashboard</p>
+          </div>
+          <Button asChild className="mt-4 md:mt-0">
+            <Link href={user?.role === "teacher" ? "/teacher" : "/student"}>Back to Dashboard</Link>
+          </Button>
+        </div>
+
         <Alert variant="destructive" className="mb-6">
           <AlertTitle>Error Loading Analytics</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
         <Button asChild>
-          <Link href="/dashboard">Return to Dashboard</Link>
+          <Link href={user?.role === "teacher" ? "/teacher" : "/student"}>Back to Dashboard</Link>
         </Button>
       </div>
     );
@@ -124,7 +136,7 @@ export default function QuizAnalyticsPage() {
           <p className="text-muted-foreground">Analytics Dashboard</p>
         </div>
         <Button asChild className="mt-4 md:mt-0">
-          <Link href="/dashboard">Back to Dashboard</Link>
+          <Link href={user?.role === "teacher" ? "/teacher" : "/student"}>Back to Dashboard</Link>
         </Button>
       </div>
 
