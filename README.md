@@ -93,7 +93,7 @@ quiz-knight-challenge/
 
 ## About the Creator
 
-I'm Shaikh Mohd Arsan, the architect behind the ideas, structure, and vision of this project. Every concept, feature, and future enhancement originates from my mind, meticulously framed and structured before execution.
+I'm Shaikh Mohd Arsan[Arsan-sk], the architect behind the ideas, structure, and vision of this project. Every concept, feature, and future enhancement originates from my mind, meticulously framed and structured before execution.
 
 While I leverage Generative and Agentic AI as powerful tools in the implementation process, the core logic, planning, and innovation are entirely my own. AI assists in execution, but the blueprint is purely human.
 
