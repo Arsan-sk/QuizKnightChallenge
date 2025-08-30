@@ -1,0 +1,4 @@
+git config --global core.pager ""
+git branch dashboard-fixes
+git checkout dashboard-fixes
+git push origin HEAD:image-upload-start 

@@ -1,0 +1,10 @@
+[33mcommit 8773786e63f659eedac75fc95377816da4de5d9e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mimage-upload-start[m[33m)[m
+Author: Shaikh Mohd Arsan <skarsan02@gmail.com>
+Date:   Thu Apr 3 15:25:23 2025 +0530
+
+    Update dependencies and configurations for image upload support
+
+client/package-lock.json
+client/package.json
+package-lock.json
+package.json
