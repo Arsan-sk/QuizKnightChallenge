@@ -76,6 +76,7 @@ export const results = pgTable("results", {
   correctAnswers: integer("correct_answers").notNull(),
   wrongAnswers: integer("wrong_answers").notNull(),
   timeTaken: integer("time_taken").notNull(),  // Time taken in seconds
+  pointsEarned: integer("points_earned").default(0), // Points earned for this attempt
   completedAt: timestamp("completed_at").defaultNow(),
 });
 
@@ -181,6 +182,11 @@ export const insertResultSchema = createInsertSchema(results).pick({
   correctAnswers: true,
   wrongAnswers: true,
   timeTaken: true,
+  pointsEarned: true,
+});
+
+export const submitResultSchema = insertResultSchema.extend({
+  pointsEarned: z.number().optional(),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;

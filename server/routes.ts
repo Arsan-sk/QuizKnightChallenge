@@ -3,10 +3,11 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
-import { 
-  insertQuizSchema, 
-  insertQuestionSchema, 
+import {
+  insertQuizSchema,
+  insertQuestionSchema,
   insertResultSchema,
+  submitResultSchema,
   updateQuizSchema,
   updateQuestionSchema,
   updateUserProfileSchema
@@ -38,7 +39,7 @@ const storage_upload = multer.diskStorage({
   }
 });
 
-const upload = multer({ 
+const upload = multer({
   storage: storage_upload,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
   fileFilter: (req, file, cb) => {
@@ -56,11 +57,11 @@ const requireAuth = (req: Request, res: Response, next: Function, role?: "teache
   if (!req.isAuthenticated()) {
     return res.status(401).json({ error: "Authentication required" });
   }
-  
+
   if (role && req.user.role !== role) {
     return res.status(403).json({ error: `${role} role required` });
   }
-  
+
   next();
 };
 
@@ -69,25 +70,25 @@ export function registerRoutes(app: Express): Server {
 
   // Serve static files from uploads directory
   app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-  
+
   // Image upload endpoint
   app.post('/api/upload', upload.single('image'), (req, res) => {
     try {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ error: "Authentication required" });
       }
-      
+
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded' });
       }
-      
+
       // Create URL for the uploaded file
       const fileUrl = `/uploads/${req.file.filename}`;
       return res.json({ url: fileUrl });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error uploading image:', error);
-      return res.status(500).json({ 
-        error: error.message || 'Failed to upload image' 
+      return res.status(500).json({
+        error: error.message || 'Failed to upload image'
       });
     }
   });
@@ -98,7 +99,7 @@ export function registerRoutes(app: Express): Server {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ error: "Authentication required" });
       }
-      
+
       const userDetails = await storage.getUserWithDetails(req.user.id);
       res.json(userDetails);
     } catch (error) {
@@ -112,11 +113,11 @@ export function registerRoutes(app: Express): Server {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ error: "Authentication required" });
       }
-      
+
       const validatedData = updateUserProfileSchema.parse(req.body);
       const updatedUser = await storage.updateUserProfile(req.user.id, validatedData);
       res.json(updatedUser);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating user profile:", error);
       res.status(400).json({ error: error.message || "Failed to update profile" });
     }
@@ -127,12 +128,12 @@ export function registerRoutes(app: Express): Server {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ error: "Authentication required" });
       }
-      
+
       const userId = parseInt(req.params.id);
       if (isNaN(userId)) {
         return res.status(400).json({ error: "Invalid user ID" });
       }
-      
+
       const userDetails = await storage.getUserWithDetails(userId);
       res.json(userDetails);
     } catch (error) {
@@ -147,7 +148,7 @@ export function registerRoutes(app: Express): Server {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ error: "Authentication required" });
       }
-      
+
       const friends = await storage.getFriends(req.user.id);
       res.json(friends);
     } catch (error) {
@@ -161,7 +162,7 @@ export function registerRoutes(app: Express): Server {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ error: "Authentication required" });
       }
-      
+
       const friendRequests = await storage.getFriendRequests(req.user.id);
       res.json(friendRequests);
     } catch (error) {
@@ -175,15 +176,15 @@ export function registerRoutes(app: Express): Server {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ error: "Authentication required" });
       }
-      
+
       const userId = parseInt(req.params.userId);
       if (isNaN(userId)) {
         return res.status(400).json({ error: "Invalid user ID" });
       }
-      
+
       const friendship = await storage.sendFriendRequest(req.user.id, userId);
       res.status(201).json(friendship);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error sending friend request:", error);
       res.status(400).json({ error: error.message || "Failed to send friend request" });
     }
@@ -194,15 +195,15 @@ export function registerRoutes(app: Express): Server {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ error: "Authentication required" });
       }
-      
+
       const userId = parseInt(req.params.userId);
       if (isNaN(userId)) {
         return res.status(400).json({ error: "Invalid user ID" });
       }
-      
+
       const friendship = await storage.acceptFriendRequest(req.user.id, userId);
       res.status(200).json(friendship);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error accepting friend request:", error);
       res.status(400).json({ error: error.message || "Failed to accept friend request" });
     }
@@ -213,15 +214,15 @@ export function registerRoutes(app: Express): Server {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ error: "Authentication required" });
       }
-      
+
       const userId = parseInt(req.params.userId);
       if (isNaN(userId)) {
         return res.status(400).json({ error: "Invalid user ID" });
       }
-      
+
       const friendship = await storage.rejectFriendRequest(req.user.id, userId);
       res.status(200).json(friendship);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error rejecting friend request:", error);
       res.status(400).json({ error: error.message || "Failed to reject friend request" });
     }
@@ -233,7 +234,7 @@ export function registerRoutes(app: Express): Server {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ error: "Authentication required" });
       }
-      
+
       const achievements = await storage.getAchievements();
       res.json(achievements);
     } catch (error) {
@@ -247,12 +248,12 @@ export function registerRoutes(app: Express): Server {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ error: "Authentication required" });
       }
-      
+
       const userId = parseInt(req.params.id);
       if (isNaN(userId)) {
         return res.status(400).json({ error: "Invalid user ID" });
       }
-      
+
       const achievements = await storage.getUserAchievements(userId);
       res.json(achievements);
     } catch (error) {
@@ -267,7 +268,7 @@ export function registerRoutes(app: Express): Server {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ error: "Authentication required" });
       }
-      
+
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
       const leaderboard = await storage.getGlobalLeaderboard(limit);
       res.json(leaderboard);
@@ -283,7 +284,7 @@ export function registerRoutes(app: Express): Server {
       if (!req.isAuthenticated() || req.user.role !== "student") {
         return res.status(403).json({ error: "Student role required" });
       }
-      
+
       const quizzes = await storage.getQuizzesForStudent(req.user.id);
       res.json(quizzes || []);
     } catch (error) {
@@ -306,7 +307,7 @@ export function registerRoutes(app: Express): Server {
         isPublic: validatedData.isPublic ?? false,
       });
       res.status(201).json(quiz);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating quiz:", error);
       res.status(400).json({ error: error.message || "Failed to create quiz" });
     }
@@ -329,7 +330,7 @@ export function registerRoutes(app: Express): Server {
       if (!quiz) {
         return res.status(404).json({ error: "Quiz not found" });
       }
-      
+
       if (quiz.createdBy !== req.user.id) {
         return res.status(403).json({ error: "Not authorized to update this quiz" });
       }
@@ -337,7 +338,7 @@ export function registerRoutes(app: Express): Server {
       const validatedData = updateQuizSchema.parse(req.body);
       const updatedQuiz = await storage.updateQuiz(quizId, validatedData);
       res.json(updatedQuiz);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating quiz:", error);
       res.status(400).json({ error: error.message || "Failed to update quiz" });
     }
@@ -360,7 +361,7 @@ export function registerRoutes(app: Express): Server {
       if (!quiz) {
         return res.status(404).json({ error: "Quiz not found" });
       }
-      
+
       if (quiz.createdBy !== req.user.id) {
         return res.status(403).json({ error: "Not authorized to delete this quiz" });
       }
@@ -390,11 +391,11 @@ export function registerRoutes(app: Express): Server {
       if (!quiz) {
         return res.status(404).json({ error: "Quiz not found" });
       }
-      
+
       if (quiz.createdBy !== req.user.id) {
         return res.status(403).json({ error: "Not authorized to start this quiz" });
       }
-      
+
       if (quiz.quizType !== "live") {
         return res.status(400).json({ error: "Only live quizzes can be started" });
       }
@@ -406,13 +407,13 @@ export function registerRoutes(app: Express): Server {
 
       const startTime = new Date();
       const endTime = new Date(startTime.getTime() + duration * 60000); // convert minutes to milliseconds
-      
+
       const updatedQuiz = await storage.updateQuiz(quizId, {
         isActive: true,
         startTime,
         endTime,
       });
-      
+
       res.json(updatedQuiz);
     } catch (error) {
       console.error("Error starting quiz:", error);
@@ -437,11 +438,11 @@ export function registerRoutes(app: Express): Server {
       if (!quiz) {
         return res.status(404).json({ error: "Quiz not found" });
       }
-      
+
       if (quiz.createdBy !== req.user.id) {
         return res.status(403).json({ error: "Not authorized to end this quiz" });
       }
-      
+
       if (!quiz.isActive) {
         return res.status(400).json({ error: "Quiz is not active" });
       }
@@ -450,7 +451,7 @@ export function registerRoutes(app: Express): Server {
         isActive: false,
         endTime: new Date(),
       });
-      
+
       res.json(updatedQuiz);
     } catch (error) {
       console.error("Error ending quiz:", error);
@@ -463,7 +464,7 @@ export function registerRoutes(app: Express): Server {
       if (!req.isAuthenticated() || req.user.role !== "teacher") {
         return res.status(403).json({ error: "Teacher role required" });
       }
-      
+
       const quizzes = await storage.getQuizzesByTeacher(req.user.id);
       res.json(quizzes || []);
     } catch (error) {
@@ -477,7 +478,7 @@ export function registerRoutes(app: Express): Server {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ error: "Authentication required" });
       }
-      
+
       const quizzes = await storage.getPublicQuizzesWithTeachers();
       res.json(quizzes || []);
     } catch (error) {
@@ -492,7 +493,7 @@ export function registerRoutes(app: Express): Server {
       if (!req.isAuthenticated() || req.user.role !== "student") {
         return res.status(403).json({ error: "Student role required" });
       }
-      
+
       const quizzes = await storage.getLiveQuizzes();
       res.json(quizzes || []);
     } catch (error) {
@@ -511,7 +512,7 @@ export function registerRoutes(app: Express): Server {
       if (isNaN(quizId)) {
         return res.status(400).json({ error: "Invalid quiz ID" });
       }
-      
+
       const quiz = await storage.getQuiz(quizId);
       if (!quiz) {
         return res.status(404).json({ error: "Quiz not found" });
@@ -557,7 +558,7 @@ export function registerRoutes(app: Express): Server {
       });
       const question = await storage.createQuestion(validatedData);
       res.status(201).json(question);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating question:", error);
       res.status(400).json({ error: error.message || "Failed to create question" });
     }
@@ -580,7 +581,7 @@ export function registerRoutes(app: Express): Server {
       if (!question) {
         return res.status(404).json({ error: "Question not found" });
       }
-      
+
       // Check if the quiz belongs to this teacher
       const quiz = await storage.getQuiz(question.quizId);
       if (!quiz || quiz.createdBy !== req.user.id) {
@@ -590,7 +591,7 @@ export function registerRoutes(app: Express): Server {
       const validatedData = updateQuestionSchema.parse(req.body);
       const updatedQuestion = await storage.updateQuestion(questionId, validatedData);
       res.json(updatedQuestion);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating question:", error);
       res.status(400).json({ error: error.message || "Failed to update question" });
     }
@@ -613,7 +614,7 @@ export function registerRoutes(app: Express): Server {
       if (!question) {
         return res.status(404).json({ error: "Question not found" });
       }
-      
+
       // Check if the quiz belongs to this teacher
       const quiz = await storage.getQuiz(question.quizId);
       if (!quiz || quiz.createdBy !== req.user.id) {
@@ -679,32 +680,23 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Quiz not found" });
       }
 
-      // For live quizzes, check if the quiz is active
-      if (quiz.quizType === "live" && !quiz.isActive) {
-        return res.status(403).json({ error: "This live quiz is not currently active" });
-      }
+      const validatedData = submitResultSchema.parse(req.body);
 
-      const validatedData = insertResultSchema.parse(req.body);
-      
-      // Calculate score as percentage of correct answers
-      const score = validatedData.totalQuestions > 0 
-        ? Math.round((validatedData.correctAnswers / validatedData.totalQuestions) * 100) 
-        : 0;
-      
+      // Calculate points earned if not provided (fallback for backward compatibility)
+      const pointsEarned = validatedData.pointsEarned ?? (validatedData.correctAnswers * 2);
+
       const result = await storage.createResult({
         ...validatedData,
+        quizId,
         userId: req.user.id,
-        quizId: quizId,
-        score: score,
+        pointsEarned,
       });
 
-      // Award 2 points per correct answer
-      const pointsEarned = validatedData.correctAnswers * 2;
+      // Update user's total points
       await storage.updateUserPoints(req.user.id, pointsEarned);
 
       res.status(201).json(result);
-    } catch (error) {
-      console.error("Error submitting result:", error);
+    } catch (error: any) {
       res.status(400).json({ error: error.message || "Failed to submit result" });
     }
   });
@@ -771,7 +763,7 @@ export function registerRoutes(app: Express): Server {
 
       // Get all results for this quiz
       const results = await storage.getResultsByQuiz(quizId);
-      
+
       if (!results || results.length === 0) {
         return res.json({
           totalAttempts: 0,
@@ -794,20 +786,20 @@ export function registerRoutes(app: Express): Server {
 
       // Calculate basic statistics with proper normalization
       const totalAttempts = results.length;
-      
+
       // Get the maximum possible score for this quiz (based on total questions)
       // In this case we use the number of questions as a reference
       const questions = await storage.getQuestionsByQuiz(quizId);
       const maxPossibleScore = questions.length; // Maximum score is 1 point per question
-      
+
       // Calculate scores as percentages (0-100%)
       const scores = results.map(r => {
         if (r.totalQuestions === 0) return 0; // Handle edge case
         return (r.correctAnswers / r.totalQuestions) * 100; // Convert to percentage based on correct answers
       });
-      
+
       const durations = results.map(r => r.timeTaken);
-      
+
       const averageScore = scores.reduce((acc, val) => acc + val, 0) / totalAttempts;
       const highestScore = Math.max(...scores);
       const lowestScore = Math.min(...scores);
@@ -817,15 +809,15 @@ export function registerRoutes(app: Express): Server {
       const userIds = [...new Set(results.map(r => r.userId))];
       const users = await Promise.all(userIds.map(id => storage.getUser(id)));
       const userMap = Object.fromEntries(users.filter(Boolean).map(user => [user.id, user]));
-      
+
       // Create student reports
       const studentReports = results.map(result => {
         const user = userMap[result.userId];
         // Calculate score as percentage
-        const scorePercentage = result.totalQuestions > 0 
-          ? (result.correctAnswers / result.totalQuestions) * 100 
+        const scorePercentage = result.totalQuestions > 0
+          ? (result.correctAnswers / result.totalQuestions) * 100
           : 0;
-          
+
         return {
           userId: result.userId,
           username: user ? user.username : 'Unknown',
@@ -836,10 +828,10 @@ export function registerRoutes(app: Express): Server {
           completedAt: result.completedAt
         };
       });
-      
+
       // Create a mapping of question IDs to their total attempts, correct counts, and average times
-      const questionData = {};
-      
+      const questionData: Record<number, any> = {};
+
       // Initialize question data
       questions.forEach(q => {
         questionData[q.id] = {
@@ -850,37 +842,39 @@ export function registerRoutes(app: Express): Server {
           totalTime: 0
         };
       });
-      
+
       // Here we would analyze actual question results from individual submissions
       // For the moment, we'll simulate this with realistic values
       results.forEach(result => {
         // For each result, let's simulate the distribution of correct/wrong answers
         const totalQuestions = result.totalQuestions;
         const correctCount = result.correctAnswers;
-        
+
         // Divide the questions into correct and wrong based on the result
         const questionIds = questions.map(q => q.id);
-        
+
         // Shuffle the question IDs to randomly assign correct/wrong
         const shuffledIds = [...questionIds].sort(() => Math.random() - 0.5);
-        
+
         // The first 'correctCount' questions are considered correct
         const correctIds = shuffledIds.slice(0, correctCount);
-        
+
         // Update question statistics
         questionIds.forEach(id => {
-          questionData[id].totalAttempts++;
-          
-          // If this was marked as a correct answer
-          if (correctIds.includes(id)) {
-            questionData[id].correctCount++;
+          if (questionData[id]) {
+            questionData[id].totalAttempts++;
+
+            // If this was marked as a correct answer
+            if (correctIds.includes(id)) {
+              questionData[id].correctCount++;
+            }
+
+            // Add some time (between 5-30 seconds) for this question
+            questionData[id].totalTime += Math.floor(5 + Math.random() * 25);
           }
-          
-          // Add some time (between 5-30 seconds) for this question
-          questionData[id].totalTime += Math.floor(5 + Math.random() * 25);
         });
       });
-      
+
       // Transform question data into the required format
       const questionStats = Object.values(questionData).map(q => {
         return {
@@ -902,20 +896,20 @@ export function registerRoutes(app: Express): Server {
       ];
 
       // Generate time performance data based on actual completion dates
-      const timePerformance = [];
+      const timePerformance: any[] = [];
       const now = new Date();
       const pastWeek = new Date(now);
       pastWeek.setDate(pastWeek.getDate() - 6);
-      
+
       // Create a map of dates to results
-      const resultsByDate = {};
+      const resultsByDate: Record<string, any[]> = {};
       for (let i = 0; i <= 6; i++) {
         const date = new Date(now);
         date.setDate(date.getDate() - i);
         const dateStr = date.toISOString().split('T')[0];
         resultsByDate[dateStr] = [];
       }
-      
+
       // Group results by date
       results.forEach(result => {
         const completedAt = new Date(result.completedAt);
@@ -926,7 +920,7 @@ export function registerRoutes(app: Express): Server {
           }
         }
       });
-      
+
       // Calculate performance for each day
       Object.entries(resultsByDate).forEach(([dateStr, dateResults]) => {
         if (dateResults.length === 0) {
@@ -940,13 +934,13 @@ export function registerRoutes(app: Express): Server {
         } else {
           const totalCorrect = dateResults.reduce((sum, r) => sum + r.correctAnswers, 0);
           const totalWrong = dateResults.reduce((sum, r) => sum + r.wrongAnswers, 0);
-          
+
           // Calculate average score as percentage
-          const dayScores = dateResults.map(r => 
+          const dayScores = dateResults.map(r =>
             r.totalQuestions > 0 ? (r.correctAnswers / r.totalQuestions) * 100 : 0
           );
           const avgScore = dayScores.reduce((sum, score) => sum + score, 0) / dayScores.length;
-          
+
           timePerformance.push({
             date: dateStr,
             attempts: dateResults.length,
@@ -956,7 +950,7 @@ export function registerRoutes(app: Express): Server {
           });
         }
       });
-      
+
       // Sort by date ascending
       timePerformance.sort((a, b) => a.date.localeCompare(b.date));
 
@@ -982,26 +976,26 @@ export function registerRoutes(app: Express): Server {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ error: "Authentication required" });
       }
-      
+
       const quizId = parseInt(req.params.quizId);
       const userId = parseInt(req.params.userId);
-      
+
       if (isNaN(quizId) || isNaN(userId)) {
         return res.status(400).json({ error: "Invalid quiz ID or user ID" });
       }
-      
+
       // Only allow teachers or the user themselves to view their results
       if (req.user.role !== "teacher" && req.user.id !== userId) {
         return res.status(403).json({ error: "Not authorized to view these results" });
       }
-      
+
       // Get the user's result for this quiz
       const result = await storage.getUserQuizResult(quizId, userId);
-      
+
       if (!result) {
         return res.status(404).json({ error: "Result not found" });
       }
-      
+
       res.json(result);
     } catch (error) {
       console.error("Error fetching user quiz result:", error);

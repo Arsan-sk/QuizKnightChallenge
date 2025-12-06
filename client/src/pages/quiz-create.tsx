@@ -22,15 +22,15 @@ import { apiRequest } from "@/lib/queryClient";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDebouncedCallback } from "use-debounce";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  Plus, 
-  Book, 
-  FileQuestion, 
-  Clock, 
+import {
+  Plus,
+  Book,
+  FileQuestion,
+  Clock,
   GraduationCap,
-  PenTool, 
-  Lightbulb, 
-  Sparkles, 
+  PenTool,
+  Lightbulb,
+  Sparkles,
   ArrowRight,
   BookOpen,
   LayoutList
@@ -59,12 +59,12 @@ const MemoizedQuestion = memo(Question, (prevProps, nextProps) => {
     if (prevProps.question?.id !== nextProps.question?.id) {
       return false;
     }
-    
+
     // Otherwise, never re-render from parent changes
     // The component will update internal state as needed
     return true;
   }
-  
+
   // Default comparison for other modes
   return false;
 });
@@ -72,7 +72,7 @@ const MemoizedQuestion = memo(Question, (prevProps, nextProps) => {
 // Add motion styling to CardFooter for layout control
 const AnimatedCardFooter = ({ children, className, ...props }: React.ComponentPropsWithoutRef<typeof CardFooter>) => (
   <CardFooter className={`bg-muted/20 border-t py-3 ${className}`} {...props}>
-    <motion.div 
+    <motion.div
       className="w-full flex justify-between"
       layout="position"
     >
@@ -102,13 +102,13 @@ export default function QuizCreate() {
     },
     mode: "onChange"
   });
-  
+
   useEffect(() => {
     const subscription = form.watch((formValues) => {
       const titleValue = formValues.title as string || "";
       setFormValid(titleValue.trim().length > 0);
     });
-    
+
     return () => subscription.unsubscribe();
   }, [form]);
 
@@ -134,15 +134,15 @@ export default function QuizCreate() {
       e.preventDefault();
       e.stopPropagation();
     }
-    
+
     const newQuestion = {
-        questionText: "",
-        questionType: "mcq",
-        options: ["", "", "", ""],
-        correctAnswer: "",
-      points: 1,
+      questionText: "",
+      questionType: "mcq",
+      options: ["", "", "", ""],
+      correctAnswer: "",
+      points: 2,
     };
-    
+
     setQuestions(prevQuestions => [...prevQuestions, newQuestion]);
   }, []);
 
@@ -152,22 +152,22 @@ export default function QuizCreate() {
       const newQuestions = [...prevQuestions];
       const currentQuestion = { ...newQuestions[index] };
       let hasChanged = false;
-      
+
       // Now we only update the specific fields that changed
       // This approach prevents unnecessary state updates and re-renders
-      
+
       // Only update specific fields if they've changed
-      if (question.questionText !== undefined && 
-          currentQuestion.questionText !== question.questionText) {
+      if (question.questionText !== undefined &&
+        currentQuestion.questionText !== question.questionText) {
         currentQuestion.questionText = question.questionText;
         hasChanged = true;
       }
-      
+
       // Handle options changes
       if (question.options !== undefined) {
         // If options length changed, we need a full update
-        if (!currentQuestion.options || 
-            currentQuestion.options.length !== question.options.length) {
+        if (!currentQuestion.options ||
+          currentQuestion.options.length !== question.options.length) {
           currentQuestion.options = [...question.options];
           hasChanged = true;
         } else {
@@ -188,28 +188,28 @@ export default function QuizCreate() {
           }
         }
       }
-      
+
       // Handle question type changes (structural)
-      if (question.questionType !== undefined && 
-          currentQuestion.questionType !== question.questionType) {
+      if (question.questionType !== undefined &&
+        currentQuestion.questionType !== question.questionType) {
         currentQuestion.questionType = question.questionType;
         hasChanged = true;
       }
-      
+
       // Handle correct answer changes
-      if (question.correctAnswer !== undefined && 
-          currentQuestion.correctAnswer !== question.correctAnswer) {
+      if (question.correctAnswer !== undefined &&
+        currentQuestion.correctAnswer !== question.correctAnswer) {
         currentQuestion.correctAnswer = question.correctAnswer;
         hasChanged = true;
       }
-      
+
       // Handle image changes
-      if (question.imageUrl !== undefined && 
-          currentQuestion.imageUrl !== question.imageUrl) {
+      if (question.imageUrl !== undefined &&
+        currentQuestion.imageUrl !== question.imageUrl) {
         currentQuestion.imageUrl = question.imageUrl;
         hasChanged = true;
       }
-      
+
       // Handle option image changes
       if (question.optionImages !== undefined) {
         if (!currentQuestion.optionImages) {
@@ -239,12 +239,19 @@ export default function QuizCreate() {
           }
         }
       }
-      
+
+      // Handle points changes
+      if (question.points !== undefined &&
+        currentQuestion.points !== question.points) {
+        currentQuestion.points = question.points;
+        hasChanged = true;
+      }
+
       // Only update the state if something has actually changed
       if (!hasChanged) {
         return prevQuestions; // Return the original array to prevent re-renders
       }
-      
+
       // Update the question in our new array and return
       newQuestions[index] = currentQuestion;
       return newQuestions;
@@ -260,21 +267,21 @@ export default function QuizCreate() {
     setQuizType(type);
     form.setValue("quizType", type);
   }, [form]);
-  
+
   const nextStep = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     setCurrentStep("questions");
   };
-  
+
   const prevStep = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
+
     setCurrentStep("details");
   };
-  
+
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
       case "easy": return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
@@ -294,7 +301,34 @@ export default function QuizCreate() {
       });
       return;
     }
-    
+
+    // Validate that all questions have a correct answer selected
+    for (let i = 0; i < questions.length; i++) {
+      const question = questions[i];
+      if (!question.correctAnswer) {
+        toast({
+          title: "Missing correct answer",
+          description: `Question ${i + 1} does not have a correct answer selected. Please select one.`,
+          variant: "destructive"
+        });
+
+        // Switch to questions tab if not already there
+        if (currentStep !== "questions") {
+          setCurrentStep("questions");
+        }
+
+        // Scroll to the question
+        setTimeout(() => {
+          const element = document.getElementById(`question-wrapper-${i}`);
+          if (element) {
+            element.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+        }, 100);
+
+        return;
+      }
+    }
+
     createQuizMutation.mutate(data);
   };
 
@@ -351,27 +385,27 @@ export default function QuizCreate() {
                 <Book className="h-4 w-4" />
                 Quiz Title
               </label>
-              <Input 
-                {...form.register("title")} 
-                placeholder="Enter an engaging title for your quiz" 
+              <Input
+                {...form.register("title")}
+                placeholder="Enter an engaging title for your quiz"
                 className="transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
               {form.formState.errors.title && (
                 <p className="text-sm text-red-500">{form.formState.errors.title.message?.toString()}</p>
               )}
-              </div>
+            </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2">
                 <FileQuestion className="h-4 w-4" />
                 Description
               </label>
-              <Textarea 
-                {...form.register("description")} 
+              <Textarea
+                {...form.register("description")}
                 placeholder="Describe what this quiz is about and what students will learn"
                 className="min-h-24 transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
-              </div>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -439,7 +473,7 @@ export default function QuizCreate() {
                   </SelectContent>
                 </Select>
                 {quizType === "live" && (
-                  <motion.p 
+                  <motion.p
                     className="text-xs text-muted-foreground mt-1 italic"
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
@@ -452,7 +486,7 @@ export default function QuizCreate() {
 
             <AnimatePresence>
               {quizType === "live" && (
-                <motion.div 
+                <motion.div
                   className="space-y-2"
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
@@ -462,9 +496,9 @@ export default function QuizCreate() {
                     <Clock className="h-4 w-4" />
                     Duration (minutes)
                   </label>
-                  <Input 
-                    type="number" 
-                    min="1" 
+                  <Input
+                    type="number"
+                    min="1"
                     max="180"
                     defaultValue="30"
                     onChange={(e) => form.setValue("duration", parseInt(e.target.value))}
@@ -475,8 +509,8 @@ export default function QuizCreate() {
             </AnimatePresence>
 
             <div className="flex items-center space-x-2 pt-2">
-              <Checkbox 
-                id="isPublic" 
+              <Checkbox
+                id="isPublic"
                 defaultChecked={true}
                 onCheckedChange={(checked) => {
                   form.setValue("isPublic", checked === true);
@@ -490,7 +524,7 @@ export default function QuizCreate() {
           </CardContent>
           <AnimatedCardFooter>
             <div></div> {/* Empty div for flex justification */}
-            <Button 
+            <Button
               type="button"
               onClick={handleButtonClick(() => setCurrentStep("questions"))}
               className={`transition-all ${!formValid ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -507,7 +541,7 @@ export default function QuizCreate() {
 
   const renderQuestionsSection = useCallback(() => (
     <AnimatePresence mode="wait">
-      <motion.div 
+      <motion.div
         key="questions-section"
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
@@ -526,16 +560,16 @@ export default function QuizCreate() {
               <CardDescription>Create questions for your quiz</CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
+              <Button
+                variant="outline"
+                size="sm"
                 type="button"
                 onClick={handleButtonClick(() => setCurrentStep("details"))}
               >
                 Back to Details
               </Button>
-              <Button 
-                type="button" 
+              <Button
+                type="button"
                 size="sm"
                 onClick={handleButtonClick(addQuestion)}
                 className="gap-1"
@@ -557,13 +591,13 @@ export default function QuizCreate() {
                 Quick Tip
               </h3>
               <p className="text-xs text-blue-700 dark:text-blue-400">
-                You can now directly mark an option as the correct answer by clicking the checkmark icon next to it. 
+                You can now directly mark an option as the correct answer by clicking the checkmark icon next to it.
                 The correct answer will be highlighted in green. No need to select it separately!
               </p>
             </motion.div>
-            
+
             {questions.length === 0 ? (
-              <motion.div 
+              <motion.div
                 className="text-center py-12 border-2 border-dashed rounded-lg flex flex-col items-center justify-center"
                 whileHover={{ scale: 1.01 }}
                 transition={{ duration: 0.2 }}
@@ -574,7 +608,7 @@ export default function QuizCreate() {
                 <p className="text-muted-foreground max-w-md mb-6">
                   Your quiz needs at least one question. Click the button below to add your first question.
                 </p>
-                <Button 
+                <Button
                   type="button"
                   onClick={handleButtonClick(addQuestion)}
                 >
@@ -585,13 +619,13 @@ export default function QuizCreate() {
             ) : (
               <div className="space-y-6">
                 <AnimatePresence mode="popLayout">
-              {questions.map((question, index) => (
-                <motion.div
+                  {questions.map((question, index) => (
+                    <motion.div
                       key={`question-wrapper-${index}`}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                  transition={{ duration: 0.3 }}
+                      transition={{ duration: 0.3 }}
                       layout
                       layoutId={`question-${index}`}
                     >
@@ -601,25 +635,25 @@ export default function QuizCreate() {
                         {question.questionType === "true_false" && <Badge variant="outline">True/False</Badge>}
                       </div>
                       <MemoizedQuestion
-                    question={question}
-                    onChange={(q) => updateQuestion(index, q)}
-                    onRemove={() => removeQuestion(index)}
-                    mode="edit"
-                  />
-                </motion.div>
-              ))}
+                        question={question}
+                        onChange={(q) => updateQuestion(index, q)}
+                        onRemove={() => removeQuestion(index)}
+                        mode="edit"
+                      />
+                    </motion.div>
+                  ))}
                 </AnimatePresence>
 
                 {questions.length > 0 && (
-                  <motion.div 
+                  <motion.div
                     className="flex justify-center pt-4"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.2 }}
                     layout="position"
                   >
-                    <Button 
-                      type="button" 
+                    <Button
+                      type="button"
                       onClick={handleButtonClick(addQuestion)}
                       variant="outline"
                       className="px-8"
@@ -629,12 +663,12 @@ export default function QuizCreate() {
                     </Button>
                   </motion.div>
                 )}
-            </div>
+              </div>
             )}
           </CardContent>
           <AnimatedCardFooter>
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               type="button"
               onClick={handleButtonClick(() => setCurrentStep("details"))}
             >

@@ -47,7 +47,7 @@ export function Question(props: QuestionProps) {
 function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
   // Create a stable question ID that won't change on re-renders
   const questionId = useRef(question?.id || Math.random().toString(36).substring(2, 9)).current;
-  
+
   // Use immediate state instead of local state with debounce
   const [questionText, setQuestionText] = useState(question?.questionText || "");
   const [questionType, setQuestionType] = useState<"mcq" | "true_false">(question?.questionType || "mcq");
@@ -55,10 +55,11 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
   const [correctAnswer, setCorrectAnswer] = useState(question?.correctAnswer || "");
   const [imageUrl, setImageUrl] = useState(question?.imageUrl || "");
   const [optionImages, setOptionImages] = useState<string[]>(question?.optionImages || []);
-  
+  const [points, setPoints] = useState(question?.points || 2);
+
   // Visual state
   const [activeSection, setActiveSection] = useState<string | null>(null);
-  
+
   // Update local state from parent props initially
   useEffect(() => {
     if (question) {
@@ -68,9 +69,10 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
       setCorrectAnswer(question.correctAnswer || "");
       setImageUrl(question.imageUrl || "");
       setOptionImages(question.optionImages || []);
+      setPoints(question.points || 2);
     }
   }, [question?.id]); // Only update when the question ID changes
-  
+
   // Update parent with all state whenever any changes happen
   const updateParent = useCallback(() => {
     onChange({
@@ -79,50 +81,51 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
       options,
       correctAnswer,
       imageUrl,
-      optionImages
+      optionImages,
+      points
     });
-  }, [onChange, questionText, questionType, options, correctAnswer, imageUrl, optionImages]);
-  
+  }, [onChange, questionText, questionType, options, correctAnswer, imageUrl, optionImages, points]);
+
   // Update parent after any state change
   useEffect(() => {
     const timer = setTimeout(updateParent, 300);
     return () => clearTimeout(timer);
-  }, [questionText, questionType, options, correctAnswer, imageUrl, optionImages, updateParent]);
-  
+  }, [questionText, questionType, options, correctAnswer, imageUrl, optionImages, points, updateParent]);
+
   // Direct state handlers without complicated logic
   const handleQuestionTextChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     setQuestionText(e.target.value);
   }, []);
-  
+
   const handleQuestionTypeChange = useCallback((type: "mcq" | "true_false") => {
     setQuestionType(type);
     setOptions(type === "mcq" ? ["", "", "", ""] : ["True", "False"]);
     setCorrectAnswer("");
   }, []);
-  
+
   const handleOptionChange = useCallback((index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const newOptions = [...options];
     newOptions[index] = e.target.value;
     setOptions(newOptions);
   }, [options]);
-  
+
   const handleQuestionImageChange = useCallback((url: string | null) => {
     setImageUrl(url || "");
   }, []);
-  
+
   const handleOptionImageChange = useCallback((index: number, url: string | null) => {
     const newOptionImages = [...optionImages];
     newOptionImages[index] = url || "";
     setOptionImages(newOptionImages);
   }, [optionImages]);
-  
+
   const markAsCorrect = useCallback((index: number) => {
     const option = options[index];
     if (option.trim() !== "") {
       setCorrectAnswer(option);
     }
   }, [options]);
-  
+
   // Filter non-empty options for UI
   const nonEmptyOptions = options.filter(option => option.trim() !== "");
   const hasOptions = nonEmptyOptions.length > 0;
@@ -149,7 +152,7 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
 
       <div className="space-y-5">
         {/* Question Text & Image Section */}
-        <motion.div 
+        <motion.div
           className="space-y-3 relative"
           animate={{ opacity: 1 }}
           initial={{ opacity: 0.8 }}
@@ -168,8 +171,8 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
                 className="transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </div>
-            
-            <div className="pt-6">
+
+            <div className="pt-6 flex flex-col gap-4">
               <ImageUpload
                 value={imageUrl}
                 onChange={handleQuestionImageChange}
@@ -181,34 +184,54 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
           </div>
         </motion.div>
 
-        {/* Question Type Section */}
+        {/* Question Type & Points Section */}
         <motion.div
-          className="border-t pt-4"
+          className="border-t pt-4 flex flex-wrap gap-6 justify-between items-start"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.1 }}
           layout="position"
         >
-          <Label className="text-sm font-medium mb-2 flex items-center gap-1.5">
-            <Edit3 className="h-4 w-4" />
-            Question Type
-          </Label>
-          <RadioGroup
-            value={questionType}
-            onValueChange={(value) =>
-              handleQuestionTypeChange(value as "mcq" | "true_false")
-            }
-            className="flex space-x-4 pt-2"
-          >
-            <div className="flex items-center space-x-2 border rounded-md px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer">
-              <RadioGroupItem value="mcq" id={`mcq-${questionId}`} />
-              <Label htmlFor={`mcq-${questionId}`}>Multiple Choice</Label>
+          <div className="space-y-2">
+            <Label className="text-sm font-medium flex items-center gap-1.5">
+              <Edit3 className="h-4 w-4" />
+              Question Type
+            </Label>
+            <RadioGroup
+              value={questionType}
+              onValueChange={(value) =>
+                handleQuestionTypeChange(value as "mcq" | "true_false")
+              }
+              className="flex space-x-4"
+            >
+              <div className="flex items-center space-x-2 border rounded-md px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer">
+                <RadioGroupItem value="mcq" id={`mcq-${questionId}`} />
+                <Label htmlFor={`mcq-${questionId}`}>Multiple Choice</Label>
+              </div>
+              <div className="flex items-center space-x-2 border rounded-md px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer">
+                <RadioGroupItem value="true_false" id={`true_false-${questionId}`} />
+                <Label htmlFor={`true_false-${questionId}`}>True/False</Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-medium flex items-center gap-1.5">
+              <CheckCircle className="h-4 w-4" />
+              Points
+            </Label>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min="1"
+                max="100"
+                value={points}
+                onChange={(e) => setPoints(parseInt(e.target.value) || 0)}
+                className="w-24 transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+              />
+              <span className="text-xs text-muted-foreground">pts</span>
             </div>
-            <div className="flex items-center space-x-2 border rounded-md px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer">
-              <RadioGroupItem value="true_false" id={`true_false-${questionId}`} />
-              <Label htmlFor={`true_false-${questionId}`}>True/False</Label>
-            </div>
-          </RadioGroup>
+          </div>
         </motion.div>
 
         {/* Options Section - Enhanced with direct correct answer selection */}
@@ -242,9 +265,9 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
               {options.map((option, index) => {
                 const isCorrect = option === correctAnswer && option.trim() !== "";
                 const optionInputId = `option-input-${questionId}-${index}`;
-                
+
                 return (
-                  <motion.div 
+                  <motion.div
                     key={`option-${questionId}-${index}`}
                     className={cn(
                       "border rounded-md p-3 relative transition-all",
@@ -255,15 +278,15 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
-                    whileHover={{ 
+                    whileHover={{
                       scale: 1.005,
-                      boxShadow: "0 2px 10px rgba(0, 0, 0, 0.05)" 
+                      boxShadow: "0 2px 10px rgba(0, 0, 0, 0.05)"
                     }}
                     onClick={() => setActiveSection(`option-${index}`)}
                     layout="position"
                   >
                     {isCorrect && (
-                      <motion.div 
+                      <motion.div
                         className="absolute -right-2 -top-2 bg-green-600 rounded-full p-1 shadow-sm"
                         initial={{ scale: 0 }}
                         animate={{ scale: 1 }}
@@ -272,17 +295,17 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
                         <CheckCircle className="h-3 w-3 text-white" />
                       </motion.div>
                     )}
-                    
+
                     <div className="flex items-center gap-3">
                       <div className={cn(
                         "font-medium text-sm w-7 h-7 flex items-center justify-center rounded-full transition-colors",
-                        isCorrect 
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300" 
+                        isCorrect
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
                           : "bg-muted text-muted-foreground"
                       )}>
                         {index + 1}
                       </div>
-                      
+
                       <Input
                         className={cn(
                           "flex-1 transition-all",
@@ -316,9 +339,9 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
                             >
                               <motion.div
                                 initial={{ scale: isCorrect ? 1 : 0.5, opacity: isCorrect ? 1 : 0.7 }}
-                                animate={{ 
-                                  scale: isCorrect ? [1, 1.2, 1] : 0.5, 
-                                  opacity: isCorrect ? 1 : 0.7 
+                                animate={{
+                                  scale: isCorrect ? [1, 1.2, 1] : 0.5,
+                                  opacity: isCorrect ? 1 : 0.7
                                 }}
                                 transition={{ duration: 0.3 }}
                               >
@@ -338,9 +361,9 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
                         )}
                       </div>
                     </div>
-                    
+
                     {isCorrect && (
-                      <motion.div 
+                      <motion.div
                         className="mt-2 pl-10 text-sm text-green-600 dark:text-green-400 font-medium flex items-center gap-1.5"
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
@@ -378,21 +401,21 @@ function QuestionTake({
   return (
     <div className="space-y-4">
       <h3 className="text-xl font-medium mb-4">{questionText}</h3>
-      
+
       {imageUrl && (
         <div className="mb-4">
-          <img 
-            src={imageUrl} 
-            alt="Question" 
+          <img
+            src={imageUrl}
+            alt="Question"
             className="max-w-full h-auto rounded-md border"
           />
         </div>
       )}
-      
+
       <div className="text-xs text-muted-foreground mb-2 italic">
         Select an answer by clicking anywhere on the option or using number keys (1-{options.length || 4})
       </div>
-      
+
       <RadioGroup
         value={userAnswer}
         onValueChange={onChange}
@@ -459,7 +482,7 @@ function QuestionTake({
                   )}>
                     {index + 1}
                   </div>
-                  
+
                   <RadioGroupItem
                     value={option}
                     id={`option-take-${index}`}
@@ -478,14 +501,14 @@ function QuestionTake({
                     {option}
                   </Label>
                 </div>
-                
+
                 {isSelected && !showResult && (
-                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10"> 
+                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10">
                     <CheckIcon className="h-3.5 w-3.5 text-primary" />
                   </div>
                 )}
               </div>
-              
+
               {optionImage && (
                 <div className="mt-3">
                   <img
@@ -504,7 +527,7 @@ function QuestionTake({
         <motion.div
           className={cn(
             "mt-4 p-3 rounded-md border",
-            userAnswer === correctAnswer 
+            userAnswer === correctAnswer
               ? "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
               : "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
           )}

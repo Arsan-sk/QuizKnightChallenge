@@ -41,7 +41,7 @@ export default function QuizAnalyticsPage() {
   const [activeTab, setActiveTab] = useState("overview");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Reference to handle click on total attempts
   const studentsTabRef = useRef<HTMLButtonElement>(null);
 
@@ -56,7 +56,7 @@ export default function QuizAnalyticsPage() {
       try {
         setIsLoading(true);
         setError(null);
-        
+
         // Fetch quiz details to get title
         try {
           const quizResponse = await fetch(`/api/quizzes/${id}`);
@@ -69,23 +69,23 @@ export default function QuizAnalyticsPage() {
         } catch (error) {
           console.error("Error fetching quiz details:", error);
         }
-        
+
         // Fetch analytics data
         const response = await fetch(`/api/analytics/quiz/${id}`);
-        
+
         if (!response.ok) {
           // If response is not ok, throw with status text
           const errorData = await response.json().catch(() => ({ error: `Error ${response.status}: ${response.statusText}` }));
           throw new Error(errorData?.error || `Failed to fetch analytics: ${response.status} ${response.statusText}`);
         }
-        
+
         const data = await response.json();
-        
+
         // Validate the response data has the expected structure
         if (!data || typeof data !== 'object') {
           throw new Error('Invalid analytics data received');
         }
-        
+
         setAnalytics(data);
       } catch (error) {
         console.error("Error fetching analytics:", error);
@@ -94,16 +94,16 @@ export default function QuizAnalyticsPage() {
         setIsLoading(false);
       }
     }
-    
+
     fetchData();
   }, [id]);
-  
+
   const hasData = analytics.totalAttempts > 0;
-  
+
   if (isLoading) {
     return <AnalyticsLoadingSkeleton />;
   }
-  
+
   if (error) {
     return (
       <div className="container max-w-7xl mx-auto p-6">
@@ -127,7 +127,7 @@ export default function QuizAnalyticsPage() {
       </div>
     );
   }
-  
+
   return (
     <div className="container max-w-7xl mx-auto p-6">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
@@ -156,7 +156,7 @@ export default function QuizAnalyticsPage() {
             <TabsTrigger value="trends">Trends</TabsTrigger>
             <TabsTrigger value="students" ref={studentsTabRef}>Students</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="overview" className="space-y-6">
             {/* Analytics Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -172,7 +172,7 @@ export default function QuizAnalyticsPage() {
                   </div>
                 </div>
               </Card>
-              
+
               <Card className="p-4 border border-border">
                 <div className="flex justify-between items-start">
                   <div>
@@ -185,7 +185,7 @@ export default function QuizAnalyticsPage() {
                   </div>
                 </div>
               </Card>
-              
+
               <Card className="p-4 border border-border">
                 <div className="flex justify-between items-start">
                   <div>
@@ -198,7 +198,7 @@ export default function QuizAnalyticsPage() {
                   </div>
                 </div>
               </Card>
-              
+
               <Card className="p-4 border border-border">
                 <div className="flex justify-between items-start">
                   <div>
@@ -211,7 +211,7 @@ export default function QuizAnalyticsPage() {
                   </div>
                 </div>
               </Card>
-              
+
               <Card className="p-4 border border-border">
                 <div className="flex justify-between items-start">
                   <div>
@@ -225,14 +225,14 @@ export default function QuizAnalyticsPage() {
                 </div>
               </Card>
             </div>
-            
+
             {/* Overview Charts */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <QuestionChart data={analytics.questionStats} />
               <DistributionChart data={analytics.performanceDistribution} />
             </div>
           </TabsContent>
-          
+
           <TabsContent value="questions">
             <QuestionChart data={analytics.questionStats} />
             <div className="mt-6 bg-card dark:bg-card rounded-lg shadow border">
@@ -249,15 +249,15 @@ export default function QuizAnalyticsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {analytics.questionStats.map((q) => {
-                      const correctPercentage = q.totalAttempts > 0 
-                        ? (q.correctCount / q.totalAttempts) * 100 
+                    {analytics.questionStats.map((q, index) => {
+                      const correctPercentage = q.totalAttempts > 0
+                        ? (q.correctCount / q.totalAttempts) * 100
                         : 0;
-                      
+
                       return (
                         <tr key={q.questionId} className="border-b hover:bg-muted/50 dark:hover:bg-muted/50">
                           <td className="p-3 text-left">
-                            <span className="font-semibold">Q{q.questionId}:</span> {q.questionText}
+                            <span className="font-semibold">Q{index + 1}:</span> {q.questionText}
                           </td>
                           <td className="p-3 text-center">{q.correctCount}</td>
                           <td className="p-3 text-center">{q.totalAttempts}</td>
@@ -275,7 +275,7 @@ export default function QuizAnalyticsPage() {
               </div>
             </div>
           </TabsContent>
-          
+
           <TabsContent value="distribution">
             <DistributionChart data={analytics.performanceDistribution} />
             <div className="mt-6 bg-card dark:bg-card rounded-lg shadow border">
@@ -295,7 +295,7 @@ export default function QuizAnalyticsPage() {
                         (sum, item) => sum + item.count, 0
                       );
                       const percentage = total > 0 ? (range.count / total) * 100 : 0;
-                      
+
                       return (
                         <tr key={range.scoreRange} className="border-b hover:bg-muted/50 dark:hover:bg-muted/50">
                           <td className="p-3 text-left">{range.scoreRange}</td>
@@ -309,7 +309,7 @@ export default function QuizAnalyticsPage() {
               </div>
             </div>
           </TabsContent>
-          
+
           <TabsContent value="trends">
             <PerformanceChart data={analytics.timePerformance} />
             <div className="mt-6 bg-card dark:bg-card rounded-lg shadow border">
@@ -340,7 +340,7 @@ export default function QuizAnalyticsPage() {
               </div>
             </div>
           </TabsContent>
-          
+
           <TabsContent value="students">
             <StudentReportTable data={analytics.studentReports} quizId={id} />
           </TabsContent>
@@ -361,9 +361,9 @@ function AnalyticsLoadingSkeleton() {
         </div>
         <Skeleton className="h-10 w-40 mt-4 md:mt-0" />
       </div>
-      
+
       <Skeleton className="h-12 w-full rounded-lg" />
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {[...Array(5)].map((_, i) => (
           <div key={i} className="border rounded-lg p-4">
@@ -372,7 +372,7 @@ function AnalyticsLoadingSkeleton() {
           </div>
         ))}
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Skeleton className="h-80 w-full rounded-lg" />
         <Skeleton className="h-80 w-full rounded-lg" />

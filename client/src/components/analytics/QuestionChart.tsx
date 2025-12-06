@@ -28,13 +28,13 @@ export function QuestionChart({ data }: QuestionChartProps) {
 
   // Prepare data for the chart
   const chartData = data.map((q, index) => {
-    const correctPercentage = q.totalAttempts > 0 
-      ? (q.correctCount / q.totalAttempts) * 100 
+    const correctPercentage = q.totalAttempts > 0
+      ? (q.correctCount / q.totalAttempts) * 100
       : 0;
-    
+
     return {
       id: q.questionId,
-      name: `Q${q.questionId}`,
+      name: `Q${index + 1}`,
       correctPercentage: parseFloat(correctPercentage.toFixed(1)),
       averageTime: q.averageTime,
       questionText: q.questionText,
@@ -91,58 +91,58 @@ export function QuestionChart({ data }: QuestionChartProps) {
               barSize={25}
             >
               <CartesianGrid strokeDasharray="3 3" opacity={0.4} />
-              <XAxis 
-                dataKey="name" 
+              <XAxis
+                dataKey="name"
                 axisLine={false}
                 tickLine={false}
               />
-              <YAxis 
-                yAxisId="left" 
-                orientation="left" 
-                domain={[0, 100]} 
+              <YAxis
+                yAxisId="left"
+                orientation="left"
+                domain={[0, 100]}
                 tickFormatter={(value) => `${value}%`}
                 axisLine={false}
                 tickLine={false}
               />
-              <YAxis 
-                yAxisId="right" 
+              <YAxis
+                yAxisId="right"
                 orientation="right"
-                domain={[0, 'dataMax']} 
+                domain={[0, 'dataMax']}
                 tickFormatter={(value) => `${value}s`}
                 axisLine={false}
                 tickLine={false}
               />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }} />
               <Legend />
-              <Bar 
-                yAxisId="left" 
-                dataKey="correctPercentage" 
-                name="Success Rate (%)" 
+              <Bar
+                yAxisId="left"
+                dataKey="correctPercentage"
+                name="Success Rate (%)"
                 radius={[4, 4, 0, 0]}
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
               >
                 {chartData.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={getChartColor(entry.correctPercentage)} 
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={getChartColor(entry.correctPercentage)}
                     fillOpacity={activeBar === index ? 1 : 0.8}
                     stroke={activeBar === index ? '#000' : 'none'}
                     strokeWidth={activeBar === index ? 1 : 0}
                   />
                 ))}
-                <LabelList 
-                  dataKey="correctPercentage" 
-                  position="top" 
+                <LabelList
+                  dataKey="correctPercentage"
+                  position="top"
                   formatter={(value) => `${value}%`}
                   style={{ fontSize: '11px' }}
                 />
               </Bar>
-              <Bar 
-                yAxisId="right" 
-                dataKey="averageTime" 
-                name="Avg. Time (s)" 
-                fill="#3b82f6" 
+              <Bar
+                yAxisId="right"
+                dataKey="averageTime"
+                name="Avg. Time (s)"
+                fill="#3b82f6"
                 radius={[4, 4, 0, 0]}
                 opacity={0.8}
               />

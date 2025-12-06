@@ -19,12 +19,12 @@ if (!process.env.DATABASE_URL) {
 }
 
 // Create pool with either real connection string or empty string (will fail gracefully)
-export const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL || 'postgresql://fake', 
+export const pool = new Pool({
+  connectionString: process.env.DATABASE_URL || 'postgresql://fake',
   // Add connection options to handle retries and timeouts
   max: 10,
   connectionTimeoutMillis: 5000,
-  idleTimeoutMillis: 30000 
+  idleTimeoutMillis: 30000
 });
 
 // Test the database connection
@@ -44,7 +44,7 @@ async function applySchemaChanges() {
   try {
     console.log('Applying schema changes...');
     const client = await pool.connect();
-    
+
     // Create branch enum type if it doesn't exist
     await client.query(`
       DO $$ BEGIN
@@ -129,6 +129,15 @@ async function applySchemaChanges() {
         "achievement_id" integer NOT NULL,
         "earned_at" timestamp DEFAULT now()
       );
+    `);
+
+    // Add points_earned column to results table if it doesn't exist
+    await client.query(`
+      DO $$ BEGIN
+        ALTER TABLE "results" ADD COLUMN "points_earned" integer DEFAULT 0;
+      EXCEPTION
+        WHEN duplicate_column THEN null;
+      END $$;
     `);
 
     client.release();

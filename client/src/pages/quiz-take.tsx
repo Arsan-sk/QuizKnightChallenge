@@ -69,24 +69,24 @@ export default function QuizTake() {
   const [direction, setDirection] = useState<"left" | "right">("right");
   const [showQuestionDetails, setShowQuestionDetails] = useState(false);
 
-  const { 
-    data: quiz, 
-    isError: quizError, 
-    isLoading 
+  const {
+    data: quiz,
+    isError: quizError,
+    isLoading
   } = useQuery({
     queryKey: [`/api/quizzes/${id}`],
   });
 
-  const { 
-    data: questions, 
-    isError: questionsError 
+  const {
+    data: questions,
+    isError: questionsError
   } = useQuery({
     queryKey: [`/api/quizzes/${id}/questions`],
   });
 
-  const { 
-    data: leaderboard, 
-    refetch: refetchLeaderboard 
+  const {
+    data: leaderboard,
+    refetch: refetchLeaderboard
   } = useQuery<LeaderboardEntry[]>({
     queryKey: [`/api/quizzes/${id}/leaderboard`],
     enabled: quizCompleted,
@@ -105,13 +105,13 @@ export default function QuizTake() {
       const userId = (user as User).id;
       const attempted = hasAttemptedQuiz(parseInt(id), userId);
       setHasAttempted(attempted);
-      
+
       if (attempted) {
-      toast({
+        toast({
           title: "Quiz already attempted",
           description: "You have already completed this quiz. Multiple attempts are not allowed.",
-        variant: "destructive",
-      });
+          variant: "destructive",
+        });
       } else {
         registerAttempt(parseInt(id), userId);
       }
@@ -151,8 +151,8 @@ export default function QuizTake() {
   const submitQuiz = useCallback(async () => {
     try {
       if (!questions || !Array.isArray(questions) || questions.length === 0 || !timeStarted || !user || !('id' in user)) {
-        console.error("Missing required data for quiz submission", { 
-          hasQuestions: !!questions && Array.isArray(questions), 
+        console.error("Missing required data for quiz submission", {
+          hasQuestions: !!questions && Array.isArray(questions),
           questionsLength: questions?.length || 0,
           hasTimeStarted: !!timeStarted,
           timeStarted: timeStarted?.toISOString(),
@@ -160,32 +160,33 @@ export default function QuizTake() {
         });
         return;
       }
-      
+
       setSubmitting(true);
-      
+
       let correctCount = 0;
       let wrongCount = 0;
-      
+      let pointsEarned = 0;
+
       const questionsArray = questions as QuestionType[];
-      
+
       for (let i = 0; i < questionsArray.length; i++) {
-        if (answers[i] === questionsArray[i]?.correctAnswer) {
+        const question = questionsArray[i];
+        if (answers[i] === question?.correctAnswer) {
           correctCount++;
+          pointsEarned += (question.points || 2);
         } else if (answers[i]) {
           wrongCount++;
         }
       }
-      
+
       const totalQuestions = questionsArray.length;
       const scorePercentage = (correctCount / totalQuestions) * 100;
-      
+
       const endTime = new Date();
       const timeTaken = Math.max(1, Math.floor((endTime.getTime() - (timeStarted?.getTime() || 0)) / 1000));
       console.log('Quiz completed at:', endTime);
       console.log('Time taken (seconds):', timeTaken);
-      
-      const pointsEarned = correctCount * 2;
-      
+
       try {
         await apiRequest(
           'POST',
@@ -196,10 +197,11 @@ export default function QuizTake() {
             timeTaken: timeTaken,
             correctAnswers: correctCount,
             wrongAnswers: wrongCount,
-            totalQuestions: totalQuestions
+            totalQuestions: totalQuestions,
+            pointsEarned: pointsEarned
           }
         );
-        
+
         setQuizResult({
           score: Math.round(scorePercentage),
           timeTaken: timeTaken,
@@ -208,11 +210,11 @@ export default function QuizTake() {
           totalQuestions: totalQuestions,
           pointsEarned: pointsEarned
         });
-        
+
         if (id) {
           completeAttempt(parseInt(id), (user as User).id);
         }
-        
+
         await safeRefetchLeaderboard();
         setQuizCompleted(true);
       } catch (error) {
@@ -234,7 +236,7 @@ export default function QuizTake() {
   const handleWebcamViolation = useCallback(() => {
     setWarnings(prev => {
       const newWarnings = prev + 1;
-      
+
       if (newWarnings >= 3) {
         toast({
           title: "Quiz terminated",
@@ -243,7 +245,7 @@ export default function QuizTake() {
         });
         submitQuiz();
       }
-      
+
       return newWarnings;
     });
   }, [toast, submitQuiz]);
@@ -251,23 +253,23 @@ export default function QuizTake() {
   // Memoize the handleVisibilityChange function to prevent re-renders
   const handleVisibilityChange = useCallback(() => {
     if (document.hidden && !quizCompleted) {
-        setWarnings((w) => {
-          const newWarnings = w + 1;
+      setWarnings((w) => {
+        const newWarnings = w + 1;
         toast({
           title: `Warning ${newWarnings}/3`,
           description: `Tab switching detected. ${3 - newWarnings} warnings left before automatic submission.`,
           variant: "destructive",
         });
-        
+
         if (newWarnings >= 3) {
-            toast({
-              title: "Quiz terminated",
+          toast({
+            title: "Quiz terminated",
             description: "Too many tab switches detected. Your quiz has been automatically submitted.",
-              variant: "destructive",
-            });
+            variant: "destructive",
+          });
           submitQuiz();
-          }
-          return newWarnings;
+        }
+        return newWarnings;
       });
     }
   }, [quizCompleted, toast, submitQuiz]);
@@ -283,7 +285,7 @@ export default function QuizTake() {
           description: "Copy and paste functionality is disabled during the quiz.",
           variant: "destructive",
         });
-        
+
         if (newAttempts >= 3) {
           toast({
             title: "Warning",
@@ -345,7 +347,7 @@ export default function QuizTake() {
           description: `Full-screen mode exited. ${3 - newWarnings} warnings left before automatic submission.`,
           variant: "destructive",
         });
-        
+
         if (newWarnings >= 3) {
           toast({
             title: "Quiz terminated",
@@ -393,7 +395,7 @@ export default function QuizTake() {
 
   const next = useCallback(() => {
     if (!typedQuestions) return;
-    
+
     if (currentQuestion < typedQuestions.length - 1) {
       setDirection("right");
       setCurrentQuestion(prev => prev + 1);
@@ -410,16 +412,16 @@ export default function QuizTake() {
   // Memoize the handleQuizSubmission function
   const handleQuizSubmission = useCallback(() => {
     if (!typedQuestions) return;
-    
+
     const answeredCount = answers.filter(Boolean).length;
     const unansweredCount = typedQuestions.length - answeredCount;
-    
+
     if (unansweredCount > 0) {
       const unansweredQuestions = typedQuestions
         .map((_, index) => !answers[index] ? index + 1 : null)
         .filter(Boolean as any)
         .join(', ');
-      
+
       if (confirm(
         `You have ${unansweredCount} unanswered question${unansweredCount > 1 ? 's' : ''}:\n\n` +
         `Question${unansweredCount > 1 ? 's' : ''} ${unansweredQuestions}\n\n` +
@@ -433,27 +435,27 @@ export default function QuizTake() {
       }
     }
   }, [answers, typedQuestions, submitQuiz]);
-  
+
   // Memoize the keydown handler to prevent unnecessary re-renders
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // If we're within an input field or quiz is completed or showing rules, don't process keyboard shortcuts
     if (quizCompleted || showRules) return;
-    
+
     const activeElement = document.activeElement;
-    const isInputActive = activeElement instanceof HTMLInputElement || 
-                          activeElement instanceof HTMLTextAreaElement ||
-                          activeElement instanceof HTMLSelectElement;
-    
+    const isInputActive = activeElement instanceof HTMLInputElement ||
+      activeElement instanceof HTMLTextAreaElement ||
+      activeElement instanceof HTMLSelectElement;
+
     if (isInputActive) return;
-    
+
     // Make sure typedQuestions is defined
     if (!typedQuestions) return;
-    
+
     // Prevent handling of shortcuts that are already handled by the preventHotkeys function
     if (e.ctrlKey || e.altKey || e.metaKey) return;
-    
+
     let handled = true;
-    
+
     switch (e.key) {
       case 'ArrowLeft':
         setCurrentQuestion(prev => {
@@ -499,7 +501,7 @@ export default function QuizTake() {
         handled = false;
         break;
     }
-    
+
     // If we handled the key, prevent it from bubbling up to other handlers
     if (handled) {
       e.preventDefault();
@@ -516,8 +518,8 @@ export default function QuizTake() {
   // Add this before the return statement to track user progress
   const answeredQuestions = answers.filter(Boolean).length;
   const remainingQuestions = (typedQuestions?.length || 0) - answeredQuestions;
-  const percentComplete = (typedQuestions?.length || 1) > 0 
-    ? Math.round((answeredQuestions / (typedQuestions?.length || 1)) * 100) 
+  const percentComplete = (typedQuestions?.length || 1) > 0
+    ? Math.round((answeredQuestions / (typedQuestions?.length || 1)) * 100)
     : 0;
 
   if (isLoading) {
@@ -527,7 +529,7 @@ export default function QuizTake() {
         <div className="container mx-auto h-screen flex flex-col items-center justify-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <p className="mt-4 text-lg">Loading quiz...</p>
-          
+
           <div className="mt-8 p-4 bg-muted rounded-lg max-w-md">
             <h3 className="font-medium mb-2">Quiz Proctoring Information</h3>
             <p className="text-sm mb-4">
@@ -540,8 +542,8 @@ export default function QuizTake() {
               <li>Keyboard shortcuts are restricted</li>
               <li className="font-medium">
                 <label className="flex items-center">
-                  <input 
-                    type="checkbox" 
+                  <input
+                    type="checkbox"
                     checked={enableWebcam}
                     onChange={(e) => setEnableWebcam(e.target.checked)}
                     className="mr-2"
@@ -605,12 +607,12 @@ export default function QuizTake() {
     const toggleQuestionDetails = () => {
       setShowQuestionDetails(!showQuestionDetails);
     };
-    
+
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
         <NavBar />
         <div className="container mx-auto px-4 py-8">
-          <motion.div 
+          <motion.div
             className="max-w-4xl mx-auto"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -622,7 +624,7 @@ export default function QuizTake() {
               transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.2 }}
               className="mb-8 text-center"
             >
-              <motion.div 
+              <motion.div
                 className="inline-flex items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30 p-4 mb-4"
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
@@ -685,18 +687,18 @@ export default function QuizTake() {
                             transition={{ duration: 1.5, delay: 0.7, ease: "easeOut" }}
                           />
                         </svg>
-                        <motion.div 
-                          className="absolute w-3 h-3 bg-primary rounded-full" 
-                          style={{ 
-                            top: "50%", 
-                            left: "50%", 
-                            x: "-50%", 
+                        <motion.div
+                          className="absolute w-3 h-3 bg-primary rounded-full"
+                          style={{
+                            top: "50%",
+                            left: "50%",
+                            x: "-50%",
                             y: "-50%",
                             rotate: -90 + ((quizResult.score / 100) * 360) + "deg",
                             transformOrigin: "40px 0px"
                           }}
                           initial={{ opacity: 0 }}
-                          animate={{ 
+                          animate={{
                             opacity: 1,
                             scale: [1, 1.2, 1],
                           }}
@@ -715,7 +717,7 @@ export default function QuizTake() {
                   </CardContent>
                 </Card>
               </motion.div>
-              
+
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -732,7 +734,7 @@ export default function QuizTake() {
                   </CardHeader>
                   <CardContent className="text-center flex-grow flex flex-col justify-center pb-6">
                     <motion.div className="relative mb-1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}>
-                      <motion.p 
+                      <motion.p
                         className="text-4xl font-bold mb-1"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
@@ -754,17 +756,17 @@ export default function QuizTake() {
                       />
                     </motion.div>
                     <p className="text-muted-foreground text-sm">
-                      {quizResult.timeTaken < 60 
-                        ? "That was quick!" 
-                        : quizResult.timeTaken < 180 
-                          ? "Good timing!" 
+                      {quizResult.timeTaken < 60
+                        ? "That was quick!"
+                        : quizResult.timeTaken < 180
+                          ? "Good timing!"
                           : "Take your time, accuracy matters!"
                       }
                     </p>
                   </CardContent>
                 </Card>
               </motion.div>
-              
+
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -772,11 +774,11 @@ export default function QuizTake() {
                 whileHover={{ scale: 1.03 }}
                 className="h-full"
               >
-                <Card 
+                <Card
                   className="overflow-hidden border-t-4 border-blue-500 cursor-pointer hover:shadow-lg transition-all duration-300 h-full flex flex-col shadow-md relative"
                   onClick={toggleQuestionDetails}
                 >
-                  <motion.div 
+                  <motion.div
                     className="absolute right-3 top-3 w-2 h-2 bg-blue-500 rounded-full"
                     animate={{
                       scale: [1, 1.5, 1],
@@ -804,7 +806,7 @@ export default function QuizTake() {
                         <div className="bg-green-50 px-3 py-1 rounded-full flex items-center relative">
                           <CheckCircle className="h-4 w-4 text-green-600 mr-1" />
                           <span className="text-green-700 font-medium">{quizResult.correctAnswers}</span>
-                          <motion.div 
+                          <motion.div
                             className="absolute -right-0.5 -top-0.5 w-1.5 h-1.5 bg-green-500 rounded-full"
                             animate={{
                               scale: [1, 1.5, 1],
@@ -821,7 +823,7 @@ export default function QuizTake() {
                         <div className="bg-red-50 px-3 py-1 rounded-full flex items-center relative">
                           <XCircle className="h-4 w-4 text-red-600 mr-1" />
                           <span className="text-red-700 font-medium">{quizResult.wrongAnswers}</span>
-                          <motion.div 
+                          <motion.div
                             className="absolute -right-0.5 -top-0.5 w-1.5 h-1.5 bg-red-500 rounded-full"
                             animate={{
                               scale: [1, 1.5, 1],
@@ -888,9 +890,9 @@ export default function QuizTake() {
                       <tbody>
                         {leaderboard.map((entry, index) => {
                           const isCurrentUser = entry.userId === typedUser?.id;
-                          
+
                           return (
-                            <motion.tr 
+                            <motion.tr
                               key={entry.id}
                               className={cn(
                                 "border-b border-muted/40",
@@ -942,7 +944,7 @@ export default function QuizTake() {
             )}
 
             {showQuestionDetails && (
-              <motion.div 
+              <motion.div
                 className="space-y-4 mb-8"
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
@@ -955,20 +957,20 @@ export default function QuizTake() {
                     Close Review
                   </Button>
                 </div>
-                
+
                 {questions.map((question, index) => {
                   const userAnswer = answers[index] || "";
                   const isCorrect = userAnswer === question.correctAnswer;
-                  
+
                   return (
-                    <motion.div 
+                    <motion.div
                       key={question.id}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.1 * index }}
                     >
                       <Card className={cn(
-                        "overflow-hidden border-l-4", 
+                        "overflow-hidden border-l-4",
                         isCorrect ? "border-l-green-500" : "border-l-red-500"
                       )}>
                         <CardContent className="p-4 relative">
@@ -983,18 +985,18 @@ export default function QuizTake() {
                               </span>
                             )}
                           </div>
-                          
+
                           <h3 className="text-base font-medium mt-1 mb-3 pr-12">
                             Question {index + 1}: {question.questionText}
                           </h3>
-                          
+
                           <div className="space-y-2">
                             {question.options.map(option => {
                               const isUserChoice = option === userAnswer;
                               const isCorrectOption = option === question.correctAnswer;
-                              
+
                               return (
-                                <div 
+                                <div
                                   key={option}
                                   className={cn(
                                     "p-2 rounded-md flex items-center",
@@ -1006,9 +1008,9 @@ export default function QuizTake() {
                                   {isCorrectOption && <CheckCircle className="h-4 w-4 mr-2 text-green-600" />}
                                   {isUserChoice && !isCorrectOption && <XCircle className="h-4 w-4 mr-2 text-red-600" />}
                                   {!isUserChoice && !isCorrectOption && <Circle className="h-4 w-4 mr-2 text-muted-foreground" />}
-                                  
+
                                   <span className={isCorrectOption ? "font-medium" : ""}>{option}</span>
-                                  
+
                                   {isUserChoice && (
                                     <span className="ml-auto text-xs font-medium">Your choice</span>
                                   )}
@@ -1024,7 +1026,7 @@ export default function QuizTake() {
               </motion.div>
             )}
 
-            <motion.div 
+            <motion.div
               className="flex justify-center"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1047,12 +1049,12 @@ export default function QuizTake() {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
         <NavBar />
-        
-        <WebcamMonitor 
-          enabled={enableWebcam && !quizCompleted} 
-          onViolationDetected={handleWebcamViolation} 
+
+        <WebcamMonitor
+          enabled={enableWebcam && !quizCompleted}
+          onViolationDetected={handleWebcamViolation}
         />
-        
+
         <div className="container max-w-5xl mx-auto px-4 py-6">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -1064,9 +1066,9 @@ export default function QuizTake() {
               <h1 className="text-3xl font-bold">{typedQuiz.title}</h1>
               <p className="text-muted-foreground">{typedQuiz.description}</p>
             </div>
-            
+
             <div className="bg-card rounded-lg shadow-sm p-6 border">
-              <LiveQuizController 
+              <LiveQuizController
                 questions={typedQuestions}
                 duration={typedQuiz.duration || 30}
                 onAnswer={handleAnswer}
@@ -1079,7 +1081,7 @@ export default function QuizTake() {
       </div>
     );
   }
-  
+
   if (!quizCompleted) {
     if (showRules) {
       return (
@@ -1094,8 +1096,8 @@ export default function QuizTake() {
             >
               <Card className="mb-6 border-2 border-primary/20 overflow-hidden">
                 <CardHeader className="border-b bg-muted/50 relative">
-                  <motion.div 
-                    className="absolute top-0 left-0 h-1 bg-primary" 
+                  <motion.div
+                    className="absolute top-0 left-0 h-1 bg-primary"
                     initial={{ width: 0 }}
                     animate={{ width: readyToStart ? "100%" : `${(5 - rulesTimer) * 20}%` }}
                     transition={{ duration: 0.5 }}
@@ -1109,7 +1111,7 @@ export default function QuizTake() {
                 </CardHeader>
                 <CardContent className="p-6">
                   <div className="space-y-4">
-                    <motion.div 
+                    <motion.div
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.1 }}
@@ -1118,7 +1120,7 @@ export default function QuizTake() {
                       <p className="text-muted-foreground">{typedQuiz.description}</p>
                     </motion.div>
 
-                    <motion.div 
+                    <motion.div
                       className="my-6"
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -1144,7 +1146,7 @@ export default function QuizTake() {
                           "Your answers are saved as you navigate between questions.",
                           "Use keyboard shortcuts: Left/Right arrows to navigate, number keys (1-4) to select options, Enter to continue"
                         ].map((rule, index) => (
-                          <motion.li 
+                          <motion.li
                             key={index}
                             className="flex items-center gap-2"
                             initial={{ opacity: 0, x: -10 }}
@@ -1161,7 +1163,7 @@ export default function QuizTake() {
                       </ul>
                     </motion.div>
 
-                    <motion.div 
+                    <motion.div
                       className="my-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -1187,7 +1189,7 @@ export default function QuizTake() {
                       <circle cx="12" cy="12" r="10"></circle>
                       <polyline points="12 6 12 12 16 14"></polyline>
                     </svg>
-                    <motion.span 
+                    <motion.span
                       className="text-sm font-medium"
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
@@ -1200,13 +1202,13 @@ export default function QuizTake() {
                     whileHover={readyToStart ? { scale: 1.05 } : {}}
                     whileTap={readyToStart ? { scale: 0.95 } : {}}
                   >
-                    <Button 
-                      onClick={() => setShowRules(false)} 
+                    <Button
+                      onClick={() => setShowRules(false)}
                       disabled={!readyToStart}
                       className="w-32 relative overflow-hidden group"
                     >
                       {readyToStart && (
-                        <motion.div 
+                        <motion.div
                           className="absolute inset-0 bg-primary/20"
                           initial={{ x: '-100%' }}
                           animate={{ x: '100%' }}
@@ -1218,8 +1220,8 @@ export default function QuizTake() {
                   </motion.div>
                 </CardFooter>
               </Card>
-              
-              <motion.div 
+
+              <motion.div
                 className="mt-8 text-center text-sm text-muted-foreground"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -1227,7 +1229,7 @@ export default function QuizTake() {
               >
                 <p>By starting this quiz, you agree to the academic integrity guidelines of your institution.</p>
                 <p className="mt-2">Need help? Contact your instructor for assistance.</p>
-                
+
                 <div className="mt-6 flex justify-center gap-4">
                   <div className="p-3 rounded-full bg-muted/30 text-muted-foreground">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1258,16 +1260,16 @@ export default function QuizTake() {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
         <NavBar />
-        
-        <WebcamMonitor 
-          enabled={enableWebcam && !quizCompleted} 
-          onViolationDetected={handleWebcamViolation} 
+
+        <WebcamMonitor
+          enabled={enableWebcam && !quizCompleted}
+          onViolationDetected={handleWebcamViolation}
         />
-        
+
         <div className="container max-w-5xl mx-auto px-4 py-8">
           <div className="max-w-5xl mx-auto">
             {/* Quiz Header */}
-            <motion.div 
+            <motion.div
               className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1277,13 +1279,13 @@ export default function QuizTake() {
                 <h1 className="text-3xl font-bold mb-1">{typedQuiz?.title}</h1>
                 <p className="text-muted-foreground">{typedQuiz?.description}</p>
               </div>
-              
+
               <div className="flex flex-wrap items-center gap-3">
                 {typedQuiz?.duration && typedQuiz.duration > 0 && (
                   <div className="bg-white dark:bg-slate-950 shadow-sm rounded-lg p-2 px-3 flex items-center gap-2">
                     <Clock className="h-4 w-4 text-primary" />
-                    <CountdownTimer 
-                      duration={typedQuiz.duration * 60} 
+                    <CountdownTimer
+                      duration={typedQuiz.duration * 60}
                       onTimeUp={() => {
                         toast({
                           title: "Time's up!",
@@ -1294,7 +1296,7 @@ export default function QuizTake() {
                     />
                   </div>
                 )}
-                
+
                 <div className="bg-white dark:bg-slate-950 shadow-sm rounded-lg p-2 px-3 flex items-center gap-2">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
                     <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
@@ -1305,7 +1307,7 @@ export default function QuizTake() {
                     {typedQuestions?.length || 0} Questions
                   </span>
                 </div>
-                
+
                 <div className="bg-white dark:bg-slate-950 shadow-sm rounded-lg p-2 px-3 flex items-center gap-2">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500">
                     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
@@ -1317,9 +1319,9 @@ export default function QuizTake() {
                 </div>
               </div>
             </motion.div>
-            
+
             {/* Progress Indicator */}
-            <motion.div 
+            <motion.div
               className="bg-white dark:bg-slate-950 rounded-xl shadow-sm mb-6 p-5"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1327,21 +1329,21 @@ export default function QuizTake() {
             >
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3">
                 <div className="flex items-center gap-3">
-                  <motion.div 
+                  <motion.div
                     className="flex items-center justify-center bg-primary/10 text-primary w-10 h-10 rounded-full"
-                    animate={{ 
+                    animate={{
                       scale: [1, 1.05, 1],
-                      backgroundColor: percentComplete === 100 ? ["rgba(22, 163, 74, 0.1)", "rgba(22, 163, 74, 0.2)", "rgba(22, 163, 74, 0.1)"] : undefined 
+                      backgroundColor: percentComplete === 100 ? ["rgba(22, 163, 74, 0.1)", "rgba(22, 163, 74, 0.2)", "rgba(22, 163, 74, 0.1)"] : undefined
                     }}
-                    transition={{ 
-                      duration: 2, 
+                    transition={{
+                      duration: 2,
                       repeat: Infinity,
                       repeatType: "reverse"
                     }}
                   >
                     <span className="font-medium">{currentQuestion + 1}</span>
                   </motion.div>
-                  
+
                   <div>
                     <h2 className="font-medium text-sm">
                       Question {currentQuestion + 1} of {typedQuestions?.length || 0}
@@ -1355,17 +1357,17 @@ export default function QuizTake() {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Progress Bar */}
                 <div className="w-full bg-muted rounded-full h-2.5 mb-6">
-                  <motion.div 
+                  <motion.div
                     className="bg-primary h-2.5 rounded-full"
                     initial={{ width: `${(currentQuestion / (typedQuestions?.length || 1)) * 100}%` }}
                     animate={{ width: `${((currentQuestion + 1) / (typedQuestions?.length || 1)) * 100}%` }}
                     transition={{ type: "spring", stiffness: 100, damping: 20 }}
                   ></motion.div>
                 </div>
-                
+
                 {/* Question Navigation Dots */}
                 <div className="flex flex-wrap gap-2">
                   {typedQuestions?.map((_, index) => (
@@ -1377,17 +1379,17 @@ export default function QuizTake() {
                       }}
                       className={cn(
                         "flex items-center justify-center w-8 h-8 rounded-full text-xs transition-all",
-                        currentQuestion === index 
-                          ? "bg-primary text-white" 
-                          : answers[index] 
-                            ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800" 
+                        currentQuestion === index
+                          ? "bg-primary text-white"
+                          : answers[index]
+                            ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800"
                             : "bg-muted text-muted-foreground hover:bg-muted/70"
                       )}
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.95 }}
-                      animate={currentQuestion === index ? { 
-                        scale: [1, 1.1, 1], 
-                        transition: { duration: 0.5, repeat: 3, repeatType: "mirror" } 
+                      animate={currentQuestion === index ? {
+                        scale: [1, 1.1, 1],
+                        transition: { duration: 0.5, repeat: 3, repeatType: "mirror" }
                       } : {}}
                     >
                       {index + 1}
@@ -1396,7 +1398,7 @@ export default function QuizTake() {
                 </div>
               </div>
             </motion.div>
-            
+
             {/* Main Question Content */}
             <AnimatePresence mode="wait">
               <QuestionTransition
@@ -1404,7 +1406,7 @@ export default function QuizTake() {
                 id={currentQuestion}
                 direction={direction}
               >
-                <motion.div 
+                <motion.div
                   className="bg-white dark:bg-slate-950 rounded-xl shadow-sm p-6 md:p-8 mb-6 relative"
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
@@ -1426,9 +1428,9 @@ export default function QuizTake() {
                 </motion.div>
               </QuestionTransition>
             </AnimatePresence>
-            
+
             {/* Navigation Controls */}
-            <motion.div 
+            <motion.div
               className="flex items-center justify-between mt-6 mb-10"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1446,7 +1448,7 @@ export default function QuizTake() {
                   Previous
                 </Button>
               </motion.div>
-              
+
               <div className="text-sm text-muted-foreground hidden md:block">
                 {currentQuestion < (typedQuestions?.length || 0) - 1 ? (
                   <span>Press <kbd className="px-2 py-1 bg-muted rounded border text-xs">→</kbd> for next question</span>
@@ -1454,7 +1456,7 @@ export default function QuizTake() {
                   <span>Last question! Ready to submit?</span>
                 )}
               </div>
-              
+
               <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
                 {currentQuestion < (typedQuestions?.length || 0) - 1 ? (
                   <Button
@@ -1487,9 +1489,9 @@ export default function QuizTake() {
                 )}
               </motion.div>
             </motion.div>
-            
+
             {/* Keyboard Shortcuts Guide */}
-            <motion.div 
+            <motion.div
               className="bg-muted/40 border rounded-lg p-4 mt-4 text-xs text-muted-foreground"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -1546,4 +1548,5 @@ export default function QuizTake() {
       </div>
     </div>
   );
+
 }
