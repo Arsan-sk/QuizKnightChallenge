@@ -9,6 +9,7 @@ import { ThemeProvider } from "./hooks/use-theme";
 import { NavigationWithProfile } from "./components/profile/navigation-with-profile";
 
 import NotFound from "@/pages/not-found";
+import Landing from "@/pages/landing";
 import AuthPage from "@/pages/auth-page";
 import TeacherDashboard from "@/pages/teacher-dashboard";
 import StudentDashboard from "@/pages/student-dashboard";
@@ -27,9 +28,7 @@ import QuizReviewPage from "@/pages/quiz-review";
 function Router() {
   return (
     <Switch>
-      <Route path="/">
-        <Redirect to="/auth" />
-      </Route>
+      <Route path="/" component={Landing} />
       <Route path="/auth" component={AuthPage} />
       <ProtectedRoute 
         path="/teacher" 

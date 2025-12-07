@@ -66,8 +66,18 @@ export function setupAuth(app: Express) {
 
   passport.serializeUser((user, done) => done(null, user.id));
   passport.deserializeUser(async (id: number, done) => {
-    const user = await storage.getUser(id);
-    done(null, user);
+    try {
+      const user = await storage.getUser(id);
+      if (!user) {
+        // User was not found (may have been deleted). Return false to indicate no user.
+        console.warn(`deserializeUser: user id ${id} not found in database; clearing session authentication.`);
+        return done(null, false);
+      }
+      return done(null, user);
+    } catch (err) {
+      console.error('Error deserializing user from session:', err);
+      return done(err as Error);
+    }
   });
 
   app.post("/api/register", async (req, res, next) => {

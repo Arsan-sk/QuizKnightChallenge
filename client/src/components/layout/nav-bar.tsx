@@ -1,38 +1,5 @@
-import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@/components/ui/button";
-import { LogOut } from "lucide-react";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-
-export function NavBar() {
-  const { user, logoutMutation } = useAuth();
-
-  return (
-    <nav className="bg-background border-b">
-      <div className="container mx-auto px-8 py-4 flex justify-between items-center">
-        <div className="flex items-center space-x-4">
-          <h1 className="text-xl font-bold">QuizKtc</h1>
-          <span className="text-muted-foreground">
-            Logged in as {user?.username} ({user?.role})
-          </span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <ThemeToggle />
-          <Button
-            variant="outline"
-            onClick={() => logoutMutation.mutate()}
-            disabled={logoutMutation.isPending}
-          >
-            {logoutMutation.isPending ? (
-              "Logging out..."
-            ) : (
-              <>
-                <LogOut className="mr-2 h-4 w-4" />
-                Logout
-              </>
-            )}
-          </Button>
-        </div>
-      </div>
-    </nav>
-  );
+// NavBar component has been removed per project request.
+// To avoid import errors for any remaining references, export a silent no-op component.
+export function NavBar(): null {
+  return null;
 }

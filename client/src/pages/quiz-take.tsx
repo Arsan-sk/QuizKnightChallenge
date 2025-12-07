@@ -11,7 +11,7 @@ import { QuestionTransition } from "@/components/ui/question-transition";
 import { apiRequest } from "@/lib/queryClient";
 import { Loader2, Trophy, Clock, CheckCircle, XCircle, Search, FileQuestion, ArrowLeft, ArrowRight, Send, HelpCircle, Keyboard, Award, ClipboardCheck, ListChecks, Medal, Home, X, Circle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { NavBar } from "@/components/layout/nav-bar";
+// NavBar removed per request
 import { useToast } from "@/hooks/use-toast";
 import { QuizReview } from "@/components/quiz/QuizReview";
 import { WebcamMonitor } from "@/components/quiz/WebcamMonitor";
@@ -67,7 +67,10 @@ export default function QuizTake() {
   const [hasAttempted, setHasAttempted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [direction, setDirection] = useState<"left" | "right">("right");
-  const [showQuestionDetails, setShowQuestionDetails] = useState(false);
+  // Use `showReview` to present the question review overlay/modal.
+  // `proctoringActive` gates all proctoring listeners/monitoring so that
+  // once submission begins we can immediately stop any further alerts.
+  const [proctoringActive, setProctoringActive] = useState(true);
 
   const {
     data: quiz,
@@ -149,6 +152,9 @@ export default function QuizTake() {
 
   // Update submitQuiz to use the safe refetch
   const submitQuiz = useCallback(async () => {
+    // stop proctoring immediately when submission starts
+    setProctoringActive(false);
+
     try {
       if (!questions || !Array.isArray(questions) || questions.length === 0 || !timeStarted || !user || !('id' in user)) {
         console.error("Missing required data for quiz submission", {
@@ -165,50 +171,47 @@ export default function QuizTake() {
 
       let correctCount = 0;
       let wrongCount = 0;
-      let pointsEarned = 0;
 
       const questionsArray = questions as QuestionType[];
 
+      // Local counts for quick feedback — server will compute authoritative scoring.
       for (let i = 0; i < questionsArray.length; i++) {
         const question = questionsArray[i];
         if (answers[i] === question?.correctAnswer) {
           correctCount++;
-          pointsEarned += (question.points || 2);
         } else if (answers[i]) {
           wrongCount++;
         }
       }
 
       const totalQuestions = questionsArray.length;
-      const scorePercentage = (correctCount / totalQuestions) * 100;
 
       const endTime = new Date();
       const timeTaken = Math.max(1, Math.floor((endTime.getTime() - (timeStarted?.getTime() || 0)) / 1000));
       console.log('Quiz completed at:', endTime);
       console.log('Time taken (seconds):', timeTaken);
 
+
       try {
-        await apiRequest(
+        const res = await apiRequest(
           'POST',
           `/api/quizzes/${id}/results`,
           {
             quizId: parseInt(id as string),
-            score: Math.round(scorePercentage),
+            userAnswers: answers,
             timeTaken: timeTaken,
-            correctAnswers: correctCount,
-            wrongAnswers: wrongCount,
-            totalQuestions: totalQuestions,
-            pointsEarned: pointsEarned
           }
         );
 
+        const created = await res.json();
+
         setQuizResult({
-          score: Math.round(scorePercentage),
-          timeTaken: timeTaken,
-          correctAnswers: correctCount,
-          wrongAnswers: wrongCount,
-          totalQuestions: totalQuestions,
-          pointsEarned: pointsEarned
+          score: created.score,
+          timeTaken: created.timeTaken,
+          correctAnswers: created.correctAnswers,
+          wrongAnswers: created.wrongAnswers,
+          totalQuestions: created.totalQuestions,
+          pointsEarned: created.pointsEarned
         });
 
         if (id) {
@@ -234,6 +237,9 @@ export default function QuizTake() {
   }, [questions, timeStarted, user, answers, id, safeRefetchLeaderboard, toast]);
 
   const handleWebcamViolation = useCallback(() => {
+    // Ignore webcam violations once proctoring has been disabled
+    if (!proctoringActive) return;
+
     setWarnings(prev => {
       const newWarnings = prev + 1;
 
@@ -252,7 +258,9 @@ export default function QuizTake() {
 
   // Memoize the handleVisibilityChange function to prevent re-renders
   const handleVisibilityChange = useCallback(() => {
-    if (document.hidden && !quizCompleted) {
+    if (!proctoringActive) return;
+
+    if (document.hidden) {
       setWarnings((w) => {
         const newWarnings = w + 1;
         toast({
@@ -272,10 +280,11 @@ export default function QuizTake() {
         return newWarnings;
       });
     }
-  }, [quizCompleted, toast, submitQuiz]);
+  }, [proctoringActive, toast, submitQuiz]);
 
   // Memoize the preventCopyPaste function
   const preventCopyPaste = useCallback((e: ClipboardEvent) => {
+    if (!proctoringActive) return;
     if (!quizCompleted) {
       e.preventDefault();
       setCopyPasteAttempts(prev => {
@@ -296,10 +305,12 @@ export default function QuizTake() {
         return newAttempts;
       });
     }
-  }, [quizCompleted, toast]);
+  }, [proctoringActive, quizCompleted, toast]);
 
   // Memoize the preventHotkeys function
   const preventHotkeys = useCallback((e: KeyboardEvent) => {
+    if (!proctoringActive) return;
+
     if (!quizCompleted && (e.ctrlKey || e.altKey || e.metaKey)) {
       const allowedCombinations = ['Home', 'End'];
       if (!allowedCombinations.includes(e.key)) {
@@ -311,7 +322,7 @@ export default function QuizTake() {
         });
       }
     }
-  }, [quizCompleted, toast]);
+  }, [proctoringActive, quizCompleted, toast]);
 
   // Memoize the enterFullScreen function
   const enterFullScreen = useCallback(() => {
@@ -338,6 +349,8 @@ export default function QuizTake() {
 
   // Memoize the exitHandler function
   const exitHandler = useCallback(() => {
+    if (!proctoringActive) return;
+
     if (!document.fullscreenElement && !quizCompleted) {
       setIsFullScreen(false);
       setWarnings(prev => {
@@ -359,11 +372,14 @@ export default function QuizTake() {
         return newWarnings;
       });
     }
-  }, [quizCompleted, toast, submitQuiz]);
+  }, [proctoringActive, quizCompleted, toast, submitQuiz]);
 
   // Update the useEffect to use memoized functions
   useEffect(() => {
-    if (!isFullScreen && !quizCompleted) {
+    // Attach proctoring listeners only while proctoringActive.
+    if (!proctoringActive) return;
+
+    if (!isFullScreen) {
       enterFullScreen();
     }
 
@@ -382,7 +398,7 @@ export default function QuizTake() {
       document.removeEventListener("keydown", preventHotkeys);
       document.removeEventListener("fullscreenchange", exitHandler);
     };
-  }, [quizCompleted, isFullScreen, handleVisibilityChange, preventCopyPaste, preventHotkeys, enterFullScreen, exitHandler]);
+  }, [proctoringActive, isFullScreen, handleVisibilityChange, preventCopyPaste, preventHotkeys, enterFullScreen, exitHandler]);
 
   // Memoize all key functions that are used in useEffect dependencies
   const handleAnswer = useCallback((answer: string) => {
@@ -525,7 +541,6 @@ export default function QuizTake() {
   if (isLoading) {
     return (
       <div>
-        <NavBar />
         <div className="container mx-auto h-screen flex flex-col items-center justify-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary" />
           <p className="mt-4 text-lg">Loading quiz...</p>
@@ -564,7 +579,6 @@ export default function QuizTake() {
   if (quizError || questionsError) {
     return (
       <div>
-        <NavBar />
         <div className="container mx-auto p-8 text-center">
           <h1 className="text-2xl font-bold text-red-500 mb-4">Error Loading Quiz</h1>
           <p className="text-muted-foreground">
@@ -589,7 +603,6 @@ export default function QuizTake() {
   if (hasAttempted) {
     return (
       <div>
-        <NavBar />
         <div className="container mx-auto p-8 text-center">
           <h1 className="text-2xl font-bold text-red-500 mb-4">Quiz Already Attempted</h1>
           <p className="text-muted-foreground mb-6">
@@ -604,13 +617,11 @@ export default function QuizTake() {
   }
 
   if (quizCompleted && quizResult) {
-    const toggleQuestionDetails = () => {
-      setShowQuestionDetails(!showQuestionDetails);
-    };
+    // Open the modal-based question review
+    const openQuestionReview = () => setShowReview(true);
 
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
-        <NavBar />
         <div className="container mx-auto px-4 py-8">
           <motion.div
             className="max-w-4xl mx-auto"
@@ -776,7 +787,7 @@ export default function QuizTake() {
               >
                 <Card
                   className="overflow-hidden border-t-4 border-blue-500 cursor-pointer hover:shadow-lg transition-all duration-300 h-full flex flex-col shadow-md relative"
-                  onClick={toggleQuestionDetails}
+                  onClick={openQuestionReview}
                 >
                   <motion.div
                     className="absolute right-3 top-3 w-2 h-2 bg-blue-500 rounded-full"
@@ -839,7 +850,7 @@ export default function QuizTake() {
                         </div>
                       </div>
                       <p className="text-muted-foreground text-sm mt-1">
-                        Click to {showQuestionDetails ? "hide" : "review"} answers
+                        Click to {showReview ? "hide" : "review"} answers
                       </p>
                     </motion.div>
                   </CardContent>
@@ -943,87 +954,12 @@ export default function QuizTake() {
               </motion.div>
             )}
 
-            {showQuestionDetails && (
-              <motion.div
-                className="space-y-4 mb-8"
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                transition={{ duration: 0.3 }}
-              >
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold">Question Review</h2>
-                  <Button variant="outline" size="sm" onClick={toggleQuestionDetails}>
-                    <X className="h-4 w-4 mr-2" />
-                    Close Review
-                  </Button>
-                </div>
-
-                {questions.map((question, index) => {
-                  const userAnswer = answers[index] || "";
-                  const isCorrect = userAnswer === question.correctAnswer;
-
-                  return (
-                    <motion.div
-                      key={question.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 * index }}
-                    >
-                      <Card className={cn(
-                        "overflow-hidden border-l-4",
-                        isCorrect ? "border-l-green-500" : "border-l-red-500"
-                      )}>
-                        <CardContent className="p-4 relative">
-                          <div className="absolute top-2 right-2">
-                            {isCorrect ? (
-                              <span className="bg-green-100 text-green-800 font-medium px-3 py-1 rounded-full text-xs flex items-center">
-                                +2
-                              </span>
-                            ) : (
-                              <span className="bg-red-100 text-red-800 font-medium px-3 py-1 rounded-full text-xs flex items-center">
-                                0
-                              </span>
-                            )}
-                          </div>
-
-                          <h3 className="text-base font-medium mt-1 mb-3 pr-12">
-                            Question {index + 1}: {question.questionText}
-                          </h3>
-
-                          <div className="space-y-2">
-                            {question.options.map(option => {
-                              const isUserChoice = option === userAnswer;
-                              const isCorrectOption = option === question.correctAnswer;
-
-                              return (
-                                <div
-                                  key={option}
-                                  className={cn(
-                                    "p-2 rounded-md flex items-center",
-                                    isCorrectOption ? "bg-green-50 border border-green-200" : "",
-                                    isUserChoice && !isCorrectOption ? "bg-red-50 border border-red-200" : "",
-                                    !isUserChoice && !isCorrectOption ? "bg-muted/30 border border-muted" : ""
-                                  )}
-                                >
-                                  {isCorrectOption && <CheckCircle className="h-4 w-4 mr-2 text-green-600" />}
-                                  {isUserChoice && !isCorrectOption && <XCircle className="h-4 w-4 mr-2 text-red-600" />}
-                                  {!isUserChoice && !isCorrectOption && <Circle className="h-4 w-4 mr-2 text-muted-foreground" />}
-
-                                  <span className={isCorrectOption ? "font-medium" : ""}>{option}</span>
-
-                                  {isUserChoice && (
-                                    <span className="ml-auto text-xs font-medium">Your choice</span>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  );
-                })}
-              </motion.div>
+            {showReview && (
+              <QuizReview
+                questions={questions as QuestionType[]}
+                userAnswers={answers}
+                onClose={() => setShowReview(false)}
+              />
             )}
 
             <motion.div
@@ -1048,10 +984,9 @@ export default function QuizTake() {
   if (typedQuiz.quizType === "live" && typedQuiz.isActive) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
-        <NavBar />
 
         <WebcamMonitor
-          enabled={enableWebcam && !quizCompleted}
+          enabled={enableWebcam && proctoringActive}
           onViolationDetected={handleWebcamViolation}
         />
 
@@ -1086,7 +1021,6 @@ export default function QuizTake() {
     if (showRules) {
       return (
         <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
-          <NavBar />
           <div className="container mx-auto px-4 py-12">
             <motion.div
               initial={{ opacity: 0, y: -20 }}
@@ -1259,10 +1193,8 @@ export default function QuizTake() {
 
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
-        <NavBar />
-
         <WebcamMonitor
-          enabled={enableWebcam && !quizCompleted}
+          enabled={enableWebcam && proctoringActive}
           onViolationDetected={handleWebcamViolation}
         />
 
@@ -1536,9 +1468,8 @@ export default function QuizTake() {
     );
   }
 
-  return (
+    return (
     <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
-      <NavBar />
       <div className="container mx-auto p-8 text-center">
         <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
         <h1 className="text-2xl font-bold mb-4">Loading Quiz</h1>

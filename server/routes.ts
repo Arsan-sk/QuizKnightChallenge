@@ -102,6 +102,9 @@ export function registerRoutes(app: Express): Server {
       }
 
       const userDetails = await storage.getUserWithDetails(req.user.id);
+      if (!userDetails) {
+        return res.status(404).json({ error: "User not found" });
+      }
       res.json(userDetails);
     } catch (error) {
       console.error("Error fetching user details:", error);
@@ -681,19 +684,46 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Quiz not found" });
       }
 
+      // Parse submitted answers; server will compute authoritative scoring
       const validatedData = submitResultSchema.parse(req.body);
 
-      // Calculate points earned if not provided (fallback for backward compatibility)
-      const pointsEarned = validatedData.pointsEarned ?? (validatedData.correctAnswers * 2);
+      const userAnswers: string[] = validatedData.userAnswers || [];
+      const timeTaken: number = validatedData.timeTaken ?? 0;
+
+      // Fetch quiz questions so we can compute correct answers & points
+      const questionsForQuiz = await storage.getQuestionsByQuiz(quizId);
+      const totalQuestions = questionsForQuiz.length;
+
+      let correctAnswers = 0;
+      let wrongAnswers = 0;
+      let pointsEarned = 0;
+
+      for (let i = 0; i < questionsForQuiz.length; i++) {
+        const q = questionsForQuiz[i];
+        const userAns = userAnswers[i];
+
+        if (userAns && userAns === q.correctAnswer) {
+          correctAnswers++;
+          pointsEarned += (q.points ?? 2);
+        } else if (userAns) {
+          wrongAnswers++;
+        }
+      }
+
+      const score = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0;
 
       const result = await storage.createResult({
-        ...validatedData,
         quizId,
         userId: req.user.id,
+        score,
+        totalQuestions,
+        correctAnswers,
+        wrongAnswers,
+        timeTaken,
         pointsEarned,
       });
 
-      // Update user's total points
+      // Update user's total points (cumulative points)
       await storage.updateUserPoints(req.user.id, pointsEarned);
 
       res.status(201).json(result);

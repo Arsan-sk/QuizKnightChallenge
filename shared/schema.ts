@@ -61,7 +61,7 @@ export const questions = pgTable("questions", {
   questionType: text("question_type", { enum: ["mcq", "true_false"] }).notNull(),
   options: text("options").array(),
   correctAnswer: text("correct_answer").notNull(),
-  points: integer("points").default(1),  // Points awarded for correct answer
+  points: integer("points").default(2),  // Points awarded for correct answer
   imageUrl: text("image_url"),  // URL for question image
   optionImages: text("option_images").array(),  // URLs for option images
   createdAt: timestamp("created_at").defaultNow(),
@@ -185,8 +185,11 @@ export const insertResultSchema = createInsertSchema(results).pick({
   pointsEarned: true,
 });
 
-export const submitResultSchema = insertResultSchema.extend({
-  pointsEarned: z.number().optional(),
+// For submission we accept the user's answers so the server can
+// compute authoritative scoring (points earned, correct answers, etc.).
+export const submitResultSchema = z.object({
+  userAnswers: z.array(z.string()),
+  timeTaken: z.number().optional(),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;

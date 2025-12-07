@@ -4,7 +4,7 @@ import { Quiz } from "@shared/schema";
 import { QuizCard } from "@/components/quiz/QuizCard";
 import { Loader2, Search } from "lucide-react";
 import { motion } from "framer-motion";
-import { NavBar } from "@/components/layout/nav-bar";
+// NavBar removed per request
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -55,7 +55,6 @@ export default function QuizBrowse() {
 
   return (
     <div>
-      <NavBar />
       <div className="container mx-auto p-8">
         <motion.div
           initial={{ opacity: 0, y: -20 }}

@@ -94,7 +94,10 @@ export class DatabaseStorage implements IStorage {
     try {
       // Get user details
       const user = await this.getUser(userId);
-      if (!user) throw new Error("User not found");
+      if (!user) {
+        console.warn(`getUserWithDetails: user ${userId} not found`);
+        return null;
+      }
 
       // Get user's achievements
       const userAchievementsList = await this.getUserAchievements(userId);
@@ -104,12 +107,12 @@ export class DatabaseStorage implements IStorage {
       
       const quizzesTaken = results.length;
       
-      // Calculate total score based on the stored score values
-      const totalScore = results.reduce((sum, result) => sum + result.score, 0);
-      
-      // Calculate average score properly
-      const averageScore = quizzesTaken > 0 
-        ? Math.round(totalScore / quizzesTaken) 
+      // Calculate totalScore based on cumulative points earned (authoritative metric)
+      const totalScore = results.reduce((sum, result) => sum + (result.pointsEarned || 0), 0);
+
+      // Average score as percentage (based on stored percentage score values)
+      const averageScore = quizzesTaken > 0
+        ? Math.round(results.reduce((sum, r) => sum + r.score, 0) / quizzesTaken)
         : 0;
         
       // Get global rank
@@ -401,12 +404,13 @@ export class DatabaseStorage implements IStorage {
           profilePicture: users.profilePicture,
           role: users.role,
           points: users.points,
-          totalScore: sql<number>`SUM(${results.score})`,
+          // Use cumulative points earned across attempts as the primary global leaderboard metric
+          totalScore: sql<number>`SUM(${results.pointsEarned})`,
         })
         .from(users)
         .leftJoin(results, eq(users.id, results.userId))
         .groupBy(users.id, users.username, users.name, users.profilePicture, users.role, users.points)
-        .orderBy(desc(sql`SUM(${results.score})`), desc(users.points))
+        .orderBy(desc(sql`SUM(${results.pointsEarned})`), desc(users.points))
         .limit(limit);
         
       return leaderboard;

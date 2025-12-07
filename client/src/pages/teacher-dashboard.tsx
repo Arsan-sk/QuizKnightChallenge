@@ -6,7 +6,7 @@ import { QuizCard } from "@/components/quiz/QuizCard";
 import { Link } from "wouter";
 import { Loader2, Plus } from "lucide-react";
 import { motion } from "framer-motion";
-import { NavBar } from "@/components/layout/nav-bar";
+// NavBar removed per request
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
@@ -28,7 +28,6 @@ export default function TeacherDashboard() {
 
   return (
     <div>
-      <NavBar />
       <div className="container mx-auto p-8">
         <motion.div
           initial={{ opacity: 0, y: -20 }}

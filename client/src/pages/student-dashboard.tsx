@@ -17,7 +17,7 @@ import {
   GraduationCap
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { NavBar } from "@/components/layout/nav-bar";
+// NavBar removed per request
 import { Link } from "wouter";
 import {
   Card,
@@ -150,7 +150,6 @@ export default function StudentDashboard() {
         onComplete={() => setShowConfetti(false)} 
       />
       
-      <NavBar />
       
       <div className="container mx-auto p-8">
         {/* Welcome header section */}

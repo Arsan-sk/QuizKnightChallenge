@@ -5,7 +5,7 @@ import { Quiz, Question as QuestionType, Result } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Clock, CheckCircle, XCircle, ArrowLeft } from "lucide-react";
-import { NavBar } from "@/components/layout/nav-bar";
+// NavBar removed per request
 import { useToast } from "@/hooks/use-toast";
 import { formatTime } from "@/utils/analytics";
 import { formatTimeTaken } from "@/lib/utils";
@@ -56,7 +56,6 @@ export default function QuizReviewPage() {
   if (isLoading) {
     return (
       <div>
-        <NavBar />
         <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
           <Loader2 className="h-8 w-8 animate-spin mr-2" />
           <span>Loading quiz review...</span>
@@ -68,7 +67,6 @@ export default function QuizReviewPage() {
   if (!quiz || !questions || !userResult || !student) {
     return (
       <div>
-        <NavBar />
         <div className="container mx-auto p-8 text-center">
           <h1 className="text-2xl font-bold text-red-500 mb-4">Error Loading Quiz Review</h1>
           <p className="text-muted-foreground mb-6">
@@ -88,7 +86,6 @@ export default function QuizReviewPage() {
   
   return (
     <div>
-      <NavBar />
       <div className="container mx-auto p-8">
         <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between">
           <div>

@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { X, Camera, Users, AlertTriangle, ArrowLeft } from "lucide-react";
 import { motion } from "framer-motion";
-import { NavBar } from "@/components/layout/nav-bar";
+// NavBar removed per request
 import { useQuery } from "@tanstack/react-query";
 import { Quiz } from "@shared/schema";
 
@@ -128,7 +128,6 @@ export default function LiveQuizMonitorPage() {
   
   return (
     <div className="min-h-screen bg-background">
-      <NavBar />
       
       <div className="container mx-auto py-6 px-4">
         <motion.div
