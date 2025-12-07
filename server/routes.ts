@@ -12,6 +12,7 @@ import {
   updateQuestionSchema,
   updateUserProfileSchema
 } from "@shared/schema";
+import { registerStatsRoutes } from "./statsRoutes";
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -1002,7 +1003,7 @@ export function registerRoutes(app: Express): Server {
       res.status(500).json({ error: "Failed to fetch user quiz result" });
     }
   });
-
+  registerStatsRoutes(app);
   const httpServer = createServer(app);
   return httpServer;
 }
