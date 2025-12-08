@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { queryClient } from "./lib/queryClient";
 import { ProtectedRoute } from "./lib/protected-route";
 import { ThemeProvider } from "./hooks/use-theme";
-import { NavigationWithProfile } from "./components/profile/navigation-with-profile";
+import Layout from "./components/layout/Layout";
 
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
@@ -97,9 +97,9 @@ function Router() {
 
 function AppContent() {
   return (
-    <NavigationWithProfile>
+    <Layout>
       <Router />
-    </NavigationWithProfile>
+    </Layout>
   );
 }
 
