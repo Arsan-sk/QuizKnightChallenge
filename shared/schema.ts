@@ -76,6 +76,8 @@ export const results = pgTable("results", {
   correctAnswers: integer("correct_answers").notNull(),
   wrongAnswers: integer("wrong_answers").notNull(),
   timeTaken: integer("time_taken").notNull(),  // Time taken in seconds
+  // Store the user's answers as a JSON string
+  answers: text("answers"),
   pointsEarned: integer("points_earned").default(0), // Points earned for this attempt
   completedAt: timestamp("completed_at").defaultNow(),
 });

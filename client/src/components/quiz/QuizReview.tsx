@@ -43,7 +43,7 @@ export function QuizReview({ questions, userAnswers, onClose }: QuizReviewProps)
                   {isCorrect ? (
                     <span className="absolute top-2 right-3 bg-green-100 text-green-800 font-medium px-2 py-1 rounded-full text-xs flex items-center">
                       <Check className="h-3 w-3 mr-1" />
-                      +1
+                      +{question.points ?? 1}
                     </span>
                   ) : (
                     <span className="absolute top-2 right-3 bg-red-100 text-red-800 font-medium px-2 py-1 rounded-full text-xs flex items-center">

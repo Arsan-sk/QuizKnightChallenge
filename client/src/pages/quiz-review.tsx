@@ -173,17 +173,17 @@ export default function QuizReviewPage() {
                     style={{ borderLeftColor: isCorrect ? 'rgb(34, 197, 94)' : 'rgb(239, 68, 68)' }}>
                 <CardContent className="p-6">
                   <div className="absolute top-4 right-4">
-                    {isCorrect ? (
-                      <span className="bg-green-100 text-green-800 font-medium px-3 py-1 rounded-full text-sm flex items-center">
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                        Correct
-                      </span>
-                    ) : (
-                      <span className="bg-red-100 text-red-800 font-medium px-3 py-1 rounded-full text-sm flex items-center">
-                        <XCircle className="h-4 w-4 mr-1" />
-                        Incorrect
-                      </span>
-                    )}
+                      {isCorrect ? (
+                        <span className="bg-green-100 text-green-800 font-medium px-3 py-1 rounded-full text-sm flex items-center">
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          +{question.points ?? 1}
+                        </span>
+                      ) : (
+                        <span className="bg-red-100 text-red-800 font-medium px-3 py-1 rounded-full text-sm flex items-center">
+                          <XCircle className="h-4 w-4 mr-1" />
+                          0
+                        </span>
+                      )}
                   </div>
                   
                   <h3 className="text-xl font-medium mb-4 pr-24">

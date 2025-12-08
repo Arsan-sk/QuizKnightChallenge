@@ -7,6 +7,7 @@ import {
 import { User } from "@shared/schema";
 import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 
 // Define the structure for the user profile details
 interface UserProfile {
@@ -52,16 +53,18 @@ export const ProfileContext = createContext<ProfileContextType | null>(null);
 // Provider component for the profile context
 export function ProfileProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  // Query to fetch the user profile
+  // Query to fetch the user profile - unique cache key per user
   const {
     data: profile,
     error,
     isLoading,
     refetch: refreshProfile,
   } = useQuery<UserProfile | null, Error>({
-    queryKey: ["/api/users/me"],
+    queryKey: ["/api/users/me", user?.id],
     queryFn: getQueryFn({ on401: "returnNull" }),
+    enabled: !!user, // Only fetch when user is authenticated
   });
 
   // Mutation to update the user profile
@@ -75,8 +78,8 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       return await res.json();
     },
     onSuccess: (updatedProfile: UserProfile) => {
-      // Update the profile in the cache
-      queryClient.setQueryData(["/api/users/me"], updatedProfile);
+      // Update the profile in the cache with user-specific key
+      queryClient.setQueryData(["/api/users/me", user?.id], updatedProfile);
       
       // Show success message
       toast({

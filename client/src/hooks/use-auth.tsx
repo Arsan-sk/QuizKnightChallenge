@@ -38,6 +38,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
+      // Invalidate profile cache to fetch fresh profile data for this user
+      queryClient.invalidateQueries({ queryKey: ["/api/users/me"] });
     },
     onError: (error: Error) => {
       toast({
@@ -55,6 +57,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: (user: SelectUser) => {
       queryClient.setQueryData(["/api/user"], user);
+      // Invalidate profile cache to fetch fresh profile data for new user
+      queryClient.invalidateQueries({ queryKey: ["/api/users/me"] });
     },
     onError: (error: Error) => {
       toast({
@@ -71,6 +75,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
+      // Clear all cached data on logout
+      queryClient.clear();
     },
     onError: (error: Error) => {
       toast({

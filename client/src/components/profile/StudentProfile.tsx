@@ -84,9 +84,9 @@ export function StudentProfile({ profile }: StudentProfileProps) {
     ];
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-6">
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <ProfileStats
                     title="Total Points"
                     value={totalPoints}
@@ -123,22 +123,20 @@ export function StudentProfile({ profile }: StudentProfileProps) {
             </div>
 
             {/* Level and Rank */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
                 >
-                    <Card className="border-none shadow-lg bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 hover:shadow-xl transition-shadow">
-                        <CardHeader className="pb-4">
-                            <CardTitle className="flex items-center gap-2 text-xl">
-                                <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-500">
-                                    <TrendingUp className="h-5 w-5 text-white" />
-                                </div>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <TrendingUp className="h-5 w-5" />
                                 Level Progress
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="flex flex-col items-center space-y-6 pb-8">
+                        <CardContent className="flex flex-col items-center space-y-4">
                             <ProgressRing
                                 progress={levelProgress}
                                 size={140}
@@ -146,8 +144,8 @@ export function StudentProfile({ profile }: StudentProfileProps) {
                                 color="#3b82f6"
                                 label={`Level ${level}`}
                             />
-                            <p className="text-sm text-muted-foreground font-medium">
-                                <span className="text-lg font-bold text-blue-600 dark:text-blue-400">{100 - levelProgress}</span> points to Level {level + 1}
+                            <p className="text-sm text-muted-foreground">
+                                {100 - levelProgress} points to Level {level + 1}
                             </p>
                         </CardContent>
                     </Card>
@@ -158,21 +156,19 @@ export function StudentProfile({ profile }: StudentProfileProps) {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 }}
                 >
-                    <Card className="border-none shadow-lg bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 hover:shadow-xl transition-shadow">
-                        <CardHeader className="pb-4">
-                            <CardTitle className="flex items-center gap-2 text-xl">
-                                <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500">
-                                    <Award className="h-5 w-5 text-white" />
-                                </div>
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Award className="h-5 w-5" />
                                 Leaderboard Rank
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="flex flex-col items-center space-y-6 pb-8">
+                        <CardContent className="flex flex-col items-center space-y-4">
                             <div className="text-center">
-                                <div className="text-7xl font-black bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 bg-clip-text text-transparent drop-shadow-sm">
-                                    #{rank || "--"}
+                                <div className="text-6xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                                    #{rank}
                                 </div>
-                                <p className="text-sm text-muted-foreground mt-3 font-medium">
+                                <p className="text-sm text-muted-foreground mt-2">
                                     {profile.branch && `${profile.branch} - `}
                                     {profile.year && `${profile.year} Year`}
                                 </p>
@@ -184,13 +180,13 @@ export function StudentProfile({ profile }: StudentProfileProps) {
 
             {/* Tabs for Achievements and Activity */}
             <Tabs defaultValue="achievements" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 h-12 p-1 bg-slate-100 dark:bg-slate-800">
-                    <TabsTrigger value="achievements" className="text-base font-semibold">Achievements</TabsTrigger>
-                    <TabsTrigger value="activity" className="text-base font-semibold">Recent Activity</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="achievements">Achievements</TabsTrigger>
+                    <TabsTrigger value="activity">Recent Activity</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="achievements" className="mt-8">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6">
+                <TabsContent value="achievements" className="mt-6">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                         {achievements.map((achievement, index) => (
                             <AchievementBadge
                                 key={achievement.name}
@@ -205,45 +201,41 @@ export function StudentProfile({ profile }: StudentProfileProps) {
                     </div>
                 </TabsContent>
 
-                <TabsContent value="activity" className="mt-8">
-                    <Card className="border-none shadow-lg bg-white dark:bg-slate-900">
-                        <CardHeader className="border-b pb-4">
-                            <CardTitle className="text-xl">Recent Quiz Results</CardTitle>
+                <TabsContent value="activity" className="mt-6">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Recent Quiz Results</CardTitle>
                         </CardHeader>
-                        <CardContent className="pt-6">
+                        <CardContent>
                             {recentResults.length > 0 ? (
-                                <div className="space-y-4">
+                                <div className="space-y-3">
                                     {(recentResults || []).slice(0, 5).map((result: any, index: number) => (
                                         <motion.div
                                             key={result.id}
                                             initial={{ opacity: 0, x: -20 }}
                                             animate={{ opacity: 1, x: 0 }}
                                             transition={{ delay: index * 0.1 }}
-                                            className="flex items-center justify-between p-4 rounded-xl border-2 hover:border-blue-200 dark:hover:border-blue-800 hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-purple-50/50 dark:hover:from-blue-950/20 dark:hover:to-purple-950/20 transition-all cursor-pointer group"
+                                            className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                                         >
-                                            <div className="space-y-1">
-                                                <p className="font-semibold text-base group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">Quiz #{result.quizId}</p>
-                                                <p className="text-xs text-muted-foreground font-medium">
+                                            <div>
+                                                <p className="font-medium">Quiz #{result.quizId}</p>
+                                                <p className="text-xs text-muted-foreground">
                                                     {new Date(result.completedAt).toLocaleDateString()}
                                                 </p>
                                             </div>
-                                            <div className="text-right space-y-1">
-                                                <p className="font-black text-2xl bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">{result.score}%</p>
-                                                <p className="text-xs text-muted-foreground font-semibold">
-                                                    <span className="text-green-600 dark:text-green-400">+{result.pointsEarned ?? (result.correctAnswers ? result.correctAnswers * 2 : 0)}</span> pts
+                                            <div className="text-right">
+                                                <p className="font-bold text-lg">{result.score}%</p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    +{result.pointsEarned ?? (result.correctAnswers ? result.correctAnswers * 2 : 0)} pts
                                                 </p>
                                             </div>
                                         </motion.div>
                                     ))}
                                 </div>
                             ) : (
-                                <div className="text-center py-16">
-                                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 mb-4">
-                                        <BookOpen className="h-8 w-8 text-slate-400" />
-                                    </div>
-                                    <p className="text-muted-foreground font-medium">No quiz results yet.</p>
-                                    <p className="text-sm text-muted-foreground mt-1">Start taking quizzes to see your activity!</p>
-                                </div>
+                                <p className="text-muted-foreground text-center py-8">
+                                    No quiz results yet. Start taking quizzes to see your activity!
+                                </p>
                             )}
                         </CardContent>
                     </Card>

@@ -1,6 +1,6 @@
 import { users, quizzes, questions, results, achievements, userAchievements, friendships, type User, type Quiz, type Question, type Result, type UpdateQuiz, type UpdateQuestion, type UpdateUserProfile, type Achievement, type UserAchievement, type Friendship } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, gt, lt, or } from "drizzle-orm";
+import { eq, and, desc, sql, gt, lt, or, asc } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -347,15 +347,66 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getQuestionsByQuiz(quizId: number): Promise<Question[]> {
-    return db.select().from(questions).where(eq(questions.quizId, quizId));
+    // Return questions in stable insertion order (ascending id)
+    return db.select().from(questions).where(eq(questions.quizId, quizId)).orderBy(asc(questions.id));
   }
 
   async createResult(result: Omit<Result, "id" | "completedAt">): Promise<Result> {
-    const [newResult] = await db
-      .insert(results)
-      .values({ ...result, completedAt: new Date() })
-      .returning();
-    return newResult;
+    // Ensure answers is stored as a JSON string to avoid array literal issues
+    const safeResult = { ...result } as any;
+    if (safeResult.answers && !Array.isArray(safeResult.answers) && typeof safeResult.answers !== 'string') {
+      // If it's some unexpected type, stringify it
+      safeResult.answers = JSON.stringify(safeResult.answers);
+    }
+    if (Array.isArray(safeResult.answers)) {
+      // Coerce arrays to JSON string explicitly
+      safeResult.answers = JSON.stringify(safeResult.answers);
+    }
+
+    try {
+      // Insert without 'answers' first to avoid issues when the column
+      // doesn't exist or has an incompatible type in the DB.
+      const insertPayload: any = { ...safeResult };
+      delete insertPayload.answers;
+
+      const [newResult] = await db
+        .insert(results)
+        .values({ ...insertPayload, completedAt: new Date() })
+        .returning();
+
+      // If answers were provided, try to update the row separately.
+      if (safeResult.answers !== undefined) {
+        try {
+          await db
+            .update(results)
+            .set({ answers: safeResult.answers })
+            .where(eq(results.id, newResult.id));
+        } catch (updateError) {
+          // Try raw SQL fallbacks: jsonb then text[] literal
+          console.warn("Initial answers update failed, attempting raw SQL fallback", { updateError, resultId: newResult.id });
+          try {
+            // Try casting to jsonb (works if column is jsonb or text)
+            await pool.query('UPDATE results SET answers = $1::jsonb WHERE id = $2', [safeResult.answers, newResult.id]);
+          } catch (e1) {
+            try {
+              // If answers is an array JSON, convert to Postgres array literal for text[] columns
+              const parsed = typeof safeResult.answers === 'string' ? JSON.parse(safeResult.answers) : safeResult.answers;
+              if (Array.isArray(parsed)) {
+                const arrLiteral = '{' + parsed.map((s: any) => String(s).replace(/"/g, '\\"')).map((s: string) => `"${s}"`).join(',') + '}';
+                await pool.query('UPDATE results SET answers = $1::text[] WHERE id = $2', [arrLiteral, newResult.id]);
+              }
+            } catch (e2) {
+              console.warn("Fallback answers update failed (non-fatal)", { e1, e2, resultId: newResult.id });
+            }
+          }
+        }
+      }
+
+      return newResult;
+    } catch (error) {
+      console.error("createResult DB error", { error, safeResult });
+      throw error;
+    }
   }
 
   async getResultsByQuiz(quizId: number): Promise<Result[]> {

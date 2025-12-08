@@ -4,8 +4,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { StudentReport } from "@/types/analytics";
 import { formatTime } from "@/utils/analytics";
 import { Eye, Users } from "lucide-react";
-import { useState } from "react";
-import { Link } from "wouter";
+import { useState, useMemo } from "react";
 
 interface StudentReportTableProps {
   data: StudentReport[];
@@ -15,6 +14,8 @@ interface StudentReportTableProps {
 export function StudentReportTable({ data, quizId }: StudentReportTableProps) {
   const [sortBy, setSortBy] = useState<keyof StudentReport>("score");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [showReview, setShowReview] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
 
   // Handle column header click for sorting
   const handleSort = (column: keyof StudentReport) => {
@@ -51,6 +52,8 @@ export function StudentReportTable({ data, quizId }: StudentReportTableProps) {
     if (sortBy !== column) return null;
     return sortDirection === "asc" ? " ↑" : " ↓";
   };
+
+  // Removed modal/query code as per request
 
   return (
     <Card className="col-span-2">
@@ -129,15 +132,8 @@ export function StudentReportTable({ data, quizId }: StudentReportTableProps) {
                       {new Date(student.completedAt).toLocaleString()}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        asChild
-                      >
-                        <Link href={`/quiz-review/${quizId}/${student.userId}`}>
-                          <Eye className="h-3 w-3 mr-1" /> Review
-                        </Link>
-                      </Button>
+                          {/* Review button hidden per request */}
+                          <span />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -149,6 +145,7 @@ export function StudentReportTable({ data, quizId }: StudentReportTableProps) {
           Click column headers to sort the data
         </div>
       </CardContent>
+      {/* Review modal removed as per request */}
     </Card>
   );
 } 

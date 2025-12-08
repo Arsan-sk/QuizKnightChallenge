@@ -329,6 +329,10 @@ export default function QuizTake() {
     const element = document.documentElement;
     if (element.requestFullscreen) {
       element.requestFullscreen()
+        .then(() => {
+          // Only set isFullScreen after successful fullscreen request
+          setIsFullScreen(true);
+        })
         .catch(err => {
           console.error('Error attempting to enable full-screen mode:', err);
           // Don't set isFullScreen to true if there was an error
@@ -337,10 +341,6 @@ export default function QuizTake() {
             description: "Could not enter full-screen mode. You can continue with the quiz, but be aware that tab switching is still monitored.",
             variant: "destructive",
           });
-        })
-        .then(() => {
-          // Only set isFullScreen after successful fullscreen request
-          setIsFullScreen(true);
         });
     } else {
       setIsFullScreen(true); // Still set to true for browsers without fullscreen API
@@ -379,9 +379,7 @@ export default function QuizTake() {
     // Attach proctoring listeners only while proctoringActive.
     if (!proctoringActive) return;
 
-    if (!isFullScreen) {
-      enterFullScreen();
-    }
+    // Do not attempt fullscreen automatically here (must be user gesture).
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     document.addEventListener("copy", preventCopyPaste);
@@ -1137,7 +1135,13 @@ export default function QuizTake() {
                     whileTap={readyToStart ? { scale: 0.95 } : {}}
                   >
                     <Button
-                      onClick={() => setShowRules(false)}
+                      onClick={() => {
+                        // Request fullscreen on user gesture, then hide rules to start quiz
+                        if (readyToStart) {
+                          enterFullScreen();
+                        }
+                        setShowRules(false);
+                      }}
                       disabled={!readyToStart}
                       className="w-32 relative overflow-hidden group"
                     >

@@ -1,4 +1,10 @@
--- Migration: 0004_remove_students.sql
+Failed to parse stored answers for result 221 SyntaxError: Unexpected end of JSON input
+    at JSON.parse (<anonymous>)
+    at <anonymous> (D:\Projects\QuizKnightChallenge\server\routes.ts:884:33)
+    at Array.forEach (<anonymous>)
+    at <anonymous> (D:\Projects\QuizKnightChallenge\server\routes.ts:880:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+7:42:28 PM [express] GET /api/analytics/quiz/14 200 in 36ms :: {"totalAttempts":1,"averageScore":100…-- Migration: 0004_remove_students.sql
 -- Purpose: Permanently remove all users with role = 'student' and related data
 -- WARNING: This is destructive. BACKUP your database before running.
 BEGIN;

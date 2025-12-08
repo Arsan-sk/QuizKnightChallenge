@@ -721,6 +721,7 @@ export function registerRoutes(app: Express): Server {
         wrongAnswers,
         timeTaken,
         pointsEarned,
+        answers: JSON.stringify(userAnswers || []),
       });
 
       // Update user's total points (cumulative points)
@@ -874,46 +875,94 @@ export function registerRoutes(app: Express): Server {
         };
       });
 
-      // Here we would analyze actual question results from individual submissions
-      // For the moment, we'll simulate this with realistic values
-      results.forEach(result => {
-        // For each result, let's simulate the distribution of correct/wrong answers
-        const totalQuestions = result.totalQuestions;
-        const correctCount = result.correctAnswers;
+      // Analyze actual question-level results using stored per-attempt answers
+      // This requires that result.answers contains a JSON array of user's answers
+      // Helper to parse stored answers in multiple possible formats
+      function parseAnswersField(val: any): string[] {
+        if (val === null || val === undefined) return [];
+        // If it's already an array, normalize to strings
+        if (Array.isArray(val)) return val.map((v) => (v === null || v === undefined) ? "" : String(v));
 
-        // Divide the questions into correct and wrong based on the result
-        const questionIds = questions.map(q => q.id);
-
-        // Shuffle the question IDs to randomly assign correct/wrong
-        const shuffledIds = [...questionIds].sort(() => Math.random() - 0.5);
-
-        // The first 'correctCount' questions are considered correct
-        const correctIds = shuffledIds.slice(0, correctCount);
-
-        // Update question statistics
-        questionIds.forEach(id => {
-          if (questionData[id]) {
-            questionData[id].totalAttempts++;
-
-            // If this was marked as a correct answer
-            if (correctIds.includes(id)) {
-              questionData[id].correctCount++;
-            }
-
-            // Add some time (between 5-30 seconds) for this question
-            questionData[id].totalTime += Math.floor(5 + Math.random() * 25);
+        // If it's an object with toJSON, try that
+        if (typeof val === 'object') {
+          try {
+            const j = JSON.stringify(val);
+            const parsed = JSON.parse(j);
+            if (Array.isArray(parsed)) return parsed.map((v) => (v === null || v === undefined) ? "" : String(v));
+          } catch (e) {
+            // fallthrough to try string handling
           }
+        }
+
+        if (typeof val === 'string') {
+          const s = val.trim();
+          if (s === '' || s === '[]') return [];
+
+          // Try JSON first
+          try {
+            const parsed = JSON.parse(s);
+            if (Array.isArray(parsed)) return parsed.map((v) => (v === null || v === undefined) ? "" : String(v));
+          } catch (e) {
+            // Try Postgres array literal like {"a","b"} or {a,b}
+            if (s.startsWith('{') && s.endsWith('}')) {
+              const inner = s.slice(1, -1);
+              if (inner.trim() === '') return [];
+              // split on commas not inside quotes
+              const parts = inner.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/g).map(p => p.trim());
+              const cleaned = parts.map(p => {
+                // remove surrounding quotes if present
+                if ((p.startsWith('"') && p.endsWith('"')) || (p.startsWith("'") && p.endsWith("'"))) {
+                  return p.slice(1, -1).replace(/\\"/g, '"').replace(/\\'/g, "'");
+                }
+                return p;
+              });
+              return cleaned.map(c => (c === null || c === undefined) ? "" : String(c));
+            }
+          }
+        }
+
+        // Unknown format: log and return empty
+        console.warn("Unable to parse answers field, returning empty array. Raw value:", val);
+        return [];
+      }
+
+      results.forEach(result => {
+        let answersArray: string[] = parseAnswersField(result.answers);
+
+        // Estimate time per question by dividing total time by number of answered questions
+        const timePerQuestion = result.totalQuestions > 0 ? Math.round(result.timeTaken / result.totalQuestions) : 0;
+
+        // Iterate questions in the canonical order and map answers by index
+        questions.forEach((q, idx) => {
+          const qd = questionData[q.id];
+          if (!qd) return;
+
+          const userAns = answersArray[idx];
+          // Count as attempted when there's any non-empty answer value
+          if (userAns !== undefined && userAns !== null && String(userAns).trim() !== "") {
+            qd.totalAttempts++;
+          }
+
+          // Count correct when the user's answer equals the stored correctAnswer
+          if (userAns !== undefined && userAns === q.correctAnswer) {
+            qd.correctCount++;
+          }
+
+          // Accumulate approximate time for this question
+          qd.totalTime += timePerQuestion;
         });
       });
 
       // Transform question data into the required format
-      const questionStats = Object.values(questionData).map(q => {
+      // Preserve question order when producing stats
+      const questionStats = questions.map(q => {
+        const qd = questionData[q.id];
         return {
           questionId: q.id,
-          questionText: q.text,
-          totalAttempts: q.totalAttempts,
-          correctCount: q.correctCount,
-          averageTime: q.totalAttempts > 0 ? Math.round(q.totalTime / q.totalAttempts) : 0
+          questionText: q.questionText,
+          totalAttempts: qd ? qd.totalAttempts : 0,
+          correctCount: qd ? qd.correctCount : 0,
+          averageTime: qd && qd.totalAttempts > 0 ? Math.round(qd.totalTime / qd.totalAttempts) : 0
         };
       });
 

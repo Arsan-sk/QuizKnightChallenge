@@ -18,23 +18,18 @@ interface TeacherProfileProps {
 }
 
 export function TeacherProfile({ profile }: TeacherProfileProps) {
-    // Fetch teacher-specific stats
-    const { data: quizzes = [] } = useQuery({
-        queryKey: ["/api/quizzes/teacher"],
+    // Fetch teacher-specific stats from server
+    const { data: stats, isLoading } = useQuery({
+        queryKey: [`/api/users/${profile.id}/stats`],
+        enabled: !!profile.id,
     });
 
-    // Calculate stats
-    const totalQuizzes = quizzes.length;
-    const activeQuizzes = quizzes.filter((q: any) => q.isActive).length;
-    const totalQuestions = quizzes.reduce(
-        (acc: number, q: any) => acc + (q.questionCount || 0),
-        0
-    );
-
-    // Mock data (replace with real data from analytics)
-    const studentsReached = 156;
-    const averageRating = 4.7;
-    const totalAttempts = 423;
+    const totalQuizzes = stats?.totalQuizzes ?? 0;
+    const studentsReached = stats?.studentsReached ?? 0;
+    const totalAttempts = stats?.totalAttempts ?? 0;
+    const averageScore = stats?.averageScore ?? 0;
+    const completionRate = stats?.completionRate ?? 0;
+    const recentQuizzes = stats?.recentQuizzes ?? [];
 
     return (
         <div className="space-y-6">
@@ -49,26 +44,27 @@ export function TeacherProfile({ profile }: TeacherProfileProps) {
                     delay={0}
                 />
                 <ProfileStats
-                    title="Active Quizzes"
-                    value={activeQuizzes}
-                    icon={Activity}
-                    description="Currently live"
-                    gradient="from-green-500 to-emerald-500"
-                    delay={0.1}
-                />
-                <ProfileStats
                     title="Students Reached"
                     value={studentsReached}
                     icon={Users}
                     description="Unique participants"
                     gradient="from-purple-500 to-pink-500"
+                    delay={0.1}
+                />
+                <ProfileStats
+                    title="Total Attempts"
+                    value={totalAttempts}
+                    icon={Activity}
+                    description="All quiz attempts"
+                    gradient="from-green-500 to-emerald-500"
                     delay={0.2}
                 />
                 <ProfileStats
-                    title="Total Questions"
-                    value={totalQuestions}
-                    icon={FileText}
-                    description="Questions created"
+                    title="Avg. Student Score"
+                    value={averageScore}
+                    suffix="%"
+                    icon={TrendingUp}
+                    description="Average across students"
                     gradient="from-orange-500 to-red-500"
                     delay={0.3}
                 />
@@ -82,7 +78,7 @@ export function TeacherProfile({ profile }: TeacherProfileProps) {
                     transition={{ delay: 0.4 }}
                 >
                     <Card>
-                        <CardHeader>
+                    <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <TrendingUp className="h-5 w-5" />
                                 Engagement Metrics
@@ -90,29 +86,20 @@ export function TeacherProfile({ profile }: TeacherProfileProps) {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-muted-foreground">
-                                    Total Attempts
-                                </span>
+                                <span className="text-sm text-muted-foreground">Total Attempts</span>
                                 <span className="text-2xl font-bold">{totalAttempts}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-muted-foreground">
-                                    Avg. Attempts/Quiz
-                                </span>
-                                <span className="text-2xl font-bold">
-                                    {totalQuizzes > 0
-                                        ? Math.round(totalAttempts / totalQuizzes)
-                                        : 0}
-                                </span>
+                                <span className="text-sm text-muted-foreground">Avg. Attempts / Quiz</span>
+                                <span className="text-2xl font-bold">{totalQuizzes > 0 ? Math.round(totalAttempts / totalQuizzes) : 0}</span>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-muted-foreground">
-                                    Average Rating
-                                </span>
-                                <span className="text-2xl font-bold flex items-center gap-1">
-                                    {averageRating}
-                                    <span className="text-yellow-500">★</span>
-                                </span>
+                                <span className="text-sm text-muted-foreground">Average Student Score</span>
+                                <span className="text-2xl font-bold">{averageScore}%</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-muted-foreground">Completion Rate</span>
+                                <span className="text-2xl font-bold">{completionRate}%</span>
                             </div>
                         </CardContent>
                     </Card>
@@ -177,9 +164,9 @@ export function TeacherProfile({ profile }: TeacherProfileProps) {
                             <CardTitle>Recently Created Quizzes</CardTitle>
                         </CardHeader>
                         <CardContent>
-                            {quizzes.length > 0 ? (
+                            {(recentQuizzes || []).length > 0 ? (
                                 <div className="space-y-3">
-                                    {quizzes.slice(0, 5).map((quiz: any, index: number) => (
+                                    {(recentQuizzes || []).slice(0, 5).map((quiz: any, index: number) => (
                                         <motion.div
                                             key={quiz.id}
                                             initial={{ opacity: 0, x: -20 }}
