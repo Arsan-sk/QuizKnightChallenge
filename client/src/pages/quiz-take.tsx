@@ -9,12 +9,15 @@ import { QuizProgress } from "@/components/ui/quiz-progress";
 import { CountdownTimer } from "@/components/ui/countdown-timer";
 import { QuestionTransition } from "@/components/ui/question-transition";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, Trophy, Clock, CheckCircle, XCircle, Search, FileQuestion, ArrowLeft, ArrowRight, Send, HelpCircle, Keyboard, Award, ClipboardCheck, ListChecks, Medal, Home, X, Circle } from "lucide-react";
+import { Loader2, Trophy, Clock, CheckCircle, XCircle, Search, FileQuestion, ArrowLeft, ArrowRight, Send, HelpCircle, Keyboard, Award, ClipboardCheck, ListChecks, Medal, Home, X, Circle, Sun, Moon, AlertTriangle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 // NavBar removed per request
 import { useToast } from "@/hooks/use-toast";
+import { useTheme } from '@/hooks/use-theme';
+import { CameraIntegrityCheck } from '@/components/proctoring/CameraIntegrityCheck';
 import { QuizReview } from "@/components/quiz/QuizReview";
-import { WebcamMonitor } from "@/components/quiz/WebcamMonitor";
+// import { WebcamMonitor } from "@/components/quiz/WebcamMonitor"; // Deprecated
+import { ProctoringWarningOverlay } from "@/components/proctoring/ProctoringWarningOverlay";
 import {
   Card,
   CardContent,
@@ -52,7 +55,7 @@ export default function QuizTake() {
   const [showReview, setShowReview] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [copyPasteAttempts, setCopyPasteAttempts] = useState(0);
-  const [enableWebcam, setEnableWebcam] = useState(false);
+  const [enableWebcam, setEnableWebcam] = useState(true); // Enable by default for security
   const [showRules, setShowRules] = useState(true);
   const [rulesTimer, setRulesTimer] = useState(5);
   const [readyToStart, setReadyToStart] = useState(false);
@@ -68,9 +71,11 @@ export default function QuizTake() {
   const [submitting, setSubmitting] = useState(false);
   const [direction, setDirection] = useState<"left" | "right">("right");
   // Use `showReview` to present the question review overlay/modal.
-  // `proctoringActive` gates all proctoring listeners/monitoring so that
-  // once submission begins we can immediately stop any further alerts.
-  const [proctoringActive, setProctoringActive] = useState(true);
+  // Proctoring lifecycle flags (explicit control)
+  const [cameraCheckComplete, setCameraCheckComplete] = useState(false);
+  const [quizStarted, setQuizStarted] = useState(false);
+  // `proctoringActive` MUST follow `quizStarted` (activation rule)
+  const [proctoringActive, setProctoringActive] = useState(false);
 
   const {
     data: quiz,
@@ -125,6 +130,8 @@ export default function QuizTake() {
     if (!timeStarted && questions && Array.isArray(questions) && questions.length > 0 && !showRules) {
       console.log('Quiz started at:', new Date());
       setTimeStarted(new Date());
+      // mark quizStarted once the rules are dismissed and questions are ready
+      setQuizStarted(true);
     }
   }, [timeStarted, questions, showRules]);
 
@@ -287,25 +294,26 @@ export default function QuizTake() {
     if (!proctoringActive) return;
     if (!quizCompleted) {
       e.preventDefault();
-      setCopyPasteAttempts(prev => {
-        const newAttempts = prev + 1;
+      setWarnings(prev => {
+        const newWarnings = prev + 1;
         toast({
-          title: "Copy/Paste Blocked",
-          description: "Copy and paste functionality is disabled during the quiz.",
+          title: `Warning ${newWarnings}/3`,
+          description: `Copy/Paste detected. ${3 - newWarnings} warnings left before automatic submission.`,
           variant: "destructive",
         });
 
-        if (newAttempts >= 3) {
+        if (newWarnings >= 3) {
           toast({
-            title: "Warning",
-            description: "Multiple copy/paste attempts detected. This will be logged.",
+            title: "Quiz terminated",
+            description: "Persistent copy/paste attempts detected. Your quiz has been automatically submitted.",
             variant: "destructive",
           });
+          submitQuiz();
         }
-        return newAttempts;
+        return newWarnings;
       });
     }
-  }, [proctoringActive, quizCompleted, toast]);
+  }, [proctoringActive, quizCompleted, toast, submitQuiz]);
 
   // Memoize the preventHotkeys function
   const preventHotkeys = useCallback((e: KeyboardEvent) => {
@@ -315,10 +323,24 @@ export default function QuizTake() {
       const allowedCombinations = ['Home', 'End'];
       if (!allowedCombinations.includes(e.key)) {
         e.preventDefault();
-        toast({
-          title: "Hotkey Blocked",
-          description: "Keyboard shortcuts are disabled during the quiz.",
-          variant: "destructive",
+
+        setWarnings(prev => {
+          const newWarnings = prev + 1;
+          toast({
+            title: `Warning ${newWarnings}/3`,
+            description: `Restricted hotkey detected. ${3 - newWarnings} warnings left before automatic submission.`,
+            variant: "destructive",
+          });
+
+          if (newWarnings >= 3) {
+            toast({
+              title: "Quiz terminated",
+              description: "Persistent violation of restrictions. Your quiz has been automatically submitted.",
+              variant: "destructive",
+            });
+            submitQuiz();
+          }
+          return newWarnings;
         });
       }
     }
@@ -373,6 +395,11 @@ export default function QuizTake() {
       });
     }
   }, [proctoringActive, quizCompleted, toast, submitQuiz]);
+
+  // Ensure proctoringActive strictly follows quizStarted (activation rule)
+  useEffect(() => {
+    setProctoringActive(quizStarted === true);
+  }, [quizStarted]);
 
   // Update the useEffect to use memoized functions
   useEffect(() => {
@@ -1113,6 +1140,36 @@ export default function QuizTake() {
                         This quiz uses advanced proctoring technology. Attempts to cheat, copy content, or seek outside help may result in disciplinary action.
                       </p>
                     </motion.div>
+
+                    {/* Camera test - isolated from other proctoring listeners */}
+                    <motion.div
+                      className="my-6 p-4 bg-muted rounded-lg border border-border"
+                      initial={{ opacity: 0, y: 6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.7 }}
+                    >
+                      <h4 className="font-medium mb-3">Camera Test</h4>
+                      <p className="text-sm text-muted-foreground mb-3">Run a quick camera check before you begin. This test is isolated and will not enable proctoring listeners.</p>
+
+                      <CameraIntegrityCheck onVerified={() => setCameraCheckComplete(true)} />
+
+                      <div className="mt-3 text-sm">
+                        <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-full ${cameraCheckComplete ? 'bg-green-100 text-green-800' : 'bg-muted/20 text-muted-foreground'}`}>
+                          {cameraCheckComplete ? (
+                            <>
+                              <CheckCircle className="h-4 w-4 text-green-600" /> Camera verified
+                            </>
+                          ) : (
+                            <>
+                              <AlertTriangle className="h-4 w-4 text-yellow-600" /> Camera not verified
+                            </>
+                          )}
+                        </span>
+                        {!cameraCheckComplete && (
+                          <span className="ml-2 text-xs text-red-500 animate-pulse">Required to start</span>
+                        )}
+                      </div>
+                    </motion.div>
                   </div>
                 </CardContent>
                 <CardFooter className="border-t py-4 bg-muted/30 flex justify-between items-center">
@@ -1142,10 +1199,11 @@ export default function QuizTake() {
                         }
                         setShowRules(false);
                       }}
-                      disabled={!readyToStart}
+
+                      disabled={!readyToStart || !cameraCheckComplete}
                       className="w-32 relative overflow-hidden group"
                     >
-                      {readyToStart && (
+                      {readyToStart && cameraCheckComplete && (
                         <motion.div
                           className="absolute inset-0 bg-primary/20"
                           initial={{ x: '-100%' }}
@@ -1153,7 +1211,7 @@ export default function QuizTake() {
                           transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
                         />
                       )}
-                      {readyToStart ? "Start Quiz" : "Please Wait..."}
+                      {!readyToStart ? "Please Wait..." : !cameraCheckComplete ? "Verify Camera" : "Start Quiz"}
                     </Button>
                   </motion.div>
                 </CardFooter>
@@ -1191,15 +1249,24 @@ export default function QuizTake() {
               </motion.div>
             </motion.div>
           </div>
-        </div>
+        </div >
       );
     }
 
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
-        <WebcamMonitor
+        <ProctoringWarningOverlay
           enabled={enableWebcam && proctoringActive}
-          onViolationDetected={handleWebcamViolation}
+          onViolation={handleWebcamViolation}
+          onAutoSubmit={() => {
+            toast({
+              title: "Major Violation",
+              description: "Quiz terminated due to persistent proctoring violations.",
+              variant: "destructive"
+            });
+            submitQuiz();
+          }}
+          warningCount={warnings}
         />
 
         <div className="container max-w-5xl mx-auto px-4 py-8">
@@ -1472,7 +1539,7 @@ export default function QuizTake() {
     );
   }
 
-    return (
+  return (
     <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
       <div className="container mx-auto p-8 text-center">
         <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />

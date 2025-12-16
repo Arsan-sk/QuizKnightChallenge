@@ -1,5 +1,6 @@
 {
   "name": "default",
+  "primary": "#6366f1",
   "radius": "0.5rem",
   "spacing": "1rem"
 }
