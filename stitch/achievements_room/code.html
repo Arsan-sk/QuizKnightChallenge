@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>QuizKTC - Achievements</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed": "#002109",
+              "on-error": "#690005",
+              "surface-container-highest": "#353437",
+              "on-tertiary": "#003915",
+              "on-secondary-fixed-variant": "#633f00",
+              "on-secondary": "#452b00",
+              "on-background": "#e5e1e4",
+              "tertiary-fixed": "#6bff8f",
+              "surface-container": "#201f22",
+              "tertiary-container": "#00863b",
+              "on-primary-container": "#fffaff",
+              "on-surface": "#e5e1e4",
+              "outline": "#918fa1",
+              "secondary-container": "#dc9100",
+              "primary-container": "#7656f9",
+              "on-primary-fixed": "#1c0062",
+              "surface-container-high": "#2a2a2c",
+              "on-tertiary-container": "#f2ffef",
+              "on-primary": "#31009a",
+              "surface-dim": "#131315",
+              "on-primary-fixed-variant": "#4816cb",
+              "surface-bright": "#39393b",
+              "error-container": "#93000a",
+              "error": "#ffb4ab",
+              "surface-tint": "#cabeff",
+              "on-secondary-container": "#4f3100",
+              "on-tertiary-fixed-variant": "#005321",
+              "surface": "#131315",
+              "secondary-fixed-dim": "#ffb955",
+              "outline-variant": "#464555",
+              "primary-fixed": "#e6deff",
+              "inverse-surface": "#e5e1e4",
+              "inverse-on-surface": "#313032",
+              "on-error-container": "#ffdad6",
+              "surface-container-lowest": "#0e0e10",
+              "secondary": "#ffb955",
+              "primary-fixed-dim": "#cabeff",
+              "background": "#131315",
+              "tertiary-fixed-dim": "#4ae176",
+              "secondary-fixed": "#ffddb4",
+              "on-surface-variant": "#c7c4d8",
+              "on-secondary-fixed": "#291800",
+              "surface-container-low": "#1c1b1d",
+              "primary": "#cabeff",
+              "inverse-primary": "#603ce2",
+              "surface-variant": "#353437",
+              "tertiary": "#4ae176"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .clay-card {
+            box-shadow: 
+                inset 0 1px 0 rgba(255,255,255,0.06),
+                0 20px 40px -12px hsla(240, 10%, 4%, 0.5);
+        }
+        .clay-primary {
+            box-shadow: 
+                inset 0 1px 0 rgba(255,255,255,0.2),
+                0 10px 20px rgba(99,91,255,0.4);
+        }
+        .glass-tube {
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary/30 selection:text-primary min-h-screen">
+<!-- TopNavBar Shell -->
+<header class="fixed top-0 w-full z-50 bg-zinc-950/80 backdrop-blur-xl flex justify-between items-center px-8 h-20 w-full shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-black tracking-tighter text-indigo-500 dark:text-indigo-400 font-headline">QuizKTC</span>
+<nav class="hidden md:flex gap-6">
+<a class="text-zinc-500 hover:text-zinc-300 transition-colors font-bold text-sm" href="#">Dashboard</a>
+<a class="text-zinc-500 hover:text-zinc-300 transition-colors font-bold text-sm" href="#">Quizzes</a>
+<a class="text-indigo-400 font-bold border-b-2 border-indigo-500 pb-1 text-sm" href="#">Achievements</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 hover:bg-zinc-900/50 rounded-full transition-all active:scale-90 duration-200">
+<span class="material-symbols-outlined text-zinc-400">notifications</span>
+</button>
+<button class="p-2 hover:bg-zinc-900/50 rounded-full transition-all active:scale-90 duration-200">
+<span class="material-symbols-outlined text-zinc-400">history</span>
+</button>
+<button class="p-2 hover:bg-zinc-900/50 rounded-full transition-all active:scale-90 duration-200">
+<span class="material-symbols-outlined text-indigo-400">emoji_events</span>
+</button>
+<div class="h-10 w-10 rounded-full overflow-hidden border-2 border-surface-bright shadow-lg">
+<img alt="User profile avatar" data-alt="close-up portrait of a young man with a slight smile in soft warm natural lighting, professional studio headshot style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBQNVR6p7bcn2IqpIYBgvO216DST5KCT3yoMgxmhaSQCVut_rREou2-TtyZaY7F3nkWh_lCnxXFtr6FMKwi5uHCmDTKcleFn3ZZWTORsjGxDTfH_XsfMGhthRVDFps7l8VZ60m3HYOlhMDlcUEB2hgrAvQnLzuVcI8B0dlwTgTLlHGq3NWUEwS3QplWtjjZ22fDlOJQL-MzPXaKx0GFoyYJ0tgn6w-bYa5rQHuzg9szMY7R5CWUAa6n_Q7SG4s7lvoKY-Ldq054_Q9_"/>
+</div>
+</div>
+</header>
+<!-- SideNavBar Shell (Desktop) -->
+<aside class="hidden lg:flex flex-col h-screen w-72 fixed left-0 top-0 bg-zinc-900 py-6 shadow-[20px_0_40px_-12px_hsla(252,87%,62%,0.05)] z-40">
+<div class="px-8 mb-12">
+<h2 class="text-indigo-500 font-headline font-bold text-lg">Instructor Portal</h2>
+<p class="text-zinc-500 text-xs tracking-widest font-bold uppercase">The Digital Sanctuary</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="text-zinc-500 mx-4 my-1 flex items-center p-4 hover:bg-zinc-800/50 rounded-2xl transition-all group active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined mr-4 group-hover:text-zinc-300">dashboard</span>
+<span class="font-bold text-sm">Dashboard</span>
+</a>
+<a class="text-zinc-500 mx-4 my-1 flex items-center p-4 hover:bg-zinc-800/50 rounded-2xl transition-all group active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined mr-4 group-hover:text-zinc-300">auto_awesome</span>
+<span class="font-bold text-sm">Quiz Wizard</span>
+</a>
+<a class="text-zinc-500 mx-4 my-1 flex items-center p-4 hover:bg-zinc-800/50 rounded-2xl transition-all group active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined mr-4 group-hover:text-zinc-300">sensors</span>
+<span class="font-bold text-sm">Live Monitor</span>
+</a>
+<a class="text-zinc-500 mx-4 my-1 flex items-center p-4 hover:bg-zinc-800/50 rounded-2xl transition-all group active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined mr-4 group-hover:text-zinc-300">analytics</span>
+<span class="font-bold text-sm">Analytics</span>
+</a>
+<a class="bg-indigo-500/10 text-indigo-400 rounded-2xl mx-4 my-1 flex items-center p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined mr-4">leaderboard</span>
+<span class="font-bold text-sm">Leaderboard</span>
+</a>
+<a class="text-zinc-500 mx-4 my-1 flex items-center p-4 hover:bg-zinc-800/50 rounded-2xl transition-all group active:scale-[0.98]" href="#">
+<span class="material-symbols-outlined mr-4 group-hover:text-zinc-300">account_circle</span>
+<span class="font-bold text-sm">Profile</span>
+</a>
+</nav>
+<div class="px-4 mt-auto">
+<button class="w-full bg-indigo-500 text-white p-4 rounded-2xl font-bold shadow-lg hover:shadow-indigo-500/20 transition-all flex items-center justify-center gap-2 mb-8 clay-primary">
+<span class="material-symbols-outlined">add</span>
+                Create New Quiz
+            </button>
+<div class="border-t border-zinc-800 pt-4">
+<a class="text-zinc-500 flex items-center p-4 hover:text-zinc-300 transition-all" href="#">
+<span class="material-symbols-outlined mr-4">settings</span>
+<span class="font-bold text-sm">Settings</span>
+</a>
+<a class="text-zinc-500 flex items-center p-4 hover:text-zinc-300 transition-all" href="#">
+<span class="material-symbols-outlined mr-4">help_outline</span>
+<span class="font-bold text-sm">Help</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="pt-28 pb-32 lg:pl-80 px-6 max-w-7xl mx-auto">
+<!-- Header Section -->
+<header class="mb-12">
+<h1 class="text-5xl md:text-6xl font-headline font-extrabold tracking-tighter text-on-background mb-2">Trophy Room</h1>
+<p class="text-on-surface-variant font-body text-lg leading-relaxed max-w-2xl">Your journey through the digital sanctuary is marked by these obsidian tokens. Each milestone forged in the heat of competition.</p>
+</header>
+<!-- Summary Tiles (Bento Style) -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+<div class="bg-surface-container rounded-lg p-8 clay-card border-none flex flex-col justify-between h-44">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-indigo-400 bg-indigo-500/10 p-3 rounded-xl" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
+<span class="font-mono text-indigo-400 text-xs font-bold uppercase tracking-widest">Total Points</span>
+</div>
+<div class="mt-auto">
+<span class="text-4xl font-mono font-bold">12,480</span>
+</div>
+</div>
+<div class="bg-surface-container rounded-lg p-8 clay-card border-none flex flex-col justify-between h-44">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-secondary bg-secondary/10 p-3 rounded-xl" style="font-variation-settings: 'FILL' 1;">military_tech</span>
+<span class="font-mono text-secondary text-xs font-bold uppercase tracking-widest">Mastery</span>
+</div>
+<div class="mt-auto">
+<span class="text-4xl font-mono font-bold">84%</span>
+</div>
+</div>
+<div class="bg-surface-container rounded-lg p-8 clay-card border-none flex flex-col justify-between h-44">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-tertiary bg-tertiary/10 p-3 rounded-xl" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<span class="font-mono text-tertiary text-xs font-bold uppercase tracking-widest">Win Streak</span>
+</div>
+<div class="mt-auto">
+<span class="text-4xl font-mono font-bold">12</span>
+</div>
+</div>
+<div class="bg-surface-container rounded-lg p-8 clay-card border-none flex flex-col justify-between h-44">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-primary bg-primary/10 p-3 rounded-xl" style="font-variation-settings: 'FILL' 1;">group</span>
+<span class="font-mono text-primary text-xs font-bold uppercase tracking-widest">Global Rank</span>
+</div>
+<div class="mt-auto">
+<span class="text-4xl font-mono font-bold">#42</span>
+</div>
+</div>
+</section>
+<!-- Achievement Categories Filter -->
+<div class="flex gap-4 mb-8 overflow-x-auto pb-4 no-scrollbar">
+<button class="bg-primary text-on-primary px-6 py-2.5 rounded-full font-bold text-sm clay-primary whitespace-nowrap">All Achievements</button>
+<button class="bg-surface-container text-zinc-400 px-6 py-2.5 rounded-full font-bold text-sm whitespace-nowrap hover:bg-surface-bright transition-all">Milestones</button>
+<button class="bg-surface-container text-zinc-400 px-6 py-2.5 rounded-full font-bold text-sm whitespace-nowrap hover:bg-surface-bright transition-all">Special Events</button>
+<button class="bg-surface-container text-zinc-400 px-6 py-2.5 rounded-full font-bold text-sm whitespace-nowrap hover:bg-surface-bright transition-all">Social</button>
+</div>
+<!-- Achievement Cards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<!-- EARNED: Glowing Achievement -->
+<div class="group relative">
+<div class="absolute inset-0 bg-primary/20 blur-3xl rounded-lg group-hover:bg-primary/30 transition-all duration-500 opacity-50"></div>
+<div class="relative bg-surface rounded-lg p-8 clay-card flex items-center gap-8 border-none overflow-hidden">
+<div class="w-24 h-24 flex-shrink-0 bg-gradient-to-br from-primary to-primary-container rounded-3xl flex items-center justify-center clay-primary">
+<span class="material-symbols-outlined text-4xl text-on-primary-container" style="font-variation-settings: 'FILL' 1;">star</span>
+</div>
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="text-xs font-mono font-bold text-primary uppercase tracking-tighter">Legendary</span>
+<span class="h-1 w-1 bg-primary rounded-full"></span>
+<span class="text-xs font-mono text-on-surface-variant">Forged 12.04.24</span>
+</div>
+<h3 class="text-2xl font-headline font-bold text-on-background mb-2">Architect of Order</h3>
+<p class="text-on-surface-variant text-sm leading-relaxed">Completed 50 quizzes with a perfect score. You are the structural anchor of the sanctuary.</p>
+</div>
+</div>
+</div>
+<!-- EARNED: Glowing Achievement 2 -->
+<div class="group relative">
+<div class="absolute inset-0 bg-secondary/20 blur-3xl rounded-lg opacity-40"></div>
+<div class="relative bg-surface rounded-lg p-8 clay-card flex items-center gap-8 border-none">
+<div class="w-24 h-24 flex-shrink-0 bg-gradient-to-br from-secondary to-secondary-container rounded-3xl flex items-center justify-center clay-primary">
+<span class="material-symbols-outlined text-4xl text-on-secondary-container" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+</div>
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="text-xs font-mono font-bold text-secondary uppercase tracking-tighter">Rare</span>
+<span class="h-1 w-1 bg-secondary rounded-full"></span>
+<span class="text-xs font-mono text-on-surface-variant">Forged 05.03.24</span>
+</div>
+<h3 class="text-2xl font-headline font-bold text-on-background mb-2">Phoenix Rising</h3>
+<p class="text-on-surface-variant text-sm leading-relaxed">Recovered from a losing streak with 10 consecutive wins. Resilience is your weapon.</p>
+</div>
+</div>
+</div>
+<!-- IN-PROGRESS -->
+<div class="bg-surface-container-low rounded-lg p-8 clay-card border-none">
+<div class="flex items-start gap-8 mb-6">
+<div class="w-24 h-24 flex-shrink-0 bg-surface-container rounded-3xl flex items-center justify-center border border-outline-variant/20 shadow-inner">
+<span class="material-symbols-outlined text-4xl text-zinc-500">public</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-center mb-1">
+<span class="text-xs font-mono font-bold text-zinc-400 uppercase tracking-tighter">Epic Pursuit</span>
+<span class="text-xs font-mono text-tertiary">72%</span>
+</div>
+<h3 class="text-2xl font-headline font-bold text-on-background mb-2">World Traveler</h3>
+<p class="text-on-surface-variant text-sm leading-relaxed mb-4">Compete in quizzes across 10 different global categories.</p>
+</div>
+</div>
+<div class="w-full h-3 bg-surface-container-lowest rounded-full overflow-hidden glass-tube">
+<div class="h-full bg-gradient-to-r from-tertiary to-tertiary-container w-[72%] rounded-full shadow-[0_0_12px_rgba(74,225,118,0.4)] relative">
+<div class="absolute top-0 left-0 w-full h-[1px] bg-white/20"></div>
+</div>
+</div>
+</div>
+<!-- IN-PROGRESS 2 -->
+<div class="bg-surface-container-low rounded-lg p-8 clay-card border-none">
+<div class="flex items-start gap-8 mb-6">
+<div class="w-24 h-24 flex-shrink-0 bg-surface-container rounded-3xl flex items-center justify-center border border-outline-variant/20 shadow-inner">
+<span class="material-symbols-outlined text-4xl text-zinc-500">speed</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-center mb-1">
+<span class="text-xs font-mono font-bold text-zinc-400 uppercase tracking-tighter">Speed Trial</span>
+<span class="text-xs font-mono text-indigo-400">45%</span>
+</div>
+<h3 class="text-2xl font-headline font-bold text-on-background mb-2">Sonic Scholar</h3>
+<p class="text-on-surface-variant text-sm leading-relaxed mb-4">Answer 100 questions in under 3 seconds each with perfect accuracy.</p>
+</div>
+</div>
+<div class="w-full h-3 bg-surface-container-lowest rounded-full overflow-hidden glass-tube">
+<div class="h-full bg-gradient-to-r from-primary to-primary-container w-[45%] rounded-full shadow-[0_0_12px_rgba(122,86,249,0.4)] relative">
+<div class="absolute top-0 left-0 w-full h-[1px] bg-white/20"></div>
+</div>
+</div>
+</div>
+<!-- LOCKED -->
+<div class="bg-surface-container-lowest rounded-lg p-8 border border-outline-variant/10 opacity-60 grayscale relative overflow-hidden group">
+<div class="absolute inset-0 bg-black/40 flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+<div class="bg-surface-bright p-4 rounded-2xl clay-card">
+<span class="material-symbols-outlined text-white">lock</span>
+</div>
+</div>
+<div class="flex items-center gap-8">
+<div class="w-24 h-24 flex-shrink-0 bg-zinc-800 rounded-3xl flex items-center justify-center border border-zinc-700">
+<span class="material-symbols-outlined text-4xl text-zinc-600">diamond</span>
+</div>
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="text-xs font-mono font-bold text-zinc-600 uppercase tracking-tighter">Mythic</span>
+</div>
+<h3 class="text-2xl font-headline font-bold text-zinc-500 mb-2">The Absolute One</h3>
+<p class="text-zinc-600 text-sm leading-relaxed">Reach Global Rank #1 for 3 consecutive weeks. ??? reward awaits.</p>
+</div>
+</div>
+</div>
+<!-- LOCKED 2 -->
+<div class="bg-surface-container-lowest rounded-lg p-8 border border-outline-variant/10 opacity-60 grayscale relative overflow-hidden group">
+<div class="absolute inset-0 bg-black/40 flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+<div class="bg-surface-bright p-4 rounded-2xl clay-card">
+<span class="material-symbols-outlined text-white">lock</span>
+</div>
+</div>
+<div class="flex items-center gap-8">
+<div class="w-24 h-24 flex-shrink-0 bg-zinc-800 rounded-3xl flex items-center justify-center border border-zinc-700">
+<span class="material-symbols-outlined text-4xl text-zinc-600">psychology</span>
+</div>
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="text-xs font-mono font-bold text-zinc-600 uppercase tracking-tighter">Advanced</span>
+</div>
+<h3 class="text-2xl font-headline font-bold text-zinc-500 mb-2">Mind Over Matter</h3>
+<p class="text-zinc-600 text-sm leading-relaxed">Complete 10 expert-level quizzes without using any hints or lifelines.</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar Shell (Mobile) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-end px-6 pb-6 bg-zinc-950/90 backdrop-blur-2xl rounded-t-[2.5rem] z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] h-20">
+<a class="flex flex-col items-center justify-center text-zinc-500 pb-2 active:scale-90 transition-transform duration-300" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-bold uppercase tracking-widest font-label mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-zinc-500 pb-2 active:scale-90 transition-transform duration-300" href="#">
+<span class="material-symbols-outlined">quiz</span>
+<span class="text-[10px] font-bold uppercase tracking-widest font-label mt-1">Quizzes</span>
+</a>
+<div class="relative">
+<a class="flex flex-col items-center justify-center bg-indigo-600 text-white rounded-full w-14 h-14 -translate-y-4 shadow-[0_10px_20px_rgba(99,91,255,0.4)] active:scale-90 transition-transform duration-300" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">emoji_events</span>
+</a>
+</div>
+<a class="flex flex-col items-center justify-center text-zinc-500 pb-2 active:scale-90 transition-transform duration-300" href="#">
+<span class="material-symbols-outlined">bar_chart</span>
+<span class="text-[10px] font-bold uppercase tracking-widest font-label mt-1">Stats</span>
+</a>
+<a class="flex flex-col items-center justify-center text-zinc-500 pb-2 active:scale-90 transition-transform duration-300" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-bold uppercase tracking-widest font-label mt-1">Profile</span>
+</a>
+</nav>
+</body></html>

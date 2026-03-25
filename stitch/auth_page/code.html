@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>QuizKTC | The Digital Sanctuary</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-low": "#1c1b1d",
+              "primary": "#cabeff",
+              "inverse-primary": "#603ce2",
+              "surface-variant": "#353437",
+              "tertiary": "#4ae176",
+              "surface-container-lowest": "#0e0e10",
+              "secondary": "#ffb955",
+              "primary-fixed-dim": "#cabeff",
+              "background": "#131315",
+              "tertiary-fixed-dim": "#4ae176",
+              "secondary-fixed": "#ffddb4",
+              "on-secondary-fixed": "#291800",
+              "on-surface-variant": "#c7c4d8",
+              "surface-tint": "#cabeff",
+              "on-secondary-container": "#4f3100",
+              "on-tertiary-fixed-variant": "#005321",
+              "secondary-fixed-dim": "#ffb955",
+              "surface": "#131315",
+              "outline-variant": "#464555",
+              "primary-fixed": "#e6deff",
+              "inverse-surface": "#e5e1e4",
+              "inverse-on-surface": "#313032",
+              "on-error-container": "#ffdad6",
+              "surface-bright": "#39393b",
+              "error-container": "#93000a",
+              "error": "#ffb4ab",
+              "surface-dim": "#131315",
+              "on-primary-fixed-variant": "#4816cb",
+              "on-primary-fixed": "#1c0062",
+              "on-primary": "#31009a",
+              "surface-container-high": "#2a2a2c",
+              "on-tertiary-container": "#f2ffef",
+              "on-primary-container": "#fffaff",
+              "tertiary-container": "#00863b",
+              "on-surface": "#e5e1e4",
+              "outline": "#918fa1",
+              "secondary-container": "#dc9100",
+              "primary-container": "#7656f9",
+              "on-error": "#690005",
+              "on-tertiary-fixed": "#002109",
+              "surface-container-highest": "#353437",
+              "on-secondary": "#452b00",
+              "on-tertiary": "#003915",
+              "on-secondary-fixed-variant": "#633f00",
+              "on-background": "#e5e1e4",
+              "surface-container": "#201f22",
+              "tertiary-fixed": "#6bff8f"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #131315;
+        color: #e5e1e4;
+      }
+      .clay-card {
+        background: #201f22;
+        box-shadow: 
+          inset 0 1px 0 rgba(255,255,255,0.06),
+          0 20px 40px -12px hsla(252, 87%, 62%, 0.15);
+      }
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      .headline-font { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; }
+      .data-font { font-family: 'JetBrains Mono', monospace; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 md:p-0 overflow-hidden">
+<!-- Auth Container -->
+<div class="flex w-full max-w-[1100px] h-[720px] rounded-lg overflow-hidden clay-card">
+<!-- Left Side: Form Section -->
+<div class="w-full md:w-[540px] bg-surface-container flex flex-col p-8 md:p-12 relative z-10">
+<!-- Logo & Title -->
+<div class="mb-10">
+<div class="flex items-center gap-2 mb-6">
+<span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">shield</span>
+<span class="headline-font text-2xl tracking-tighter text-primary">QuizKTC</span>
+</div>
+<h1 class="headline-font text-3xl text-on-surface tracking-tighter">Welcome back</h1>
+<p class="text-on-surface-variant body-md mt-2">Step back into the digital sanctuary.</p>
+</div>
+<!-- Tab Switcher (Segmented Control) -->
+<div class="bg-surface-container-lowest p-1 rounded-full flex mb-8 w-fit min-w-[200px]">
+<button class="flex-1 py-2 px-6 rounded-full text-sm font-semibold transition-all bg-primary-container text-on-primary-container shadow-lg">Login</button>
+<button class="flex-1 py-2 px-6 rounded-full text-sm font-semibold transition-all text-on-surface-variant hover:text-on-surface">Register</button>
+</div>
+<!-- Role Toggle (Only visible for Register, shown here as instructed for style guide) -->
+<div class="flex gap-3 mb-8">
+<button class="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-md border border-outline-variant bg-surface-container-high transition-all hover:bg-surface-bright">
+<span class="material-symbols-outlined text-xl">school</span>
+<span class="font-medium text-sm">Student</span>
+</button>
+<button class="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-md bg-primary-container text-on-primary-container shadow-md">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">menu_book</span>
+<span class="font-medium text-sm">Teacher</span>
+</button>
+</div>
+<!-- Form -->
+<form class="space-y-6">
+<!-- Recessed Input Group -->
+<div class="relative">
+<div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-outline text-lg">alternate_email</span>
+</div>
+<input class="w-full bg-surface-container-lowest border-none rounded-sm py-4 pl-12 pr-4 text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/40 transition-all outline-none" placeholder="Email Address" type="email"/>
+</div>
+<div class="relative">
+<div class="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-outline text-lg">lock</span>
+</div>
+<input class="w-full bg-surface-container-lowest border-none rounded-sm py-4 pl-12 pr-4 text-on-surface placeholder:text-outline focus:ring-2 focus:ring-primary/40 transition-all outline-none" placeholder="Password" type="password"/>
+</div>
+<div class="flex items-center justify-between text-xs text-on-surface-variant px-1">
+<label class="flex items-center gap-2 cursor-pointer">
+<input class="rounded-sm bg-surface-container-lowest border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+<span>Remember me</span>
+</label>
+<a class="hover:text-primary transition-colors" href="#">Forgot password?</a>
+</div>
+<!-- Submit Button -->
+<button class="w-full bg-primary-container text-on-primary-container headline-font py-4 rounded-md flex items-center justify-center gap-3 shadow-[0_10px_20px_-5px_hsla(252,87,62,0.4)] hover:scale-[1.02] active:scale-95 transition-all" type="submit">
+                    Sign In
+                    <span class="material-symbols-outlined animate-spin text-xl">progress_activity</span>
+</button>
+</form>
+<!-- Social Auth -->
+<div class="mt-auto pt-8">
+<div class="flex items-center gap-4 mb-6">
+<div class="h-px bg-outline-variant flex-1"></div>
+<span class="text-xs text-outline uppercase tracking-widest font-bold">Or continue with</span>
+<div class="h-px bg-outline-variant flex-1"></div>
+</div>
+<div class="flex gap-4">
+<button class="flex-1 py-3 bg-surface-container-lowest rounded-md flex items-center justify-center hover:bg-surface-variant transition-all">
+<img alt="Google" class="w-5 h-5 grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDiwDK86unuV91Mx42C4WRA6pu8o61jqVkrNlDLVTU5AufSoX5Hya3MRdA8cR4cOnOWTRe8IKCsSNGb-XBdfcHFX6yHCVf-eAvpcD1YBYEjbUZhNo8REGXVmHRD6T_2Q0P8GdR6W_LaBnYuc0RkEMFHSof9IfGNOzDLjjAb88xh0CbHqL_O8YcyayaDFNkdw2AwxCgu0FfG-xmSLpvtpCuveBIQvhGGuSK8O2HFRNAaN1yvOoQwQm-aqnzuZA4HFvJXURVxmX8NNJC_"/>
+</button>
+<button class="flex-1 py-3 bg-surface-container-lowest rounded-md flex items-center justify-center hover:bg-surface-variant transition-all">
+<span class="material-symbols-outlined text-outline">terminal</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Right Side: Decorative Panel (Desktop Only) -->
+<div class="hidden md:flex flex-1 relative bg-gradient-to-br from-[#635BFF] to-[#31009a] overflow-hidden p-12 flex-col justify-between">
+<!-- Decorative Knight Piece background -->
+<div class="absolute -right-20 -bottom-20 opacity-20 rotate-12 scale-150">
+<span class="material-symbols-outlined text-[400px]" style="font-variation-settings: 'FILL' 1;">chess_pawn</span>
+</div>
+<div class="relative z-10">
+<div class="bg-white/10 backdrop-blur-md rounded-full px-4 py-1.5 w-fit border border-white/20 mb-8">
+<span class="headline-font text-[10px] text-white tracking-widest uppercase">The Obsidian Paladin System</span>
+</div>
+<h2 class="headline-font text-5xl text-white tracking-tighter leading-tight">Master the <br/>Digital Domain.</h2>
+<p class="text-primary-fixed mt-6 max-w-sm text-lg leading-relaxed">Experience a high-depth tactile environment designed for elite learning and competitive assessment.</p>
+</div>
+<!-- Benefit Chips -->
+<div class="relative z-10 space-y-4">
+<div class="bg-surface-container-lowest/20 backdrop-blur-xl p-4 rounded-md border border-white/10 flex items-center gap-4 hover:translate-x-2 transition-transform duration-300">
+<div class="w-10 h-10 rounded-full bg-secondary/20 flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<div>
+<p class="font-bold text-sm text-white">Proctored Excellence</p>
+<p class="text-xs text-white/60">Advanced anti-cheat sanctuary architecture.</p>
+</div>
+</div>
+<div class="bg-surface-container-lowest/20 backdrop-blur-xl p-4 rounded-md border border-white/10 flex items-center gap-4 hover:translate-x-2 transition-transform duration-300">
+<div class="w-10 h-10 rounded-full bg-tertiary/20 flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined text-tertiary" style="font-variation-settings: 'FILL' 1;">bolt</span>
+</div>
+<div>
+<p class="font-bold text-sm text-white">Neural Speed</p>
+<p class="text-xs text-white/60">Real-time JetBrains powered data analytics.</p>
+</div>
+</div>
+<div class="bg-surface-container-lowest/20 backdrop-blur-xl p-4 rounded-md border border-white/10 flex items-center gap-4 hover:translate-x-2 transition-transform duration-300">
+<div class="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">military_tech</span>
+</div>
+<div>
+<p class="font-bold text-sm text-white">Global Leaderboards</p>
+<p class="text-xs text-white/60">Climb the ranks of the digital sanctuary.</p>
+</div>
+</div>
+</div>
+<!-- Visual Asset -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none mix-blend-overlay opacity-30">
+<img class="w-[600px] h-[600px] object-cover rounded-full" data-alt="abstract flowing violet and blue energetic liquid gradients with smooth light reflections and deep obsidian shadows" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBRf8vZEwlgVk9j1eSr1hlbG3bwzjxoxI08A6NRZ4okKuUFE80HT60eyYO_iteiMwH5sOBvw0X3sjXqZ8cE_Ae680n3BvGLGTXP4k3LNuv0k_udf1BqpNjke9fkCoa6ywK7NzT98r1HOBskk-lnlM9mJpYnWC4PKC2pD7hHK44_8yFtVbpcZtbLxIPEFjfz62Bjx3nfUYZb_WOE0tWSYvkB6ThmOzuZCukiuzLI4VeVpI-8FZGxNd95aVgzsJLVgWI0CUE04yxyCa9T"/>
+</div>
+</div>
+</div>
+<!-- Background Elements -->
+<div class="fixed inset-0 -z-10 pointer-events-none">
+<div class="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-primary/10 blur-[120px] rounded-full"></div>
+<div class="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-secondary/5 blur-[120px] rounded-full"></div>
+</div>
+</body></html>

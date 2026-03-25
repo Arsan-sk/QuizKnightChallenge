@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>QuizKTC - History</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed": "#002109",
+              "on-error": "#690005",
+              "surface-container-highest": "#353437",
+              "on-tertiary": "#003915",
+              "on-secondary-fixed-variant": "#633f00",
+              "on-secondary": "#452b00",
+              "on-background": "#e5e1e4",
+              "tertiary-fixed": "#6bff8f",
+              "surface-container": "#201f22",
+              "tertiary-container": "#00863b",
+              "on-primary-container": "#fffaff",
+              "on-surface": "#e5e1e4",
+              "outline": "#918fa1",
+              "secondary-container": "#dc9100",
+              "primary-container": "#7656f9",
+              "on-primary-fixed": "#1c0062",
+              "surface-container-high": "#2a2a2c",
+              "on-tertiary-container": "#f2ffef",
+              "on-primary": "#31009a",
+              "surface-dim": "#131315",
+              "on-primary-fixed-variant": "#4816cb",
+              "surface-bright": "#39393b",
+              "error-container": "#93000a",
+              "error": "#ffb4ab",
+              "surface-tint": "#cabeff",
+              "on-secondary-container": "#4f3100",
+              "on-tertiary-fixed-variant": "#005321",
+              "surface": "#131315",
+              "secondary-fixed-dim": "#ffb955",
+              "outline-variant": "#464555",
+              "primary-fixed": "#e6deff",
+              "inverse-surface": "#e5e1e4",
+              "inverse-on-surface": "#313032",
+              "on-error-container": "#ffdad6",
+              "surface-container-lowest": "#0e0e10",
+              "secondary": "#ffb955",
+              "primary-fixed-dim": "#cabeff",
+              "background": "#131315",
+              "tertiary-fixed-dim": "#4ae176",
+              "secondary-fixed": "#ffddb4",
+              "on-surface-variant": "#c7c4d8",
+              "on-secondary-fixed": "#291800",
+              "surface-container-low": "#1c1b1d",
+              "primary": "#cabeff",
+              "inverse-primary": "#603ce2",
+              "surface-variant": "#353437",
+              "tertiary": "#4ae176"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .clay-card {
+            background: linear-gradient(145deg, rgba(32, 31, 34, 0.9), rgba(14, 14, 16, 0.9));
+            box-shadow: 
+                inset 0 1px 0 rgba(255,255,255,0.06),
+                10px 10px 20px rgba(0,0,0,0.3),
+                -5px -5px 15px rgba(255,255,255,0.02);
+            backdrop-filter: blur(12px);
+        }
+        .clay-badge-green {
+            background: theme('colors.tertiary-container');
+            box-shadow: inset 0 2px 4px rgba(255,255,255,0.2), 0 4px 12px rgba(0, 134, 59, 0.3);
+        }
+        .clay-badge-amber {
+            background: theme('colors.secondary-container');
+            box-shadow: inset 0 2px 4px rgba(255,255,255,0.2), 0 4px 12px rgba(220, 145, 0, 0.3);
+        }
+        .clay-badge-red {
+            background: theme('colors.error-container');
+            box-shadow: inset 0 2px 4px rgba(255,255,255,0.2), 0 4px 12px rgba(147, 0, 10, 0.3);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary-container selection:text-white">
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 bg-zinc-950/80 backdrop-blur-xl shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] flex justify-between items-center px-8 h-20 w-full">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-black tracking-tighter text-indigo-500 dark:text-indigo-400 font-headline">QuizKTC</span>
+<nav class="hidden md:flex gap-6">
+<a class="text-zinc-500 hover:text-zinc-300 transition-colors font-bold text-sm" href="#">Dashboard</a>
+<a class="text-zinc-500 hover:text-zinc-300 transition-colors font-bold text-sm" href="#">Quizzes</a>
+<a class="text-indigo-400 font-bold border-b-2 border-indigo-500 pb-1 text-sm" href="#">history</a>
+<a class="text-zinc-500 hover:text-zinc-300 transition-colors font-bold text-sm" href="#">leaderboard</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden md:flex items-center bg-surface-container-lowest rounded-full px-4 py-2 group focus-within:ring-2 ring-primary/20">
+<span class="material-symbols-outlined text-zinc-500 text-sm">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm w-48 text-on-surface" placeholder="Search history..." type="text"/>
+</div>
+<button class="p-2 hover:bg-zinc-900/50 rounded-full transition-all text-zinc-400 active:scale-90">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 hover:bg-zinc-900/50 rounded-full transition-all text-zinc-400 active:scale-90">
+<span class="material-symbols-outlined">emoji_events</span>
+</button>
+<div class="h-10 w-10 rounded-full overflow-hidden border border-outline-variant/20 ml-2">
+<img alt="User profile avatar" class="w-full h-full object-cover" data-alt="portrait of a professional man with a friendly smile, clean background, high-end studio lighting, minimalist aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuASWG44-aFIA1dq8lHxy4m7TQWBWG1mzZ-cvhEHr4z4SaqeFyR5aXQpCPb5f_8NaU-nfAFIWn9Tg2HdoPk_stlJkRjfvsePyUJIjgGp5W-oIHC4fY-wrSauBYlRcqV_0JYKcDDLv7AmVMGrz_8h8lC90EsaIbpp7beby5LjX77zJjuh5nZVGk1642YLO24twomyB8nMPHAvLXkNF3UXQvMG3ZKwivqAC7UILE8flzQXTg0CjOTYVT-FiYZ-um9aJJntKaVe3cvAX8BG"/>
+</div>
+</div>
+</header>
+<main class="pt-32 pb-40 px-6 md:px-12 max-w-7xl mx-auto">
+<!-- Header & Filters -->
+<div class="mb-12">
+<h1 class="font-headline text-5xl font-extrabold tracking-tighter text-on-background mb-8 ml-2">Journey Archive</h1>
+<div class="flex flex-col md:flex-row gap-4 items-center justify-between bg-surface-container p-4 rounded-lg shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+<div class="flex gap-2 p-1 bg-surface-container-lowest rounded-md">
+<button class="px-6 py-2 bg-primary-container text-white rounded-sm font-bold text-sm shadow-lg">All Attempts</button>
+<button class="px-6 py-2 text-zinc-500 hover:text-zinc-300 transition-all font-bold text-sm">High Scores</button>
+<button class="px-6 py-2 text-zinc-500 hover:text-zinc-300 transition-all font-bold text-sm">Incomplete</button>
+</div>
+<div class="flex gap-4 w-full md:w-auto">
+<div class="flex items-center bg-surface-container-lowest rounded-md px-4 py-2 flex-1 md:w-48">
+<span class="material-symbols-outlined text-zinc-500 mr-2">calendar_today</span>
+<select class="bg-transparent border-none focus:ring-0 text-sm text-zinc-400 w-full">
+<option>Last 30 Days</option>
+<option>Last 6 Months</option>
+<option>All Time</option>
+</select>
+</div>
+<button class="flex items-center bg-surface-container-highest px-6 py-2 rounded-md font-bold text-sm text-secondary hover:brightness-110 active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined mr-2">filter_list</span>
+                        Advanced
+                    </button>
+</div>
+</div>
+</div>
+<!-- Timeline -->
+<div class="relative">
+<!-- Central Line -->
+<div class="absolute left-4 md:left-1/2 top-0 bottom-0 w-1 bg-gradient-to-b from-primary/30 via-primary/10 to-transparent -translate-x-1/2"></div>
+<!-- Quiz Entries -->
+<div class="space-y-16">
+<!-- Entry 1: High Score -->
+<div class="relative flex flex-col md:flex-row items-center justify-center gap-8 md:gap-24">
+<div class="md:w-1/2 md:text-right hidden md:block">
+<span class="font-headline text-3xl font-extrabold text-zinc-600 block">MAY 24</span>
+<span class="font-label text-zinc-500 tracking-widest uppercase text-xs">2:45 PM</span>
+</div>
+<div class="absolute left-4 md:left-1/2 w-8 h-8 bg-background border-4 border-tertiary rounded-full -translate-x-1/2 z-10 shadow-[0_0_20px_rgba(74,225,118,0.3)]"></div>
+<div class="w-full md:w-1/2 pl-12 md:pl-0">
+<div class="clay-card p-6 rounded-lg group hover:translate-y-[-4px] transition-all duration-300">
+<div class="md:hidden mb-4">
+<span class="font-headline font-bold text-zinc-400">MAY 24</span>
+</div>
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-headline text-2xl font-bold text-on-surface mb-1">Advanced Quantum Mechanics</h3>
+<p class="text-zinc-500 text-sm mb-4">Physics Department • Level 4</p>
+<div class="flex items-center gap-4 text-zinc-400 font-label text-xs uppercase tracking-tighter">
+<div class="flex items-center"><span class="material-symbols-outlined text-sm mr-1">timer</span> 24m 12s</div>
+<div class="flex items-center"><span class="material-symbols-outlined text-sm mr-1">rule</span> 48/50 Correct</div>
+</div>
+</div>
+<div class="clay-badge-green text-white font-headline text-xl font-black px-5 py-3 rounded-md flex flex-col items-center">
+<span class="font-mono">96%</span>
+<span class="text-[8px] uppercase tracking-widest mt-1 opacity-80">Passed</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Entry 2: Average Score -->
+<div class="relative flex flex-col md:flex-row-reverse items-center justify-center gap-8 md:gap-24">
+<div class="md:w-1/2 text-left hidden md:block">
+<span class="font-headline text-3xl font-extrabold text-zinc-600 block text-zinc-600">MAY 18</span>
+<span class="font-label text-zinc-500 tracking-widest uppercase text-xs">10:15 AM</span>
+</div>
+<div class="absolute left-4 md:left-1/2 w-8 h-8 bg-background border-4 border-secondary rounded-full -translate-x-1/2 z-10 shadow-[0_0_20px_rgba(255,185,85,0.3)]"></div>
+<div class="w-full md:w-1/2 pr-0 md:pr-0 pl-12 md:pl-0">
+<div class="clay-card p-6 rounded-lg group hover:translate-y-[-4px] transition-all duration-300">
+<div class="md:hidden mb-4">
+<span class="font-headline font-bold text-zinc-400">MAY 18</span>
+</div>
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-headline text-2xl font-bold text-on-surface mb-1">World History: Industrial Era</h3>
+<p class="text-zinc-500 text-sm mb-4">Social Sciences • Level 2</p>
+<div class="flex items-center gap-4 text-zinc-400 font-label text-xs uppercase tracking-tighter">
+<div class="flex items-center"><span class="material-symbols-outlined text-sm mr-1">timer</span> 18m 45s</div>
+<div class="flex items-center"><span class="material-symbols-outlined text-sm mr-1">rule</span> 37/50 Correct</div>
+</div>
+</div>
+<div class="clay-badge-amber text-white font-headline text-xl font-black px-5 py-3 rounded-md flex flex-col items-center">
+<span class="font-mono">74%</span>
+<span class="text-[8px] uppercase tracking-widest mt-1 opacity-80">Review</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Entry 3: Low Score -->
+<div class="relative flex flex-col md:flex-row items-center justify-center gap-8 md:gap-24">
+<div class="md:w-1/2 text-right hidden md:block">
+<span class="font-headline text-3xl font-extrabold text-zinc-600 block">MAY 12</span>
+<span class="font-label text-zinc-500 tracking-widest uppercase text-xs">04:30 PM</span>
+</div>
+<div class="absolute left-4 md:left-1/2 w-8 h-8 bg-background border-4 border-error rounded-full -translate-x-1/2 z-10 shadow-[0_0_20px_rgba(255,180,171,0.3)]"></div>
+<div class="w-full md:w-1/2 pl-12 md:pl-0">
+<div class="clay-card p-6 rounded-lg group hover:translate-y-[-4px] transition-all duration-300">
+<div class="md:hidden mb-4">
+<span class="font-headline font-bold text-zinc-400">MAY 12</span>
+</div>
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-headline text-2xl font-bold text-on-surface mb-1">Organic Chemistry II</h3>
+<p class="text-zinc-500 text-sm mb-4">STEM • Level 5</p>
+<div class="flex items-center gap-4 text-zinc-400 font-label text-xs uppercase tracking-tighter">
+<div class="flex items-center"><span class="material-symbols-outlined text-sm mr-1">timer</span> 45m 00s</div>
+<div class="flex items-center"><span class="material-symbols-outlined text-sm mr-1">rule</span> 21/50 Correct</div>
+</div>
+</div>
+<div class="clay-badge-red text-white font-headline text-xl font-black px-5 py-3 rounded-md flex flex-col items-center">
+<span class="font-mono">42%</span>
+<span class="text-[8px] uppercase tracking-widest mt-1 opacity-80">Failed</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Entry 4: High Score -->
+<div class="relative flex flex-col md:flex-row-reverse items-center justify-center gap-8 md:gap-24">
+<div class="md:w-1/2 text-left hidden md:block">
+<span class="font-headline text-3xl font-extrabold text-zinc-600 block">MAY 05</span>
+<span class="font-label text-zinc-500 tracking-widest uppercase text-xs">09:00 AM</span>
+</div>
+<div class="absolute left-4 md:left-1/2 w-8 h-8 bg-background border-4 border-tertiary rounded-full -translate-x-1/2 z-10 shadow-[0_0_20px_rgba(74,225,118,0.3)]"></div>
+<div class="w-full md:w-1/2 pl-12 md:pl-0">
+<div class="clay-card p-6 rounded-lg group hover:translate-y-[-4px] transition-all duration-300">
+<div class="md:hidden mb-4">
+<span class="font-headline font-bold text-zinc-400">MAY 05</span>
+</div>
+<div class="flex justify-between items-start">
+<div>
+<h3 class="font-headline text-2xl font-bold text-on-surface mb-1">Principles of Design</h3>
+<p class="text-zinc-500 text-sm mb-4">Visual Arts • Level 1</p>
+<div class="flex items-center gap-4 text-zinc-400 font-label text-xs uppercase tracking-tighter">
+<div class="flex items-center"><span class="material-symbols-outlined text-sm mr-1">timer</span> 12m 30s</div>
+<div class="flex items-center"><span class="material-symbols-outlined text-sm mr-1">rule</span> 50/50 Correct</div>
+</div>
+</div>
+<div class="clay-badge-green text-white font-headline text-xl font-black px-5 py-3 rounded-md flex flex-col items-center">
+<span class="font-mono">100%</span>
+<span class="text-[8px] uppercase tracking-widest mt-1 opacity-80">Mastered</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Pagination -->
+<div class="mt-24 flex justify-center items-center gap-4">
+<button class="w-12 h-12 rounded-full clay-card flex items-center justify-center text-zinc-400 hover:text-primary transition-all active:scale-90">
+<span class="material-symbols-outlined">chevron_left</span>
+</button>
+<div class="flex gap-2">
+<button class="w-10 h-10 rounded-full bg-primary-container text-white font-bold text-sm">1</button>
+<button class="w-10 h-10 rounded-full clay-card text-zinc-500 font-bold text-sm hover:text-zinc-300">2</button>
+<button class="w-10 h-10 rounded-full clay-card text-zinc-500 font-bold text-sm hover:text-zinc-300">3</button>
+</div>
+<button class="w-12 h-12 rounded-full clay-card flex items-center justify-center text-zinc-400 hover:text-primary transition-all active:scale-90">
+<span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-end px-6 pb-6 bg-zinc-950/90 backdrop-blur-2xl rounded-t-[2.5rem] z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+<div class="flex flex-col items-center justify-center text-zinc-500 pb-2 active:scale-90 transition-transform duration-300">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-bold uppercase tracking-widest Inter">Home</span>
+</div>
+<div class="flex flex-col items-center justify-center text-zinc-500 pb-2 active:scale-90 transition-transform duration-300">
+<span class="material-symbols-outlined">quiz</span>
+<span class="text-[10px] font-bold uppercase tracking-widest Inter">Quizzes</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-indigo-600 text-white rounded-full w-14 h-14 -translate-y-4 shadow-[0_10px_20px_rgba(99,91,255,0.4)] active:scale-90 transition-transform duration-300">
+<span class="material-symbols-outlined">history</span>
+<span class="text-[8px] font-bold uppercase tracking-widest Inter">History</span>
+</div>
+<div class="flex flex-col items-center justify-center text-zinc-500 pb-2 active:scale-90 transition-transform duration-300">
+<span class="material-symbols-outlined">bar_chart</span>
+<span class="text-[10px] font-bold uppercase tracking-widest Inter">Stats</span>
+</div>
+<div class="flex flex-col items-center justify-center text-zinc-500 pb-2 active:scale-90 transition-transform duration-300">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-bold uppercase tracking-widest Inter">Profile</span>
+</div>
+</nav>
+<!-- Background Decoration -->
+<div class="fixed top-[-10%] right-[-5%] w-[500px] h-[500px] bg-primary/10 blur-[120px] rounded-full -z-10"></div>
+<div class="fixed bottom-[-10%] left-[-5%] w-[400px] h-[400px] bg-secondary/5 blur-[100px] rounded-full -z-10"></div>
+</body></html>

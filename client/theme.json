@@ -1,7 +1,6 @@
 {
-  "name": "default",
-  "primary": "#6366f1",
-  "radius": "0.5rem",
-  "spacing": "1rem"
+  "variant": "professional",
+  "primary": "hsl(252 87% 62%)",
+  "appearance": "dark",
+  "radius": 0.75
 }
-

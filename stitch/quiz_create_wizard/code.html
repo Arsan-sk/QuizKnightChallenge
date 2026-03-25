@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed": "#002109",
+              "on-error": "#690005",
+              "surface-container-highest": "#353437",
+              "on-tertiary": "#003915",
+              "on-secondary-fixed-variant": "#633f00",
+              "on-secondary": "#452b00",
+              "on-background": "#e5e1e4",
+              "tertiary-fixed": "#6bff8f",
+              "surface-container": "#201f22",
+              "tertiary-container": "#00863b",
+              "on-primary-container": "#fffaff",
+              "on-surface": "#e5e1e4",
+              "outline": "#918fa1",
+              "secondary-container": "#dc9100",
+              "primary-container": "#7656f9",
+              "on-primary-fixed": "#1c0062",
+              "surface-container-high": "#2a2a2c",
+              "on-tertiary-container": "#f2ffef",
+              "on-primary": "#31009a",
+              "surface-dim": "#131315",
+              "on-primary-fixed-variant": "#4816cb",
+              "surface-bright": "#39393b",
+              "error-container": "#93000a",
+              "error": "#ffb4ab",
+              "surface-tint": "#cabeff",
+              "on-secondary-container": "#4f3100",
+              "on-tertiary-fixed-variant": "#005321",
+              "surface": "#131315",
+              "secondary-fixed-dim": "#ffb955",
+              "outline-variant": "#464555",
+              "primary-fixed": "#e6deff",
+              "inverse-surface": "#e5e1e4",
+              "inverse-on-surface": "#313032",
+              "on-error-container": "#ffdad6",
+              "surface-container-lowest": "#0e0e10",
+              "secondary": "#ffb955",
+              "primary-fixed-dim": "#cabeff",
+              "background": "#131315",
+              "tertiary-fixed-dim": "#4ae176",
+              "secondary-fixed": "#ffddb4",
+              "on-surface-variant": "#c7c4d8",
+              "on-secondary-fixed": "#291800",
+              "surface-container-low": "#1c1b1d",
+              "primary": "#cabeff",
+              "inverse-primary": "#603ce2",
+              "surface-variant": "#353437",
+              "tertiary": "#4ae176"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+      .clay-card {
+        box-shadow: 0 20px 40px -12px hsla(252, 87%, 62%, 0.1),
+                    inset 0 1px 0 rgba(255,255,255,0.06);
+      }
+      .clay-button-primary {
+        box-shadow: 0 10px 20px rgba(99,91,255,0.3),
+                    inset 0 1px 0 rgba(255,255,255,0.2);
+      }
+      .clay-difficulty-active {
+        box-shadow: inset 0 4px 8px rgba(0,0,0,0.3),
+                    0 1px 0 rgba(255,255,255,0.1);
+      }
+      .recessed-input {
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.4);
+      }
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary selection:text-on-primary">
+<!-- Sidebar (Shared Component SideNavBar) -->
+<aside class="hidden md:flex flex-col h-screen w-72 fixed left-0 top-0 border-r-0 bg-zinc-900 shadow-[20px_0_40px_-12px_hsla(252,87%,62%,0.05)] py-6 z-40">
+<div class="px-8 mb-10">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-on-primary shadow-lg">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+</div>
+<div>
+<h2 class="font-headline font-bold text-sm text-on-background tracking-tight">Instructor Portal</h2>
+<p class="text-[10px] text-zinc-500 font-medium">The Digital Sanctuary</p>
+</div>
+</div>
+</div>
+<nav class="flex-1">
+<a class="text-zinc-500 mx-4 my-1 flex items-center p-4 hover:bg-zinc-800/50 rounded-2xl transition-all hover:text-zinc-300 group" href="#">
+<span class="material-symbols-outlined mr-4 group-hover:scale-110 transition-transform">dashboard</span>
+<span class="font-headline font-bold text-sm">Dashboard</span>
+</a>
+<a class="bg-indigo-500/10 text-indigo-400 rounded-2xl mx-4 my-1 flex items-center p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] group" href="#">
+<span class="material-symbols-outlined mr-4" style="font-variation-settings: 'FILL' 1;">auto_awesome</span>
+<span class="font-headline font-bold text-sm">Quiz Wizard</span>
+</a>
+<a class="text-zinc-500 mx-4 my-1 flex items-center p-4 hover:bg-zinc-800/50 rounded-2xl transition-all hover:text-zinc-300 group" href="#">
+<span class="material-symbols-outlined mr-4 group-hover:scale-110 transition-transform">sensors</span>
+<span class="font-headline font-bold text-sm">Live Monitor</span>
+</a>
+<a class="text-zinc-500 mx-4 my-1 flex items-center p-4 hover:bg-zinc-800/50 rounded-2xl transition-all hover:text-zinc-300 group" href="#">
+<span class="material-symbols-outlined mr-4 group-hover:scale-110 transition-transform">analytics</span>
+<span class="font-headline font-bold text-sm">Analytics</span>
+</a>
+<a class="text-zinc-500 mx-4 my-1 flex items-center p-4 hover:bg-zinc-800/50 rounded-2xl transition-all hover:text-zinc-300 group" href="#">
+<span class="material-symbols-outlined mr-4 group-hover:scale-110 transition-transform">leaderboard</span>
+<span class="font-headline font-bold text-sm">Leaderboard</span>
+</a>
+<a class="text-zinc-500 mx-4 my-1 flex items-center p-4 hover:bg-zinc-800/50 rounded-2xl transition-all hover:text-zinc-300 group" href="#">
+<span class="material-symbols-outlined mr-4 group-hover:scale-110 transition-transform">account_circle</span>
+<span class="font-headline font-bold text-sm">Profile</span>
+</a>
+</nav>
+<div class="mt-auto px-4 space-y-2">
+<a class="text-zinc-500 flex items-center p-4 hover:text-zinc-300 transition-all" href="#">
+<span class="material-symbols-outlined mr-4">settings</span>
+<span class="font-headline font-bold text-sm">Settings</span>
+</a>
+<div class="p-4 rounded-2xl bg-surface-container-low border border-white/5">
+<div class="flex items-center gap-3">
+<img alt="Teacher Profile" class="w-10 h-10 rounded-full object-cover" data-alt="portrait of a professional educator with warm expression against a soft studio background lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAtq1xYesoey0H93GxUb0rdEii3ES_vzzhpHj7c9aU67Z2upWXWMKuexOSyU5DOApY3TOBBhlOQtn7dzWa2xbxAskmIuXGQhISJX1FyCQDZK3P52175_3PiUzdlf8ZDwn03t72A2BS9w9bMJv1QM90qh34TSINoVFK6UVe1Ldt0OF0dKS8pOt18zAgS-4sd09HU0rZzdMoVUue6kLu1F26snOIN2s7GIW8zIAjKVwCjK_ix7A8a3p2BoDK0EwC7ozZ2b3iZJV5NJut6"/>
+<div class="overflow-hidden">
+<p class="font-headline font-bold text-xs truncate">Dr. Sarah Jenkins</p>
+<p class="text-[10px] text-zinc-500 truncate">Senior Professor</p>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="md:ml-72 min-h-screen relative p-6 md:p-12">
+<!-- Wizard Header -->
+<header class="mb-12">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div>
+<h1 class="font-headline font-extrabold text-4xl md:text-5xl tracking-tighter mb-2 text-primary">
+                        Quiz Creation Wizard
+                    </h1>
+<p class="text-zinc-500 max-w-xl text-lg leading-relaxed">
+                        Step 1: Define the core identity of your challenge. Set the tone and difficulty for your students.
+                    </p>
+</div>
+<!-- Progress Indicator -->
+<div class="flex items-center gap-4 bg-surface-container p-4 rounded-xl clay-card">
+<div class="flex items-center gap-3">
+<span class="font-mono text-primary font-bold text-xl">01</span>
+<div class="w-32 h-2 bg-surface-container-lowest rounded-full overflow-hidden">
+<div class="w-1/4 h-full bg-gradient-to-r from-primary to-primary-container rounded-full shadow-[0_0_10px_rgba(122,86,249,0.5)]"></div>
+</div>
+<span class="font-mono text-zinc-500 text-sm">/ 04</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Steps Navigation (Horizontal List for Visual Clarity) -->
+<nav class="flex flex-wrap gap-4 mb-10 overflow-x-auto pb-4">
+<button class="flex items-center gap-3 px-6 py-3 rounded-full bg-primary text-on-primary clay-button-primary font-headline font-bold text-sm transition-transform active:scale-95">
+<span class="material-symbols-outlined text-lg" style="font-variation-settings: 'FILL' 1;">info</span>
+                1. Info
+            </button>
+<button class="flex items-center gap-3 px-6 py-3 rounded-full bg-surface-container text-zinc-500 font-headline font-bold text-sm hover:text-zinc-300 transition-all">
+<span class="material-symbols-outlined text-lg">format_list_bulleted</span>
+                2. Questions
+            </button>
+<button class="flex items-center gap-3 px-6 py-3 rounded-full bg-surface-container text-zinc-500 font-headline font-bold text-sm hover:text-zinc-300 transition-all">
+<span class="material-symbols-outlined text-lg">settings_suggest</span>
+                3. Settings
+            </button>
+<button class="flex items-center gap-3 px-6 py-3 rounded-full bg-surface-container text-zinc-500 font-headline font-bold text-sm hover:text-zinc-300 transition-all">
+<span class="material-symbols-outlined text-lg">visibility</span>
+                4. Preview
+            </button>
+</nav>
+<!-- Main Form Bento Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Left Side: Form Content -->
+<div class="lg:col-span-8 space-y-8">
+<section class="bg-surface-container p-8 md:p-10 rounded-lg clay-card">
+<h3 class="font-headline font-bold text-xl mb-8 flex items-center gap-3">
+<span class="w-2 h-8 bg-primary rounded-full"></span>
+                        Basic Information
+                    </h3>
+<div class="space-y-6">
+<div class="group">
+<label class="block font-headline font-bold text-xs uppercase tracking-widest text-zinc-500 mb-2 ml-1">Quiz Title</label>
+<input class="w-full bg-surface-container-lowest border-none rounded-sm p-5 recessed-input focus:ring-2 focus:ring-primary/20 text-on-background placeholder:text-zinc-700 transition-all outline-none" placeholder="e.g., Quantum Mechanics Fundamentals" type="text"/>
+</div>
+<div class="group">
+<label class="block font-headline font-bold text-xs uppercase tracking-widest text-zinc-500 mb-2 ml-1">Description</label>
+<textarea class="w-full bg-surface-container-lowest border-none rounded-sm p-5 recessed-input focus:ring-2 focus:ring-primary/20 text-on-background placeholder:text-zinc-700 transition-all outline-none resize-none" placeholder="Explain the learning objectives and scope of this quiz..." rows="4"></textarea>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="group">
+<label class="block font-headline font-bold text-xs uppercase tracking-widest text-zinc-500 mb-2 ml-1">Subject</label>
+<select class="w-full bg-surface-container-lowest border-none rounded-sm p-5 recessed-input focus:ring-2 focus:ring-primary/20 text-on-background transition-all outline-none appearance-none">
+<option>Select a Subject</option>
+<option>Mathematics</option>
+<option>Physics</option>
+<option>Biology</option>
+<option>Computer Science</option>
+<option>History</option>
+</select>
+</div>
+<div class="group">
+<label class="block font-headline font-bold text-xs uppercase tracking-widest text-zinc-500 mb-2 ml-1">Language</label>
+<select class="w-full bg-surface-container-lowest border-none rounded-sm p-5 recessed-input focus:ring-2 focus:ring-primary/20 text-on-background transition-all outline-none appearance-none">
+<option>English (US)</option>
+<option>Spanish</option>
+<option>French</option>
+<option>German</option>
+</select>
+</div>
+</div>
+</div>
+</section>
+<!-- Difficulty Picker -->
+<section class="bg-surface-container p-8 md:p-10 rounded-lg clay-card">
+<h3 class="font-headline font-bold text-xl mb-4 flex items-center gap-3">
+<span class="w-2 h-8 bg-secondary rounded-full"></span>
+                        Difficulty Level
+                    </h3>
+<p class="text-zinc-500 text-sm mb-8">This determines the adaptive logic applied to questions.</p>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Easy -->
+<button class="relative group p-6 rounded-2xl bg-surface-container-low transition-all duration-300 hover:bg-surface-bright flex flex-col items-center gap-4 recessed-input active:scale-95">
+<div class="w-14 h-14 rounded-full bg-tertiary/10 flex items-center justify-center text-tertiary transition-transform group-hover:scale-110">
+<span class="material-symbols-outlined text-3xl">child_care</span>
+</div>
+<div class="text-center">
+<p class="font-headline font-bold text-on-background">Easy</p>
+<p class="text-[10px] text-zinc-500 mt-1 uppercase tracking-tighter">Fundamentals</p>
+</div>
+</button>
+<!-- Medium (Active) -->
+<button class="relative group p-6 rounded-2xl bg-primary text-on-primary transition-all duration-300 flex flex-col items-center gap-4 clay-button-primary active:scale-95">
+<div class="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-3xl" style="font-variation-settings: 'FILL' 1;">psychology</span>
+</div>
+<div class="text-center">
+<p class="font-headline font-extrabold">Medium</p>
+<p class="text-[10px] text-on-primary/70 mt-1 uppercase tracking-widest font-bold">Standard</p>
+</div>
+<div class="absolute -top-2 -right-2 bg-secondary text-on-secondary-container rounded-full p-1 shadow-lg">
+<span class="material-symbols-outlined text-sm">check</span>
+</div>
+</button>
+<!-- Hard -->
+<button class="relative group p-6 rounded-2xl bg-surface-container-low transition-all duration-300 hover:bg-surface-bright flex flex-col items-center gap-4 recessed-input active:scale-95">
+<div class="w-14 h-14 rounded-full bg-error/10 flex items-center justify-center text-error transition-transform group-hover:scale-110">
+<span class="material-symbols-outlined text-3xl">bolt</span>
+</div>
+<div class="text-center">
+<p class="font-headline font-bold text-on-background">Hard</p>
+<p class="text-[10px] text-zinc-500 mt-1 uppercase tracking-tighter">Advanced</p>
+</div>
+</button>
+</div>
+</section>
+</div>
+<!-- Right Side: Assistive / Preview Panel -->
+<div class="lg:col-span-4 space-y-8">
+<div class="bg-surface-container-low p-8 rounded-lg clay-card sticky top-24 border-l-4 border-primary">
+<span class="material-symbols-outlined text-primary mb-4 text-3xl">lightbulb</span>
+<h4 class="font-headline font-bold text-lg mb-4 text-on-background">Teacher Tip</h4>
+<p class="text-zinc-500 text-sm leading-relaxed mb-6">
+                        A clear, descriptive title helps students find your quiz in the library. Use the description to set expectations about time limits and question types.
+                    </p>
+<div class="p-4 rounded-xl bg-surface-container-lowest space-y-3">
+<p class="font-headline font-bold text-[10px] uppercase tracking-widest text-zinc-600">Checklist</p>
+<div class="flex items-center gap-3 text-sm text-zinc-400">
+<span class="material-symbols-outlined text-tertiary text-sm">check_circle</span>
+                            Title entered
+                        </div>
+<div class="flex items-center gap-3 text-sm text-zinc-400">
+<span class="material-symbols-outlined text-zinc-700 text-sm">radio_button_unchecked</span>
+                            Minimum 100 char description
+                        </div>
+<div class="flex items-center gap-3 text-sm text-zinc-400">
+<span class="material-symbols-outlined text-tertiary text-sm">check_circle</span>
+                            Subject categorized
+                        </div>
+</div>
+</div>
+<!-- Preview Thumbnail Card -->
+<div class="bg-surface-container p-6 rounded-lg clay-card overflow-hidden">
+<p class="font-headline font-bold text-[10px] uppercase tracking-widest text-zinc-500 mb-4">Quiz Card Preview</p>
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-2xl">
+<div class="h-32 bg-primary-container relative">
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+<div class="absolute bottom-3 left-4 flex gap-2">
+<span class="px-2 py-1 rounded-full bg-secondary text-on-secondary text-[8px] font-bold uppercase">Physics</span>
+</div>
+</div>
+<div class="p-4 space-y-2">
+<div class="h-4 w-3/4 bg-surface-container-high rounded-full"></div>
+<div class="h-2 w-full bg-surface-container rounded-full"></div>
+<div class="h-2 w-1/2 bg-surface-container rounded-full"></div>
+<div class="flex items-center justify-between pt-4">
+<div class="flex -space-x-2">
+<div class="w-6 h-6 rounded-full border-2 border-surface-container-lowest bg-zinc-800"></div>
+<div class="w-6 h-6 rounded-full border-2 border-surface-container-lowest bg-zinc-700"></div>
+</div>
+<div class="h-3 w-12 bg-surface-container-high rounded-full"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer Actions -->
+<footer class="mt-16 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
+<button class="text-zinc-500 font-headline font-bold text-sm hover:text-white transition-all flex items-center gap-2">
+<span class="material-symbols-outlined">delete_outline</span>
+                Discard Draft
+            </button>
+<div class="flex items-center gap-4">
+<button class="px-8 py-4 rounded-full bg-surface-container-high text-on-surface font-headline font-bold text-sm hover:bg-surface-bright transition-all">
+                    Save as Draft
+                </button>
+<button class="px-10 py-4 rounded-full bg-primary text-on-primary clay-button-primary font-headline font-extrabold text-sm flex items-center gap-3 transition-transform active:scale-95 group">
+                    Next: Add Questions
+                    <span class="material-symbols-outlined transition-transform group-hover:translate-x-1">arrow_forward</span>
+</button>
+</div>
+</footer>
+</main>
+<!-- Bottom Navigation for Mobile (Shared Component BottomNavBar) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-end px-6 pb-6 bg-zinc-950/90 backdrop-blur-2xl rounded-t-[2.5rem] z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)] h-20">
+<a class="flex flex-col items-center justify-center text-zinc-500 pb-2" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-bold uppercase tracking-widest Inter mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-indigo-600 text-white rounded-full w-14 h-14 -translate-y-4 shadow-[0_10px_20px_rgba(99,91,255,0.4)] transition-transform active:scale-90" href="#">
+<span class="material-symbols-outlined">quiz</span>
+<span class="text-[8px] font-bold uppercase tracking-tighter mt-1">Quiz</span>
+</a>
+<a class="flex flex-col items-center justify-center text-zinc-500 pb-2" href="#">
+<span class="material-symbols-outlined">podcasts</span>
+<span class="text-[10px] font-bold uppercase tracking-widest Inter mt-1">Live</span>
+</a>
+<a class="flex flex-col items-center justify-center text-zinc-500 pb-2" href="#">
+<span class="material-symbols-outlined">bar_chart</span>
+<span class="text-[10px] font-bold uppercase tracking-widest Inter mt-1">Stats</span>
+</a>
+<a class="flex flex-col items-center justify-center text-zinc-500 pb-2" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-bold uppercase tracking-widest Inter mt-1">Profile</span>
+</a>
+</nav>
+</body></html>

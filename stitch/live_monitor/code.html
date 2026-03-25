@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>QuizKTC - Live Monitor</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed": "#002109",
+              "on-error": "#690005",
+              "surface-container-highest": "#353437",
+              "on-tertiary": "#003915",
+              "on-secondary-fixed-variant": "#633f00",
+              "on-secondary": "#452b00",
+              "on-background": "#e5e1e4",
+              "tertiary-fixed": "#6bff8f",
+              "surface-container": "#201f22",
+              "tertiary-container": "#00863b",
+              "on-primary-container": "#fffaff",
+              "on-surface": "#e5e1e4",
+              "outline": "#918fa1",
+              "secondary-container": "#dc9100",
+              "primary-container": "#7656f9",
+              "on-primary-fixed": "#1c0062",
+              "surface-container-high": "#2a2a2c",
+              "on-tertiary-container": "#f2ffef",
+              "on-primary": "#31009a",
+              "surface-dim": "#131315",
+              "on-primary-fixed-variant": "#4816cb",
+              "surface-bright": "#39393b",
+              "error-container": "#93000a",
+              "error": "#ffb4ab",
+              "surface-tint": "#cabeff",
+              "on-secondary-container": "#4f3100",
+              "on-tertiary-fixed-variant": "#005321",
+              "surface": "#131315",
+              "secondary-fixed-dim": "#ffb955",
+              "outline-variant": "#464555",
+              "primary-fixed": "#e6deff",
+              "inverse-surface": "#e5e1e4",
+              "inverse-on-surface": "#313032",
+              "on-error-container": "#ffdad6",
+              "surface-container-lowest": "#0e0e10",
+              "secondary": "#ffb955",
+              "primary-fixed-dim": "#cabeff",
+              "background": "#131315",
+              "tertiary-fixed-dim": "#4ae176",
+              "secondary-fixed": "#ffddb4",
+              "on-surface-variant": "#c7c4d8",
+              "on-secondary-fixed": "#291800",
+              "surface-container-low": "#1c1b1d",
+              "primary": "#cabeff",
+              "inverse-primary": "#603ce2",
+              "surface-variant": "#353437",
+              "tertiary": "#4ae176"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .proctor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        body {
+            background-color: #131315;
+            color: #e5e1e4;
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-background overflow-hidden">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 w-full z-50 bg-zinc-950/80 backdrop-blur-xl flex justify-between items-center px-8 h-20 w-full shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+<div class="flex items-center gap-8">
+<span class="text-2xl font-black tracking-tighter text-indigo-500 dark:text-indigo-400 font-headline">QuizKTC</span>
+<nav class="hidden md:flex gap-6 items-center h-full">
+<a class="text-zinc-500 hover:text-zinc-300 transition-colors font-headline text-sm" href="#">Dashboard</a>
+<a class="text-zinc-500 hover:text-zinc-300 transition-colors font-headline text-sm" href="#">Quiz Wizard</a>
+<a class="text-indigo-400 font-bold border-b-2 border-indigo-500 pb-1 font-headline text-sm" href="#">Live Monitor</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden md:flex bg-surface-container-lowest rounded-full px-4 py-2 items-center gap-3">
+<span class="material-symbols-outlined text-zinc-500 text-lg">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-sm text-on-surface placeholder-zinc-600 w-48" placeholder="Search students..." type="text"/>
+</div>
+<button class="p-2 hover:bg-zinc-900/50 rounded-full transition-all text-zinc-400">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="p-2 hover:bg-zinc-900/50 rounded-full transition-all text-zinc-400">
+<span class="material-symbols-outlined">emoji_events</span>
+</button>
+<div class="h-10 w-10 rounded-full overflow-hidden border-2 border-indigo-500/30">
+<img alt="Teacher Profile" data-alt="Close up portrait of a professional male educator with a kind expression and modern glasses in a brightly lit studio" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBAECCxKyERSvCmBkToUDd8-eCB5Z0CitQ7wH7DCnemOPo8ihFMA9h2o1Dq3AOE9_YiLuIJcRUoY95L6OEevKEul_2eBukpTv5KRGFD8Wk3mKXDL4aigFl0xQskJ8eG4A94IwO4WLgYXSHvQ7tqGDVxk8Xjfqy3u_P0cyAY9-lCsGChKE1zNS6XkzIW5-rR0M_tx_15fqu7cwz3Ar-SGwtauNhNLxmeU3LuptKep38YgVg-3obwrSibCZixVUdS-kw74FJn-aSRgBev"/>
+</div>
+</div>
+</header>
+<div class="flex h-screen pt-20">
+<!-- Sidebar Navigation -->
+<aside class="hidden lg:flex flex-col h-full py-6 bg-zinc-900 w-72 fixed left-0 top-20 shadow-[20px_0_40px_-12px_hsla(252,87%,62%,0.05)] z-40">
+<div class="px-8 mb-8">
+<h2 class="text-zinc-400 text-[10px] font-bold uppercase tracking-[0.2em] mb-4">Assessment Control</h2>
+<div class="bg-surface-container rounded-2xl p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+<p class="text-xs text-zinc-500 mb-1">Active Quiz</p>
+<p class="text-sm font-headline font-bold text-on-surface">Advanced Macroeconomics - Finals</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="text-zinc-500 mx-4 my-1 flex items-center p-4 hover:text-zinc-300 hover:bg-zinc-800/50 rounded-2xl transition-all" href="#">
+<span class="material-symbols-outlined mr-3">dashboard</span>
+<span class="font-bold text-sm">Dashboard</span>
+</a>
+<a class="bg-indigo-500/10 text-indigo-400 rounded-2xl mx-4 my-1 flex items-center p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]" href="#">
+<span class="material-symbols-outlined mr-3">sensors</span>
+<span class="font-bold text-sm">Live Monitor</span>
+</a>
+<a class="text-zinc-500 mx-4 my-1 flex items-center p-4 hover:text-zinc-300 hover:bg-zinc-800/50 rounded-2xl transition-all" href="#">
+<span class="material-symbols-outlined mr-3">analytics</span>
+<span class="font-bold text-sm">Analytics</span>
+</a>
+<a class="text-zinc-500 mx-4 my-1 flex items-center p-4 hover:text-zinc-300 hover:bg-zinc-800/50 rounded-2xl transition-all" href="#">
+<span class="material-symbols-outlined mr-3">leaderboard</span>
+<span class="font-bold text-sm">Leaderboard</span>
+</a>
+</nav>
+<div class="px-4 mt-auto">
+<button class="w-full bg-error-container text-white py-4 px-6 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-[0_10px_30px_rgba(147,0,10,0.3)] active:scale-95 transition-all">
+<span class="material-symbols-outlined">block</span>
+                    End Quiz session
+                </button>
+<div class="mt-4 flex flex-col gap-2">
+<a class="text-zinc-500 flex items-center p-3 hover:text-zinc-300 text-xs" href="#">
+<span class="material-symbols-outlined mr-2 text-sm">settings</span> Settings
+                    </a>
+</div>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="flex-1 ml-0 lg:ml-72 mr-0 xl:mr-80 overflow-y-auto p-8 custom-scrollbar">
+<!-- Stats Ticker -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12">
+<div class="bg-surface-container rounded-lg p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] flex flex-col items-center">
+<span class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mb-2">Connected</span>
+<span class="text-3xl font-headline font-extrabold text-on-surface font-mono">142/145</span>
+</div>
+<div class="bg-surface-container rounded-lg p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] flex flex-col items-center">
+<span class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mb-2">Time Remaining</span>
+<span class="text-3xl font-headline font-extrabold text-secondary font-mono">42:15</span>
+</div>
+<div class="bg-surface-container rounded-lg p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] flex flex-col items-center">
+<span class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mb-2">Avg. Score</span>
+<span class="text-3xl font-headline font-extrabold text-tertiary font-mono">78.4%</span>
+</div>
+<div class="bg-surface-container rounded-lg p-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] flex flex-col items-center border-2 border-error/20">
+<span class="text-error text-[10px] font-bold uppercase tracking-widest mb-2">Violations</span>
+<span class="text-3xl font-headline font-extrabold text-error font-mono">03</span>
+</div>
+</div>
+<!-- Header and Filter -->
+<div class="flex justify-between items-end mb-8">
+<div>
+<h1 class="text-4xl font-headline font-extrabold tracking-tighter mb-2">Live Student Feed</h1>
+<p class="text-zinc-500">Real-time monitoring of all active participants</p>
+</div>
+<div class="flex gap-4">
+<div class="bg-surface-container-high rounded-full px-4 py-2 flex items-center gap-2 text-sm font-bold">
+<span class="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_8px_#4ae176]"></span> Live
+                    </div>
+</div>
+</div>
+<!-- Student Grid -->
+<div class="proctor-grid">
+<!-- Student Card 1 -->
+<div class="bg-surface-container rounded-lg overflow-hidden group hover:scale-[1.02] transition-transform duration-300 shadow-[0_20px_40px_-12px_rgba(0,0,0,0.5)]">
+<div class="relative aspect-video">
+<img alt="Student Feed" class="w-full h-full object-cover grayscale brightness-75 group-hover:grayscale-0 transition-all duration-500" data-alt="Student focusing on exam in a dimly lit room with webcam view framing, cinematic soft lighting on face" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBM9KZiPv-J_4dS_jbfwVkp-wh7pDxFgvL8asM0mWWs4H4vd1aFpzvOiupBMIxjJ5sjSg5QRVpdd-lUHlatbTeybiKQBUPw_YiKVkXN2rxrHEElXG0LrnmV2KeUs7QQGTN2vzvUakTSto3-duC9-S_qpNH8ny1IQKrgWhf3nnMtYjxWQNODcpqvCJ16ma9ocj1dHY_YrHynJCKIngeT1TO6DowMqh4dbnvCqI1yQLBHvZCyh-fXGgXcGZEyNL14eKTptoHuiSeU3Csr"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+<div class="absolute bottom-3 left-3 flex items-center gap-2">
+<span class="w-2 h-2 bg-tertiary rounded-full"></span>
+<span class="text-[10px] font-bold text-white uppercase tracking-tighter">Proctoring Active</span>
+</div>
+</div>
+<div class="p-5">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-sm font-headline font-extrabold text-on-surface">Alex Rivera</p>
+<p class="text-[10px] text-zinc-500 font-mono tracking-tight">ID: 8829-XR</p>
+</div>
+<div class="text-right">
+<p class="text-xs font-mono text-tertiary">72% Progress</p>
+</div>
+</div>
+<div class="h-1.5 bg-surface-container-lowest rounded-full overflow-hidden mb-4">
+<div class="h-full bg-tertiary w-[72%] shadow-[0_0_10px_rgba(74,225,118,0.3)]"></div>
+</div>
+<div class="flex justify-between items-center text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+<span>Q: 24/35</span>
+<span>Score: 88%</span>
+</div>
+</div>
+</div>
+<!-- Student Card 2 (Alert State) -->
+<div class="bg-surface-container-high rounded-lg overflow-hidden border-2 border-error/50 group hover:scale-[1.02] transition-transform duration-300 shadow-[0_20px_40px_-12px_rgba(147,0,10,0.15)]">
+<div class="relative aspect-video">
+<img alt="Student Feed" class="w-full h-full object-cover brightness-75" data-alt="Female student looking away from screen with a concerned expression, captured in a real-time monitoring webcam frame" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA-VrDNdl-vYggzlwBHoAdxqhBgpE1mUL0u7FOsrZrS-m38xgRLHb8ZvYx8wYzpTFdiwW4JHpgWWuY5s7ecFV-j9K2sRaqIK3-1tTXEycoTEIlvSiX6tWXmFf71VP_F64ay1DdenJVkVVLufmpPPdl024zTsl_oM75_zLjjQov4TpHlEgIfyRCkMJTA_ODee08dNsNBCFLaRenbN3H22j8Y4JL8J8ywyp64ZjnhBNVWk7Pt3lcqTlv4KZBOZ2pVBLCWl2o02ci9YYvl"/>
+<div class="absolute inset-0 bg-error/20"></div>
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="bg-error text-on-error text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">Eye Detection Alert</div>
+</div>
+<div class="absolute bottom-3 left-3 flex items-center gap-2">
+<span class="w-2 h-2 bg-error rounded-full animate-pulse"></span>
+<span class="text-[10px] font-bold text-white uppercase tracking-tighter">Violation Flags (2)</span>
+</div>
+</div>
+<div class="p-5">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-sm font-headline font-extrabold text-on-surface">Sarah Chen</p>
+<p class="text-[10px] text-zinc-500 font-mono tracking-tight">ID: 9011-SC</p>
+</div>
+<div class="text-right">
+<p class="text-xs font-mono text-error">45% Progress</p>
+</div>
+</div>
+<div class="h-1.5 bg-surface-container-lowest rounded-full overflow-hidden mb-4">
+<div class="h-full bg-error w-[45%] shadow-[0_0_10px_rgba(255,180,171,0.3)]"></div>
+</div>
+<div class="flex gap-2">
+<button class="flex-1 bg-error-container/20 text-error text-[10px] font-bold py-2 rounded-lg border border-error/30 hover:bg-error-container/40 transition-colors uppercase">Warn</button>
+<button class="flex-1 bg-surface-bright text-on-surface text-[10px] font-bold py-2 rounded-lg hover:bg-zinc-700 transition-colors uppercase">View Log</button>
+</div>
+</div>
+</div>
+<!-- Student Card 3 -->
+<div class="bg-surface-container rounded-lg overflow-hidden group hover:scale-[1.02] transition-transform duration-300 shadow-[0_20px_40px_-12px_rgba(0,0,0,0.5)]">
+<div class="relative aspect-video">
+<img alt="Student Feed" class="w-full h-full object-cover grayscale brightness-75 group-hover:grayscale-0 transition-all duration-500" data-alt="Young man in a hoodie studying late at night with glowing screen light reflecting on his face, proctoring camera view" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCxTOnNiUb5s7qhlh2P44yKtNBCJ3jiiLW6BXjJyfjyWxtOMOs4hyhT7xrxptcX27LU28c_XD9Fcto5P7_z4SO8P5o9BvGPZ1HqkK3kA1Wow-9mD5jC--6oZmHa4mCzxJPpyY109YKFS0iDxdFT1fBYJPq6fybxRZvwc1apkuoYTIuealBullkCcGsA_HzVgzj4MR7gC7RzzVcbcvyckMgNrf5POBMvaVYLTJzjo4fobZh-9kWWQCTavy7DolCri9DdYtpeZ-hdm46l"/>
+<div class="absolute bottom-3 left-3 flex items-center gap-2">
+<span class="w-2 h-2 bg-tertiary rounded-full"></span>
+<span class="text-[10px] font-bold text-white uppercase tracking-tighter">Proctoring Active</span>
+</div>
+</div>
+<div class="p-5">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-sm font-headline font-extrabold text-on-surface">Marcus Thorne</p>
+<p class="text-[10px] text-zinc-500 font-mono tracking-tight">ID: 7741-MT</p>
+</div>
+<div class="text-right">
+<p class="text-xs font-mono text-tertiary">98% Progress</p>
+</div>
+</div>
+<div class="h-1.5 bg-surface-container-lowest rounded-full overflow-hidden mb-4">
+<div class="h-full bg-tertiary w-[98%]"></div>
+</div>
+<div class="flex justify-between items-center text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+<span>Q: 34/35</span>
+<span>Score: 94%</span>
+</div>
+</div>
+</div>
+<!-- Repeat for demo -->
+<div class="bg-surface-container rounded-lg overflow-hidden group hover:scale-[1.02] transition-transform duration-300 shadow-[0_20px_40px_-12px_rgba(0,0,0,0.5)]">
+<div class="relative aspect-video">
+<img alt="Student Feed" class="w-full h-full object-cover grayscale brightness-75 group-hover:grayscale-0 transition-all duration-500" data-alt="Student in casual wear looking intently at exam screen, soft bokeh background with educational environment" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBR6YlTCIYJr6efDIgW3H-MUM9lBYyrru3zTsUV75W6Y0OwTFAbLEr1rbYI9nE7y1VUU4tahN6g3K9VbuN5IRZp_3xZPMPb-Ztf90TFyt_DqOk6_DkuI2ZiIio1PCwH1B0wKSKiqKaj8oyp6jM37lvIMtuvWGbfRUvgjXCd1ZsCqUjGnIUPeULv3XNtYFnd_gDCRKyVM-F5ihWLq7JRyGMBbF8_1QfG8kV8f5Z9o4gW6vrNwwkIoqyU7ZYJEZy-utnOGEmtAg1yOE8Q"/>
+<div class="absolute bottom-3 left-3 flex items-center gap-2">
+<span class="w-2 h-2 bg-tertiary rounded-full"></span>
+<span class="text-[10px] font-bold text-white uppercase tracking-tighter">Proctoring Active</span>
+</div>
+</div>
+<div class="p-5">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-sm font-headline font-extrabold text-on-surface">Elena Garcia</p>
+<p class="text-[10px] text-zinc-500 font-mono tracking-tight">ID: 6632-EG</p>
+</div>
+<div class="text-right">
+<p class="text-xs font-mono text-tertiary">12% Progress</p>
+</div>
+</div>
+<div class="h-1.5 bg-surface-container-lowest rounded-full overflow-hidden mb-4">
+<div class="h-full bg-indigo-500 w-[12%]"></div>
+</div>
+<div class="flex justify-between items-center text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+<span>Q: 4/35</span>
+<span>Score: 100%</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-container rounded-lg overflow-hidden group hover:scale-[1.02] transition-transform duration-300 shadow-[0_20px_40px_-12px_rgba(0,0,0,0.5)]">
+<div class="relative aspect-video">
+<img alt="Student Feed" class="w-full h-full object-cover grayscale brightness-75 group-hover:grayscale-0 transition-all duration-500" data-alt="Side profile of a young male student wearing professional headphones in a dark room focusing on monitor" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB2S9zxIHreYC0VoCnjF222z0q4VZ1Tj3FlNpnfkFcnQ8BwNK7LMTkVj5jPpv4DP6KxcSXsWdBi9Rb1AQVpf3lG9F-yB7WZlF1X5q5fjblVHpthiFozzVpt9BEPJNjiW7Sp0EepdqzSjG4uaznFD65e1lzStZXcEtDB6_yARCjYqggu2TQRFV0hU2dR9RU4F-oUhD_XJwpSQSlsY-lQ3nInzXShEUAGCrpRmkS6cdyxcxCEEj7uONNJYuDXppHouMBrtA6lyNSCQoPR"/>
+<div class="absolute bottom-3 left-3 flex items-center gap-2">
+<span class="w-2 h-2 bg-tertiary rounded-full"></span>
+<span class="text-[10px] font-bold text-white uppercase tracking-tighter">Proctoring Active</span>
+</div>
+</div>
+<div class="p-5">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-sm font-headline font-extrabold text-on-surface">Jordan Smyth</p>
+<p class="text-[10px] text-zinc-500 font-mono tracking-tight">ID: 5541-JS</p>
+</div>
+<div class="text-right">
+<p class="text-xs font-mono text-secondary">55% Progress</p>
+</div>
+</div>
+<div class="h-1.5 bg-surface-container-lowest rounded-full overflow-hidden mb-4">
+<div class="h-full bg-secondary w-[55%]"></div>
+</div>
+<div class="flex justify-between items-center text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+<span>Q: 19/35</span>
+<span>Score: 62%</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-container rounded-lg overflow-hidden group hover:scale-[1.02] transition-transform duration-300 shadow-[0_20px_40px_-12px_rgba(0,0,0,0.5)]">
+<div class="relative aspect-video">
+<img alt="Student Feed" class="w-full h-full object-cover grayscale brightness-75 group-hover:grayscale-0 transition-all duration-500" data-alt="Student in focused work state, blurred apartment background, webcam view focusing on face and eye movement" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCnPQPPJhJitLj3Cv4jV3QE2bIofhJOzUYUxLaZKUgwRk_kkXRq3BkRsoCPvPtRjZBr18cI2JJfqGijUIWQmT4bxVdDfyL7qxF0eTKJOW-_oFI8YZkNJZlQm5nc8PA5OSK62zOwyJiPzuI-XGE3BKpfuA3DcJaK5UM9EMk-0Bx1yHVgSXVufS5g0yIswiYrA24utz26sPmbUZ0K_C4AQXkWCtpv7lTLVxLAGvZ5oTLHYhfsm7g8VQPHUktzw0Qo6EmX-P3OnSd-MJQE"/>
+<div class="absolute bottom-3 left-3 flex items-center gap-2">
+<span class="w-2 h-2 bg-tertiary rounded-full"></span>
+<span class="text-[10px] font-bold text-white uppercase tracking-tighter">Proctoring Active</span>
+</div>
+</div>
+<div class="p-5">
+<div class="flex justify-between items-start mb-4">
+<div>
+<p class="text-sm font-headline font-extrabold text-on-surface">Lila Owens</p>
+<p class="text-[10px] text-zinc-500 font-mono tracking-tight">ID: 4421-LO</p>
+</div>
+<div class="text-right">
+<p class="text-xs font-mono text-tertiary">81% Progress</p>
+</div>
+</div>
+<div class="h-1.5 bg-surface-container-lowest rounded-full overflow-hidden mb-4">
+<div class="h-full bg-tertiary w-[81%]"></div>
+</div>
+<div class="flex justify-between items-center text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+<span>Q: 28/35</span>
+<span>Score: 91%</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Right Sidebar (Alert Feed) -->
+<aside class="hidden xl:flex flex-col h-full bg-surface-container-low w-80 fixed right-0 top-20 z-40 p-6 overflow-y-auto">
+<div class="flex items-center justify-between mb-8">
+<h3 class="font-headline font-extrabold text-lg tracking-tight">Violation Feed</h3>
+<span class="bg-error/10 text-error text-[10px] font-black px-2 py-1 rounded-md uppercase">Live</span>
+</div>
+<div class="space-y-6">
+<!-- Alert 1 -->
+<div class="flex gap-4 p-4 rounded-2xl bg-error/5 border-l-4 border-error shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+<div class="flex-shrink-0">
+<span class="material-symbols-outlined text-error">visibility_off</span>
+</div>
+<div>
+<div class="flex justify-between items-start mb-1">
+<p class="text-xs font-bold text-on-surface">Eye tracking lost</p>
+<span class="text-[10px] font-mono text-zinc-500">2m ago</span>
+</div>
+<p class="text-[11px] text-zinc-400 mb-2 leading-relaxed">Student Sarah Chen (9011-SC) looking away from screen for &gt; 15s.</p>
+<div class="flex gap-2">
+<button class="text-[10px] font-bold text-error uppercase tracking-widest hover:underline">Issue Warning</button>
+<button class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest hover:underline">Dismiss</button>
+</div>
+</div>
+</div>
+<!-- Alert 2 -->
+<div class="flex gap-4 p-4 rounded-2xl bg-secondary/5 border-l-4 border-secondary shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+<div class="flex-shrink-0">
+<span class="material-symbols-outlined text-secondary">tab</span>
+</div>
+<div>
+<div class="flex justify-between items-start mb-1">
+<p class="text-xs font-bold text-on-surface">Tab Switching</p>
+<span class="text-[10px] font-mono text-zinc-500">5m ago</span>
+</div>
+<p class="text-[11px] text-zinc-400 mb-2 leading-relaxed">System detected browser focus change for David Kim (1281-DK).</p>
+<button class="text-[10px] font-bold text-secondary uppercase tracking-widest hover:underline">Mark for review</button>
+</div>
+</div>
+<!-- Alert 3 -->
+<div class="flex gap-4 p-4 rounded-2xl bg-zinc-800/50 border-l-4 border-zinc-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] opacity-60">
+<div class="flex-shrink-0">
+<span class="material-symbols-outlined text-zinc-400">volume_up</span>
+</div>
+<div>
+<div class="flex justify-between items-start mb-1">
+<p class="text-xs font-bold text-on-surface">Noise Detected</p>
+<span class="text-[10px] font-mono text-zinc-500">14m ago</span>
+</div>
+<p class="text-[11px] text-zinc-400 mb-2 leading-relaxed">Multiple voices detected in background for Elias Vance.</p>
+<span class="text-[10px] font-bold text-zinc-600 uppercase">Resolved</span>
+</div>
+</div>
+<!-- Alert 4 -->
+<div class="flex gap-4 p-4 rounded-2xl bg-error/5 border-l-4 border-error shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+<div class="flex-shrink-0">
+<span class="material-symbols-outlined text-error">person_add</span>
+</div>
+<div>
+<div class="flex justify-between items-start mb-1">
+<p class="text-xs font-bold text-on-surface">Secondary Person</p>
+<span class="text-[10px] font-mono text-zinc-500">18m ago</span>
+</div>
+<p class="text-[11px] text-zinc-400 mb-2 leading-relaxed">AI detected a second face in the frame of participant 3301-RT.</p>
+<button class="text-[10px] font-bold text-error uppercase tracking-widest hover:underline">Instant Block</button>
+</div>
+</div>
+</div>
+<div class="mt-auto pt-8 border-t border-zinc-800">
+<div class="bg-indigo-500/5 rounded-2xl p-4">
+<p class="text-xs font-bold text-indigo-400 mb-2 flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">auto_awesome</span>
+                        AI Proctor Insight
+                    </p>
+<p class="text-[11px] text-zinc-400 leading-normal">Session health is 94%. Overall integrity remains high. 3 students showing slight hesitation on Q28.</p>
+</div>
+</div>
+</aside>
+</div>
+<!-- Mobile Navigation -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-end px-6 pb-6 bg-zinc-950/90 backdrop-blur-2xl rounded-t-[2.5rem] z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+<div class="flex flex-col items-center justify-center text-zinc-500 pb-2">
+<span class="material-symbols-outlined">home</span>
+<span class="text-[10px] font-bold uppercase tracking-widest font-body mt-1">Home</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-indigo-600 text-white rounded-full w-14 h-14 -translate-y-4 shadow-[0_10px_20px_rgba(99,91,255,0.4)] transition-transform duration-300 active:scale-90">
+<span class="material-symbols-outlined">sensors</span>
+</div>
+<div class="flex flex-col items-center justify-center text-zinc-500 pb-2">
+<span class="material-symbols-outlined">person</span>
+<span class="text-[10px] font-bold uppercase tracking-widest font-body mt-1">Profile</span>
+</div>
+</nav>
+</body></html>

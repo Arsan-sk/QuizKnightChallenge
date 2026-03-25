@@ -1,32 +1,15 @@
 import React from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle
-} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BadgeCheck, Clock, Eye, FileEdit, ListChecks } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { BadgeCheck, Clock, Eye, FileEdit, ListChecks, BarChart3, BookOpen, AlertCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
-// Types for quiz attempts and creations
 interface QuizAttempt {
   id: number;
   quizId: number;
@@ -47,460 +30,281 @@ interface QuizCreation {
   attempts: number;
 }
 
+const stagger = { animate: { transition: { staggerChildren: 0.06 } } };
+const fadeUp = {
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.35 },
+};
+
 export default function HistoryPage() {
   const { user, isLoading: authLoading } = useAuth();
   const [, navigate] = useLocation();
 
-  // Get quiz attempts for students
-  const {
-    data: quizAttempts,
-    isLoading: attemptsLoading,
-    error: attemptsError,
-    refetch: refetchAttempts
-  } = useQuery({
+  const { data: quizAttempts, isLoading: attemptsLoading, error: attemptsError, refetch: refetchAttempts } = useQuery({
     queryKey: ["quizAttempts"],
     queryFn: async () => {
       const response = await fetch("/api/results/user");
-      if (!response.ok) {
-        throw new Error("Failed to fetch quiz attempts");
-      }
+      if (!response.ok) throw new Error("Failed to fetch quiz attempts");
       return response.json() as Promise<QuizAttempt[]>;
     },
-    enabled: user?.role === "student"
+    enabled: user?.role === "student",
   });
 
-  // Get created quizzes for teachers
-  const {
-    data: createdQuizzes,
-    isLoading: quizzesLoading,
-    error: quizzesError,
-    refetch: refetchQuizzes
-  } = useQuery({
+  const { data: createdQuizzes, isLoading: quizzesLoading, error: quizzesError, refetch: refetchQuizzes } = useQuery({
     queryKey: ["createdQuizzes"],
     queryFn: async () => {
       const response = await fetch("/api/quizzes/teacher");
-      if (!response.ok) {
-        throw new Error("Failed to fetch created quizzes");
-      }
+      if (!response.ok) throw new Error("Failed to fetch created quizzes");
       return response.json() as Promise<QuizCreation[]>;
     },
-    enabled: user?.role === "teacher"
+    enabled: user?.role === "teacher",
   });
 
-  // Handle loading state
+  const getScoreStyle = (score: number, maxScore: number) => {
+    const pct = maxScore > 0 ? (score / maxScore) : 0;
+    if (pct >= 0.7) return "text-[hsl(145,63%,60%)] bg-[hsl(145,63%,42%,0.15)] border-[hsl(145,63%,42%,0.3)]";
+    if (pct >= 0.4) return "text-[hsl(38,95%,65%)] bg-[hsl(38,95%,58%,0.15)] border-[hsl(38,95%,58%,0.3)]";
+    return "text-[hsl(0,72%,65%)] bg-[hsl(0,72%,51%,0.15)] border-[hsl(0,72%,51%,0.3)]";
+  };
+
   if (authLoading) {
     return (
-      <div className="container py-6">
-        <Card>
-          <CardHeader>
-            <Skeleton className="h-8 w-52 mb-2" />
-            <Skeleton className="h-4 w-72" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-64 w-full" />
-          </CardContent>
-        </Card>
+      <div className="max-w-4xl mx-auto px-6 py-8 space-y-4">
+        <Skeleton className="h-8 w-48 rounded-xl" />
+        {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-xl" />)}
       </div>
     );
   }
 
-  // Handle unauthenticated users
   if (!user) {
     return (
-      <div className="container py-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Not Authenticated</CardTitle>
-            <CardDescription>
-              You need to be logged in to view your history
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p>Please log in to access this page.</p>
-          </CardContent>
-          <CardFooter>
-            <Button onClick={() => navigate("/auth")}>Go to Login</Button>
-          </CardFooter>
-        </Card>
+      <div className="max-w-4xl mx-auto px-6 py-8 flex items-center justify-center min-h-[50vh]">
+        <div className="clay-card p-10 text-center">
+          <AlertCircle className="w-12 h-12 mx-auto mb-4 text-[hsl(var(--muted-foreground))]" />
+          <p className="text-sm text-[hsl(var(--muted-foreground))] mb-4">Please log in to view your history.</p>
+          <Button onClick={() => navigate("/auth")} style={{ background: "hsl(var(--primary))" }}>
+            Go to Login
+          </Button>
+        </div>
       </div>
     );
   }
 
-  // Student view for quiz attempts
   if (user.role === "student") {
-    // Loading state
     if (attemptsLoading) {
       return (
-        <div className="container py-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Quiz History</CardTitle>
-              <CardDescription>
-                View your previous quiz attempts
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+        <div className="max-w-4xl mx-auto px-6 py-8 space-y-3">
+          {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-xl" />)}
         </div>
       );
     }
 
-    // Error state
     if (attemptsError) {
       return (
-        <div className="container py-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Error</CardTitle>
-              <CardDescription>
-                There was an error loading your quiz attempts
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-destructive">
-                {attemptsError instanceof Error
-                  ? attemptsError.message
-                  : "Unknown error occurred"}
-              </p>
-              <Button 
-                onClick={() => refetchAttempts()} 
-                className="mt-4"
-                variant="outline"
-              >
-                Try Again
-              </Button>
-            </CardContent>
-          </Card>
+        <div className="max-w-4xl mx-auto px-6 py-8 flex items-center justify-center min-h-[40vh]">
+          <div className="clay-card p-8 text-center">
+            <AlertCircle className="w-10 h-10 mx-auto mb-3 text-[hsl(var(--danger-h) var(--danger-s) 60%)]" />
+            <p className="text-sm text-[hsl(var(--muted-foreground))] mb-4">
+              {attemptsError instanceof Error ? attemptsError.message : "Error loading attempts"}
+            </p>
+            <Button onClick={() => refetchAttempts()} variant="outline">Try Again</Button>
+          </div>
         </div>
       );
     }
 
-    // No attempts state
     if (!quizAttempts?.length) {
       return (
-        <div className="container py-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Quiz History</CardTitle>
-              <CardDescription>
-                View your previous quiz attempts
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center py-10">
-              <ListChecks className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No quiz attempts yet</h3>
-              <p className="text-muted-foreground text-center max-w-md mb-6">
-                You haven't taken any quizzes yet. Start taking quizzes to track your progress!
-              </p>
-              <Button onClick={() => navigate("/student/quizzes")}>
-                Browse Quizzes
-              </Button>
-            </CardContent>
-          </Card>
+        <div className="max-w-4xl mx-auto px-6 py-8 flex items-center justify-center min-h-[50vh]">
+          <div className="clay-card p-12 text-center">
+            <ListChecks className="w-12 h-12 mx-auto mb-4 text-[hsl(var(--muted-foreground))]" />
+            <h3 className="font-bold text-[hsl(var(--foreground))] mb-2"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>No quiz attempts yet</h3>
+            <p className="text-sm text-[hsl(var(--muted-foreground))] mb-6">
+              Start taking quizzes to track your progress!
+            </p>
+            <Button onClick={() => navigate("/student/quizzes")} style={{ background: "hsl(var(--primary))" }}>
+              Browse Quizzes
+            </Button>
+          </div>
         </div>
       );
     }
 
-    // Display quiz attempts
     return (
-      <div className="container py-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Quiz History</CardTitle>
-            <CardDescription>
-              View your previous quiz attempts
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableCaption>A list of your recent quiz attempts</TableCaption>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Quiz Title</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Score</TableHead>
-                  <TableHead>Time Taken</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {quizAttempts.map((attempt) => (
-                  <TableRow key={attempt.id}>
-                    <TableCell className="font-medium">
-                      {attempt.quizTitle}
-                    </TableCell>
-                    <TableCell>
-                      {attempt.completedAt
-                        ? format(new Date(attempt.completedAt), "PPP")
-                        : "N/A"}
-                    </TableCell>
-                    <TableCell>
-                      <span className={`font-semibold ${
-                        (attempt.score / attempt.maxScore) >= 0.7 
-                          ? "text-green-600" 
-                          : (attempt.score / attempt.maxScore) >= 0.4 
-                            ? "text-amber-600" 
-                            : "text-red-600"
-                      }`}>
-                        {attempt.score}/{attempt.maxScore} 
-                        ({Math.round((attempt.score / attempt.maxScore) * 100)}%)
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <Clock className="inline mr-1 h-4 w-4" /> 
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+          <h1 className="text-2xl font-extrabold text-[hsl(var(--foreground))]"
+            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            Quiz History
+          </h1>
+          <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
+            {quizAttempts.length} attempt{quizAttempts.length !== 1 ? "s" : ""} completed
+          </p>
+        </motion.div>
+
+        <motion.div initial="initial" animate="animate" variants={stagger} className="space-y-3">
+          {quizAttempts.map((attempt) => {
+            const pct = attempt.maxScore > 0 ? Math.round((attempt.score / attempt.maxScore) * 100) : 0;
+            return (
+              <motion.div
+                key={attempt.id}
+                variants={fadeUp}
+                whileHover={{ x: 2, transition: { duration: 0.15 } }}
+                className="clay-card px-5 py-4 flex items-center gap-4"
+              >
+                <div
+                  className={cn("text-xs font-bold px-2.5 py-1 rounded-lg border flex-shrink-0", getScoreStyle(attempt.score, attempt.maxScore))}
+                >
+                  {pct}%
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-sm text-[hsl(var(--foreground))] truncate"
+                    style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                    {attempt.quizTitle}
+                  </div>
+                  <div className="text-xs text-[hsl(var(--muted-foreground))] flex items-center gap-3 mt-0.5">
+                    <span>{attempt.completedAt ? format(new Date(attempt.completedAt), "PPP") : "N/A"}</span>
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
                       {Math.floor(attempt.timeTaken / 60)}m {attempt.timeTaken % 60}s
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => navigate(`/student/quiz-results/${attempt.quizId}/${attempt.id}`)}
-                      >
-                        <Eye className="h-4 w-4 mr-1" /> Review
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                    </span>
+                  </div>
+                </div>
+                <div className="text-xs text-[hsl(var(--muted-foreground))] flex-shrink-0">
+                  {attempt.score}/{attempt.maxScore} pts
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-3 text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+                  onClick={() => navigate(`/student/quiz-results/${attempt.quizId}/${attempt.id}`)}
+                >
+                  <Eye className="w-3.5 h-3.5 mr-1" />
+                  Review
+                </Button>
+              </motion.div>
+            );
+          })}
+        </motion.div>
       </div>
     );
   }
 
-  // Teacher view for created quizzes
   if (user.role === "teacher") {
-    // Loading state
     if (quizzesLoading) {
       return (
-        <div className="container py-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Quiz Management</CardTitle>
-              <CardDescription>
-                View and manage your created quizzes
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+        <div className="max-w-4xl mx-auto px-6 py-8 space-y-3">
+          {[...Array(5)].map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-xl" />)}
         </div>
       );
     }
 
-    // Error state
-    if (quizzesError) {
-      return (
-        <div className="container py-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Error</CardTitle>
-              <CardDescription>
-                There was an error loading your created quizzes
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-destructive">
-                {quizzesError instanceof Error
-                  ? quizzesError.message
-                  : "Unknown error occurred"}
-              </p>
-              <Button 
-                onClick={() => refetchQuizzes()} 
-                className="mt-4"
-                variant="outline"
-              >
-                Try Again
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      );
-    }
+    const publishedQuizzes = createdQuizzes?.filter(q => q.published) || [];
+    const draftQuizzes = createdQuizzes?.filter(q => !q.published) || [];
 
-    // No quizzes state
-    if (!createdQuizzes?.length) {
-      return (
-        <div className="container py-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Quiz Management</CardTitle>
-              <CardDescription>
-                View and manage your created quizzes
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center py-10">
-              <ListChecks className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No quizzes created yet</h3>
-              <p className="text-muted-foreground text-center max-w-md mb-6">
-                You haven't created any quizzes yet. Start creating quizzes for your students!
-              </p>
-              <Button onClick={() => navigate("/teacher/quiz/create")}>
-                Create Quiz
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      );
-    }
-
-    // Split quizzes into published and drafts
-    const publishedQuizzes = createdQuizzes.filter(quiz => quiz.published);
-    const draftQuizzes = createdQuizzes.filter(quiz => !quiz.published);
-
-    // Display created quizzes with tabs for published and drafts
     return (
-      <div className="container py-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Quiz Management</CardTitle>
-            <CardDescription>
-              View and manage your created quizzes
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Tabs defaultValue="published">
-              <TabsList className="mb-4">
-                <TabsTrigger value="published">
-                  Published ({publishedQuizzes.length})
-                </TabsTrigger>
-                <TabsTrigger value="drafts">
-                  Drafts ({draftQuizzes.length})
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="published">
-                <Table>
-                  <TableCaption>Your published quizzes</TableCaption>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead>Last Updated</TableHead>
-                      <TableHead>Questions</TableHead>
-                      <TableHead>Attempts</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {publishedQuizzes.map((quiz) => (
-                      <TableRow key={quiz.id}>
-                        <TableCell className="font-medium">
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-extrabold text-[hsl(var(--foreground))]"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              Quiz Management
+            </h1>
+            <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
+              {createdQuizzes?.length || 0} quizzes created
+            </p>
+          </div>
+          <Button
+            onClick={() => navigate("/teacher/quiz/create")}
+            style={{ background: "hsl(var(--primary))" }}
+            className="text-sm font-semibold"
+          >
+            Create New Quiz
+          </Button>
+        </motion.div>
+
+        <Tabs defaultValue="published">
+          <TabsList
+            className="mb-5 rounded-xl p-1"
+            style={{ background: "hsl(var(--muted))" }}
+          >
+            <TabsTrigger value="published" className="rounded-lg text-sm font-medium">
+              Published ({publishedQuizzes.length})
+            </TabsTrigger>
+            <TabsTrigger value="drafts" className="rounded-lg text-sm font-medium">
+              Drafts ({draftQuizzes.length})
+            </TabsTrigger>
+          </TabsList>
+
+          {[
+            { value: "published", data: publishedQuizzes },
+            { value: "drafts", data: draftQuizzes },
+          ].map(({ value, data }) => (
+            <TabsContent key={value} value={value}>
+              {data.length === 0 ? (
+                <div className="clay-card p-10 text-center">
+                  <BookOpen className="w-10 h-10 mx-auto mb-3 text-[hsl(var(--muted-foreground))]" />
+                  <p className="text-sm text-[hsl(var(--muted-foreground))]">No {value} quizzes.</p>
+                </div>
+              ) : (
+                <motion.div initial="initial" animate="animate" variants={stagger} className="space-y-3">
+                  {data.map((quiz) => (
+                    <motion.div
+                      key={quiz.id}
+                      variants={fadeUp}
+                      className="clay-card px-5 py-4 flex items-center gap-4"
+                    >
+                      <div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                        style={{ background: "hsl(var(--primary) / 0.12)" }}
+                      >
+                        <BookOpen className="w-5 h-5" style={{ color: "hsl(var(--primary))" }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm text-[hsl(var(--foreground))] truncate"
+                          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
                           {quiz.title}
-                          <Badge className="ml-2" variant="outline">Live</Badge>
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(quiz.createdAt), "PP")}
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(quiz.updatedAt), "PP")}
-                        </TableCell>
-                        <TableCell>{quiz.questionCount}</TableCell>
-                        <TableCell>
-                          <BadgeCheck className="inline mr-1 h-4 w-4" /> 
-                          {quiz.attempts}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => navigate(`/teacher/quiz/edit/${quiz.id}`)}
-                            className="mr-2"
-                          >
-                            <FileEdit className="h-4 w-4 mr-1" /> Edit
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => navigate(`/teacher/results/${quiz.id}`)}
-                          >
-                            <Eye className="h-4 w-4 mr-1" /> Results
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TabsContent>
-              
-              <TabsContent value="drafts">
-                <Table>
-                  <TableCaption>Your draft quizzes</TableCaption>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead>Last Updated</TableHead>
-                      <TableHead>Questions</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {draftQuizzes.map((quiz) => (
-                      <TableRow key={quiz.id}>
-                        <TableCell className="font-medium">
-                          {quiz.title}
-                          <Badge className="ml-2" variant="secondary">Draft</Badge>
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(quiz.createdAt), "PP")}
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(quiz.updatedAt), "PP")}
-                        </TableCell>
-                        <TableCell>{quiz.questionCount}</TableCell>
-                        <TableCell className="text-right">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => navigate(`/teacher/quiz/edit/${quiz.id}`)}
-                          >
-                            <FileEdit className="h-4 w-4 mr-1" /> Edit
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-          <CardFooter>
-            <Button onClick={() => navigate("/teacher/quiz/create")}>
-              Create New Quiz
-            </Button>
-          </CardFooter>
-        </Card>
+                        </div>
+                        <div className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5 flex gap-3">
+                          <span>Created {format(new Date(quiz.createdAt), "PP")}</span>
+                          <span className="flex items-center gap-1">
+                            <BarChart3 className="w-3 h-3" />
+                            {quiz.attempts} attempts
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-3 text-xs"
+                          onClick={() => navigate(`/teacher/quiz/edit/${quiz.id}`)}
+                        >
+                          <FileEdit className="w-3.5 h-3.5 mr-1" />
+                          Edit
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-3 text-xs"
+                          onClick={() => navigate(`/quiz-analytics/${quiz.id}`)}
+                        >
+                          <Eye className="w-3.5 h-3.5 mr-1" />
+                          Analytics
+                        </Button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+            </TabsContent>
+          ))}
+        </Tabs>
       </div>
     );
   }
 
-  // Fallback for unexpected role
-  return (
-    <div className="container py-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>History</CardTitle>
-          <CardDescription>
-            View your activity history
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p>Your role ({user.role}) doesn't have specific history views.</p>
-        </CardContent>
-      </Card>
-    </div>
-  );
-} 
+  return null;
+}

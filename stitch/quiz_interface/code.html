@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>QuizKTC - Knight Mode</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container-low": "#1c1b1d",
+                        "primary": "#cabeff",
+                        "inverse-primary": "#603ce2",
+                        "surface-variant": "#353437",
+                        "tertiary": "#4ae176",
+                        "surface-container-lowest": "#0e0e10",
+                        "secondary": "#ffb955",
+                        "primary-fixed-dim": "#cabeff",
+                        "background": "#131315",
+                        "tertiary-fixed-dim": "#4ae176",
+                        "secondary-fixed": "#ffddb4",
+                        "on-secondary-fixed": "#291800",
+                        "on-surface-variant": "#c7c4d8",
+                        "surface-tint": "#cabeff",
+                        "on-secondary-container": "#4f3100",
+                        "on-tertiary-fixed-variant": "#005321",
+                        "secondary-fixed-dim": "#ffb955",
+                        "surface": "#131315",
+                        "outline-variant": "#464555",
+                        "primary-fixed": "#e6deff",
+                        "inverse-surface": "#e5e1e4",
+                        "inverse-on-surface": "#313032",
+                        "on-error-container": "#ffdad6",
+                        "surface-bright": "#39393b",
+                        "error-container": "#93000a",
+                        "error": "#ffb4ab",
+                        "surface-dim": "#131315",
+                        "on-primary-fixed-variant": "#4816cb",
+                        "on-primary-fixed": "#1c0062",
+                        "on-primary": "#31009a",
+                        "surface-container-high": "#2a2a2c",
+                        "on-tertiary-container": "#f2ffef",
+                        "on-primary-container": "#fffaff",
+                        "tertiary-container": "#00863b",
+                        "on-surface": "#e5e1e4",
+                        "outline": "#918fa1",
+                        "secondary-container": "#dc9100",
+                        "primary-container": "#7656f9",
+                        "on-error": "#690005",
+                        "on-tertiary-fixed": "#002109",
+                        "surface-container-highest": "#353437",
+                        "on-secondary": "#452b00",
+                        "on-tertiary": "#003915",
+                        "on-secondary-fixed-variant": "#633f00",
+                        "on-background": "#e5e1e4",
+                        "surface-container": "#201f22",
+                        "tertiary-fixed": "#6bff8f"
+                    },
+                    fontFamily: {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Inter"],
+                        "label": ["Inter"],
+                        "mono": ["JetBrains Mono"]
+                    },
+                    borderRadius: { "DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px" },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .clay-card {
+            box-shadow: 0 20px 40px -12px hsla(252, 87%, 62%, 0.15), inset 0 1px 0 rgba(255,255,255,0.06);
+        }
+        .clay-card-secondary {
+            box-shadow: 0 20px 40px -12px hsla(38, 95%, 58%, 0.15), inset 0 1px 0 rgba(255,255,255,0.06);
+        }
+        .recessed-well {
+            box-shadow: inset 0 2px 4px 0 rgba(0, 0, 0, 0.5);
+        }
+        .glass-tube {
+            background: rgba(255, 255, 255, 0.03);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body min-h-screen selection:bg-primary-container selection:text-on-primary-container overflow-x-hidden">
+<!-- Top Sticky Bar (Quiz Interface Top bar) -->
+<header class="fixed top-0 left-0 w-full z-50 bg-background/80 backdrop-blur-xl h-[72px] flex items-center px-6 md:px-12 justify-between">
+<div class="flex items-center gap-4">
+<span class="font-headline font-extrabold text-xl tracking-tighter text-primary">QuizKTC</span>
+<div class="h-6 w-[1px] bg-outline-variant/30"></div>
+<h1 class="font-headline font-semibold text-sm md:text-base text-on-surface opacity-80">Advanced Quantum Mechanics</h1>
+</div>
+<div class="flex items-center gap-6 md:gap-12">
+<div class="flex flex-col items-end">
+<span class="text-[10px] uppercase tracking-widest text-outline font-bold">Progress</span>
+<span class="font-mono font-bold text-primary tracking-tight">Q 03 / 15</span>
+</div>
+<div class="flex flex-col items-center">
+<span class="text-[10px] uppercase tracking-widest text-outline font-bold">Time Left</span>
+<div class="flex items-center gap-2 px-3 py-1 rounded-full bg-surface-container-high border border-outline-variant/20">
+<span class="material-symbols-outlined text-secondary text-sm">timer</span>
+<span class="font-mono font-bold text-secondary text-lg leading-none">24:45</span>
+</div>
+</div>
+<div class="hidden md:flex items-center gap-2 bg-error-container/20 text-error px-3 py-1.5 rounded-full border border-error/20">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">warning</span>
+<span class="text-xs font-bold uppercase tracking-wide">High Proctoring</span>
+</div>
+</div>
+</header>
+<!-- Main Content Area -->
+<main class="pt-[100px] pb-[120px] px-6 flex flex-col items-center min-h-screen relative">
+<!-- Camera Check Screen (Overlay/Fixed Corner) -->
+<aside class="fixed bottom-32 right-6 md:right-12 z-40 w-48 group">
+<div class="bg-surface-container-high p-2 rounded-lg clay-card-secondary overflow-hidden relative border border-outline-variant/10">
+<div class="aspect-video rounded-md bg-surface-container-lowest overflow-hidden relative">
+<img alt="Camera preview" class="w-full h-full object-cover grayscale opacity-60" data-alt="Professional woman looking at laptop screen in a dark room, soft blue monitor glow on face, cinematic lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAflSoZwIO-vH-rfbcrRto_prUDUKhuHEmikq729vY-3uSpAR6-RCfD84_nyd5JaEswrSiczGv-F6WSzYVpGQRy9AH88BHyzFNNDzP_PlNkx_oEaMBlrz2T6OlJp2gxZXk9JtbogqSpK18yALtDLEr9hL7XWfBuq-djxJXLi10LbxD8EkOYAAssOGcyybxd_-IztvTNjJF0Wyt4McoRFcmGJGyXT8qk0sM2RLAUl9FzVUYLG-q3Us3KKagxXrYpWz9WteCpQ2m-ytFB"/>
+<div class="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent"></div>
+<div class="absolute top-2 right-2 flex gap-1">
+<div class="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_8px_#4ae176]"></div>
+</div>
+</div>
+<div class="mt-2 flex items-center justify-between px-1">
+<span class="text-[10px] font-bold text-tertiary uppercase tracking-tighter">Camera: ✓ Ready</span>
+<span class="material-symbols-outlined text-xs text-outline">settings</span>
+</div>
+</div>
+</aside>
+<!-- Question Card -->
+<div class="w-full max-w-[640px] space-y-8">
+<div class="bg-surface-container p-8 md:p-12 rounded-lg clay-card border border-outline-variant/10">
+<div class="mb-8">
+<span class="text-primary font-mono text-sm font-bold uppercase tracking-widest mb-2 block">Question 03</span>
+<h2 class="font-headline font-extrabold text-xl md:text-2xl text-on-primary-container leading-tight tracking-tight">
+                        What is the primary implication of the Heisenberg Uncertainty Principle regarding a particle's position and momentum?
+                    </h2>
+</div>
+<!-- Answer Tiles -->
+<div class="grid grid-cols-1 gap-4">
+<!-- Default State -->
+<button class="flex items-center gap-4 p-5 rounded-md bg-surface-container-lowest border border-outline-variant/10 hover:bg-surface-container-low transition-all duration-200 group text-left active:scale-[0.98]">
+<div class="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center font-headline font-bold text-outline group-hover:text-primary transition-colors">A</div>
+<span class="text-on-surface font-medium">Both can be measured simultaneously with infinite precision.</span>
+</button>
+<!-- Selected State (Violet Fill) -->
+<button class="flex items-center gap-4 p-5 rounded-md bg-primary-container border border-primary text-on-primary-container transition-all duration-200 text-left scale-[1.02] shadow-[0_10px_20px_-5px_hsla(252,87,62,0.3)]">
+<div class="w-10 h-10 rounded-full bg-on-primary-container/20 flex items-center justify-center font-headline font-bold text-white">B</div>
+<span class="font-bold">Increasing precision in position decreases precision in momentum.</span>
+<span class="material-symbols-outlined ml-auto" style="font-variation-settings: 'FILL' 1;">radio_button_checked</span>
+</button>
+<!-- Correct State (Simulated for visual demo) -->
+<button class="flex items-center gap-4 p-5 rounded-md bg-tertiary-container/30 border border-tertiary/40 text-tertiary transition-all duration-200 text-left">
+<div class="w-10 h-10 rounded-full bg-tertiary/20 flex items-center justify-center font-headline font-bold text-tertiary">C</div>
+<span class="font-medium text-on-surface">The principle only applies to macro-scale objects in vacuum.</span>
+<div class="ml-auto w-6 h-6 rounded-full bg-tertiary flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-sm" style="font-variation-settings: 'wght' 700;">check</span>
+</div>
+</button>
+<!-- Wrong State (Simulated for visual demo) -->
+<button class="flex items-center gap-4 p-5 rounded-md bg-error-container/20 border border-error/40 text-error transition-all duration-200 text-left">
+<div class="w-10 h-10 rounded-full bg-error/20 flex items-center justify-center font-headline font-bold text-error">D</div>
+<span class="font-medium text-on-surface">Momentum becomes constant when position is observed.</span>
+<div class="ml-auto w-6 h-6 rounded-full bg-error flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-sm" style="font-variation-settings: 'wght' 700;">close</span>
+</div>
+</button>
+</div>
+</div>
+<!-- Hint/Context Box -->
+<div class="bg-surface-container-low p-6 rounded-md recessed-well border border-outline-variant/5 flex gap-4">
+<span class="material-symbols-outlined text-secondary">lightbulb</span>
+<p class="text-sm text-outline leading-relaxed">
+                    Remember the relationship: <span class="font-mono text-secondary">Δx Δp ≥ ħ / 2</span>. Consider how the observation affects the wave function.
+                </p>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 bg-background/90 backdrop-blur-2xl border-t border-white/5 py-6 px-6 md:px-12 flex items-center justify-between">
+<button class="flex items-center gap-2 px-6 py-3 rounded-full text-outline hover:text-on-surface hover:bg-white/5 transition-all font-bold uppercase tracking-wider text-xs active:scale-95">
+<span class="material-symbols-outlined">arrow_back</span>
+            Previous
+        </button>
+<!-- Question Dot Navigator -->
+<div class="hidden md:flex items-center gap-2 px-6 py-3 bg-surface-container-lowest rounded-full glass-tube">
+<div class="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_8px_#4ae176]"></div>
+<div class="w-2 h-2 rounded-full bg-tertiary shadow-[0_0_8px_#4ae176]"></div>
+<div class="w-3 h-3 rounded-full bg-primary ring-4 ring-primary/20"></div>
+<div class="w-2 h-2 rounded-full bg-surface-container-highest"></div>
+<div class="w-2 h-2 rounded-full bg-surface-container-highest"></div>
+<div class="w-2 h-2 rounded-full bg-surface-container-highest"></div>
+<div class="w-2 h-2 rounded-full bg-surface-container-highest"></div>
+<div class="w-2 h-2 rounded-full bg-surface-container-highest"></div>
+<div class="w-2 h-2 rounded-full bg-surface-container-highest"></div>
+<div class="w-2 h-2 rounded-full bg-surface-container-highest"></div>
+<span class="mx-2 text-[10px] font-mono font-bold text-outline">+5 more</span>
+</div>
+<div class="flex items-center gap-4">
+<button class="flex items-center gap-2 px-8 py-3 rounded-full bg-primary text-on-primary font-bold uppercase tracking-wider text-xs shadow-lg shadow-primary/20 hover:brightness-110 transition-all active:scale-95">
+                Next
+                <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+<div class="w-[1px] h-6 bg-outline-variant/30 hidden md:block"></div>
+<button class="hidden md:flex items-center gap-2 px-6 py-3 rounded-full bg-secondary-container text-on-secondary-container font-extrabold uppercase tracking-widest text-xs hover:brightness-110 transition-all active:scale-95">
+                Submit Quiz
+            </button>
+</div>
+</nav>
+</body></html>

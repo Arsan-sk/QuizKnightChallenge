@@ -2,258 +2,220 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { useProfile } from "@/hooks/use-profile";
 import { useAuth } from "@/hooks/use-auth";
-import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EditProfileModal } from "@/components/profile/EditProfileModal";
 import { StudentProfile } from "@/components/profile/StudentProfile";
 import { TeacherProfile } from "@/components/profile/TeacherProfile";
 import {
-    Edit,
-    Mail,
-    Calendar,
-    MapPin,
-    GraduationCap,
-    Briefcase,
+  Edit, Mail, Calendar, MapPin, GraduationCap,
+  Briefcase, RefreshCw, Shield, AlertCircle
 } from "lucide-react";
-import { Link } from "wouter";
+
+const fadeUp = {
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.4 },
+};
 
 export default function ProfilePage() {
-    const { profile, isLoading, error } = useProfile();
-    const { user } = useAuth();
-    const [editModalOpen, setEditModalOpen] = useState(false);
+  const { profile, isLoading, error } = useProfile();
+  const { user } = useAuth();
+  const [editModalOpen, setEditModalOpen] = useState(false);
 
-    // Debug logging
-    console.log('ProfilePage - profile:', profile);
-    console.log('ProfilePage - user:', user);
-    console.log('ProfilePage - isLoading:', isLoading);
-    console.log('ProfilePage - error:', error);
+  const isTeacher = profile?.role === "teacher" || user?.role === "teacher";
 
-    // Loading state
-    if (isLoading) {
-        return (
-            <div className="container py-8 space-y-8">
-                <div className="flex items-center gap-6">
-                    <Skeleton className="h-32 w-32 rounded-full" />
-                    <div className="space-y-3 flex-1">
-                        <Skeleton className="h-8 w-64" />
-                        <Skeleton className="h-4 w-48" />
-                        <Skeleton className="h-6 w-32" />
-                    </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Skeleton className="h-40" />
-                    <Skeleton className="h-40" />
-                    <Skeleton className="h-40" />
-                </div>
-            </div>
-        );
-    }
+  const heroBg = isTeacher
+    ? "linear-gradient(135deg, hsl(145 63% 30%) 0%, hsl(180 70% 30%) 100%)"
+    : "linear-gradient(135deg, hsl(var(--primary) / 0.9) 0%, hsl(270 80% 50%) 100%)";
 
-    // Error state
-    if (error) {
-        return (
-            <div className="container py-8">
-                <Card>
-                    <CardContent className="py-8">
-                        <div className="text-center space-y-4">
-                            <h2 className="text-2xl font-bold text-destructive">Error</h2>
-                            <p className="text-muted-foreground">
-                                Failed to load profile data
-                            </p>
-                            <Button onClick={() => window.location.reload()}>
-                                Try Again
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        );
-    }
+  const getInitials = () => {
+    const name = profile?.displayName || profile?.username || user?.username || "U";
+    return name.substring(0, 2).toUpperCase();
+  };
 
-    // No profile - only show this if not loading and definitely no profile
-    if (!isLoading && !profile && !user) {
-        return (
-            <div className="container py-8">
-                <Card>
-                    <CardContent className="py-8">
-                        <div className="text-center space-y-4">
-                            <h2 className="text-2xl font-bold">Profile Not Found</h2>
-                            <p className="text-muted-foreground">
-                                Please make sure you are logged in.
-                            </p>
-                            <Link href="/auth">
-                                <Button>Go to Login</Button>
-                            </Link>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        );
-    }
-
-    // If we have user but profile is still loading, show loading state
-    if (user && !profile && isLoading) {
-        return (
-            <div className="container py-8 space-y-8">
-                <div className="flex items-center gap-6">
-                    <Skeleton className="h-32 w-32 rounded-full" />
-                    <div className="space-y-3 flex-1">
-                        <Skeleton className="h-8 w-64" />
-                        <Skeleton className="h-4 w-48" />
-                        <Skeleton className="h-6 w-32" />
-                    </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <Skeleton className="h-40" />
-                    <Skeleton className="h-40" />
-                    <Skeleton className="h-40" />
-                </div>
-            </div>
-        );
-    }
-
-    // Use profile data if available, otherwise fall back to user data
-    const displayProfile = profile || user;
-
-    const getInitials = () => {
-        const nameToUse = displayProfile?.name || displayProfile?.username || "??";
-        if (displayProfile?.name) {
-            return displayProfile.name
-                .split(" ")
-                .map((n) => n[0])
-                .join("")
-                .toUpperCase()
-                .substring(0, 2);
-        }
-        return nameToUse.substring(0, 2).toUpperCase();
-    };
-
-    const isStudent = user?.role === "student" || displayProfile?.role === "student";
-
+  // Loading state
+  if (isLoading) {
     return (
-        <div className="container py-8 space-y-8">
-            {/* Hero Section */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-            >
-                <Card className="overflow-hidden">
-                    {/* Background gradient */}
-                    <div
-                        className={`h-32 bg-gradient-to-r ${isStudent
-                                ? "from-blue-500 via-purple-500 to-pink-500"
-                                : "from-green-500 via-teal-500 to-cyan-500"
-                            }`}
-                    />
-
-                    <CardContent className="relative -mt-16 pb-6">
-                        <div className="flex flex-col md:flex-row items-start md:items-end gap-6">
-                            {/* Avatar */}
-                            <motion.div
-                                whileHover={{ scale: 1.05 }}
-                                className="relative"
-                            >
-                                <Avatar className="h-32 w-32 border-4 border-background shadow-xl">
-                                    <AvatarImage
-                                        src={displayProfile?.profilePicture || displayProfile?.profileImage}
-                                    />
-                                    <AvatarFallback className="text-3xl bg-gradient-to-br from-blue-500 to-purple-500 text-white">
-                                        {getInitials()}
-                                    </AvatarFallback>
-                                </Avatar>
-
-                                {/* Online indicator */}
-                                <div className="absolute bottom-2 right-2 h-6 w-6 bg-green-500 border-4 border-background rounded-full" />
-                            </motion.div>
-
-                            {/* Profile Info */}
-                            <div className="flex-1 space-y-3">
-                                <div>
-                                    <h1 className="text-3xl font-bold">
-                                        {displayProfile?.name || displayProfile?.username || "User"}
-                                    </h1>
-                                    <p className="text-muted-foreground">@{displayProfile?.username || "unknown"}</p>
-                                </div>
-
-                                <div className="flex flex-wrap gap-2">
-                                    <Badge
-                                        variant="secondary"
-                                        className={`capitalize ${isStudent
-                                                ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300"
-                                                : "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300"
-                                            }`}
-                                    >
-                                        {isStudent ? (
-                                            <GraduationCap className="h-3 w-3 mr-1" />
-                                        ) : (
-                                            <Briefcase className="h-3 w-3 mr-1" />
-                                        )}
-                                        {displayProfile?.role || "user"}
-                                    </Badge>
-
-                                    {displayProfile?.branch && (
-                                        <Badge variant="outline">
-                                            <MapPin className="h-3 w-3 mr-1" />
-                                            {displayProfile.branch}
-                                        </Badge>
-                                    )}
-
-                                    {displayProfile?.year && (
-                                        <Badge variant="outline">{displayProfile.year} Year</Badge>
-                                    )}
-                                </div>
-
-                                {displayProfile?.bio && (
-                                    <p className="text-muted-foreground max-w-2xl">
-                                        {displayProfile.bio}
-                                    </p>
-                                )}
-
-                                <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                                    {displayProfile?.email && (
-                                        <div className="flex items-center gap-1">
-                                            <Mail className="h-4 w-4" />
-                                            {displayProfile.email}
-                                        </div>
-                                    )}
-                                    {displayProfile?.createdAt && (
-                                        <div className="flex items-center gap-1">
-                                            <Calendar className="h-4 w-4" />
-                                            Joined {new Date(displayProfile.createdAt).toLocaleDateString()}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* Edit Button */}
-                            <Button
-                                onClick={() => setEditModalOpen(true)}
-                                className="gap-2"
-                            >
-                                <Edit className="h-4 w-4" />
-                                Edit Profile
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            </motion.div>
-
-            {/* Role-specific content */}
-            {isStudent ? (
-                <StudentProfile profile={displayProfile} />
-            ) : (
-                <TeacherProfile profile={displayProfile} />
-            )}
-
-            {/* Edit Profile Modal */}
-            <EditProfileModal
-                open={editModalOpen}
-                onOpenChange={setEditModalOpen}
-            />
+      <div className="max-w-4xl mx-auto px-6 py-8 space-y-6">
+        <div className="rounded-2xl overflow-hidden">
+          <Skeleton className="h-36 w-full" />
+          <div className="relative px-6 pb-6">
+            <Skeleton className="absolute -top-14 left-6 h-28 w-28 rounded-full border-4 border-[hsl(var(--background))]" />
+            <div className="pt-20 space-y-2">
+              <Skeleton className="h-7 w-48" />
+              <Skeleton className="h-4 w-32" />
+            </div>
+          </div>
         </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-24 rounded-xl" />
+          ))}
+        </div>
+      </div>
     );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto px-6 py-8 flex items-center justify-center min-h-[50vh]">
+        <div
+          className="clay-card p-10 text-center max-w-sm"
+        >
+          <AlertCircle className="w-12 h-12 mx-auto mb-4 text-[hsl(var(--danger-h) var(--danger-s) 60%)]" />
+          <h2
+            className="font-bold text-[hsl(var(--foreground))] mb-2"
+            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+          >
+            Failed to load profile
+          </h2>
+          <p className="text-sm text-[hsl(var(--muted-foreground))] mb-6">
+            Something went wrong while loading your profile data.
+          </p>
+          <Button
+            onClick={() => window.location.reload()}
+            className="gap-2"
+            style={{ background: "hsl(var(--primary))" }}
+          >
+            <RefreshCw className="w-4 h-4" />
+            Try Again
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[hsl(var(--background))]">
+      <motion.div {...fadeUp} className="max-w-4xl mx-auto px-6 py-8 space-y-6">
+
+        {/* Hero Card */}
+        <div className="clay-card overflow-hidden">
+          {/* Banner */}
+          <div
+            className="h-36 relative"
+            style={{ background: heroBg }}
+          >
+            <div
+              className="absolute inset-0 opacity-20"
+              style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.4) 0%, transparent 60%)" }}
+            />
+            {/* Edit button */}
+            <Button
+              onClick={() => setEditModalOpen(true)}
+              size="sm"
+              variant="outline"
+              className="absolute top-4 right-4 gap-1.5 font-medium text-xs bg-black/30 border-white/30 text-white hover:bg-black/50 hover:text-white backdrop-blur-sm"
+            >
+              <Edit className="w-3.5 h-3.5" />
+              Edit Profile
+            </Button>
+          </div>
+
+          {/* Avatar + basic info */}
+          <div className="relative px-6 pb-6">
+            {/* Avatar — overlaps banner */}
+            <div className="absolute -top-14 left-6">
+              <Avatar
+                className="w-28 h-28 border-4 border-[hsl(var(--background))] shadow-xl"
+              >
+                <AvatarImage src={profile?.profilePicture || profile?.profileImage} />
+                <AvatarFallback
+                  className="text-3xl font-bold text-white"
+                  style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(270 90% 65%))" }}
+                >
+                  {getInitials()}
+                </AvatarFallback>
+              </Avatar>
+              {/* Online dot */}
+              <span
+                className="absolute bottom-1.5 right-1.5 w-4 h-4 rounded-full bg-[hsl(145,63%,48%)] border-2 border-[hsl(var(--background))]"
+              />
+            </div>
+
+            <div className="pt-18 mt-16">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h1
+                    className="text-2xl font-extrabold text-[hsl(var(--foreground))] mb-1"
+                    style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+                  >
+                    {profile?.displayName || profile?.username || user?.username}
+                  </h1>
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-[hsl(var(--muted-foreground))]">
+                    {profile?.username && (
+                      <span className="font-mono text-xs">@{profile.username}</span>
+                    )}
+                    <span className={isTeacher ? "badge-success" : "badge-primary"}>
+                      {isTeacher ? "🎓 Teacher" : "🏅 Student"}
+                    </span>
+                    {isTeacher && (
+                      <span
+                        className="text-[10px] font-bold tracking-widest uppercase px-2 py-0.5 rounded-full"
+                        style={{
+                          background: "hsl(38 95% 58% / 0.15)",
+                          color: "hsl(38 95% 65%)",
+                          border: "1px solid hsl(38 95% 58% / 0.3)",
+                        }}
+                      >
+                        MASTER EDUCATOR
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Mobile edit button */}
+                <Button
+                  onClick={() => setEditModalOpen(true)}
+                  size="sm"
+                  variant="outline"
+                  className="md:hidden gap-1.5 text-xs border-[hsl(var(--border))]"
+                >
+                  <Edit className="w-3.5 h-3.5" />
+                  Edit
+                </Button>
+              </div>
+
+              {/* Bio / meta info */}
+              <div className="mt-4 space-y-2">
+                {profile?.bio && (
+                  <p className="text-sm text-[hsl(var(--muted-foreground))]">{profile.bio}</p>
+                )}
+                <div className="flex flex-wrap gap-4 text-xs text-[hsl(var(--muted-foreground))]">
+                  {profile?.email && (
+                    <div className="flex items-center gap-1.5">
+                      <Mail className="w-3.5 h-3.5" />
+                      {profile.email}
+                    </div>
+                  )}
+                  {profile?.branch && (
+                    <div className="flex items-center gap-1.5">
+                      {isTeacher ? <Briefcase className="w-3.5 h-3.5" /> : <GraduationCap className="w-3.5 h-3.5" />}
+                      {profile.branch}
+                      {profile.year && `, ${profile.year}`}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Role-specific profile content */}
+        {isTeacher ? (
+          <TeacherProfile profile={profile} />
+        ) : (
+          <StudentProfile profile={profile} />
+        )}
+      </motion.div>
+
+      <EditProfileModal
+        open={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+      />
+    </div>
+  );
 }

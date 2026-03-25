@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>QuizKTC - Student Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container-low": "#1c1b1d",
+                        "primary": "#cabeff",
+                        "inverse-primary": "#603ce2",
+                        "surface-variant": "#353437",
+                        "tertiary": "#4ae176",
+                        "surface-container-lowest": "#0e0e10",
+                        "secondary": "#ffb955",
+                        "primary-fixed-dim": "#cabeff",
+                        "background": "#131315",
+                        "tertiary-fixed-dim": "#4ae176",
+                        "secondary-fixed": "#ffddb4",
+                        "on-secondary-fixed": "#291800",
+                        "on-surface-variant": "#c7c4d8",
+                        "surface-tint": "#cabeff",
+                        "on-secondary-container": "#4f3100",
+                        "on-tertiary-fixed-variant": "#005321",
+                        "secondary-fixed-dim": "#ffb955",
+                        "surface": "#131315",
+                        "outline-variant": "#464555",
+                        "primary-fixed": "#e6deff",
+                        "inverse-surface": "#e5e1e4",
+                        "inverse-on-surface": "#313032",
+                        "on-error-container": "#ffdad6",
+                        "surface-bright": "#39393b",
+                        "error-container": "#93000a",
+                        "error": "#ffb4ab",
+                        "surface-dim": "#131315",
+                        "on-primary-fixed-variant": "#4816cb",
+                        "on-primary-fixed": "#1c0062",
+                        "on-primary": "#31009a",
+                        "surface-container-high": "#2a2a2c",
+                        "on-tertiary-container": "#f2ffef",
+                        "on-primary-container": "#fffaff",
+                        "tertiary-container": "#00863b",
+                        "on-surface": "#e5e1e4",
+                        "outline": "#918fa1",
+                        "secondary-container": "#dc9100",
+                        "primary-container": "#7656f9",
+                        "on-error": "#690005",
+                        "on-tertiary-fixed": "#002109",
+                        "surface-container-highest": "#353437",
+                        "on-secondary": "#452b00",
+                        "on-tertiary": "#003915",
+                        "on-secondary-fixed-variant": "#633f00",
+                        "on-background": "#e5e1e4",
+                        "surface-container": "#201f22",
+                        "tertiary-fixed": "#6bff8f"
+                    },
+                    fontFamily: {
+                        "headline": ["Plus Jakarta Sans"],
+                        "body": ["Inter"],
+                        "label": ["Inter"],
+                        "mono": ["JetBrains Mono"]
+                    },
+                    borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .clay-card {
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+        }
+        .clay-progress {
+            filter: drop-shadow(0 0 12px hsla(252, 87%, 62%, 0.3));
+        }
+        .mesh-gradient {
+            background-color: #1c0062;
+            background-image: 
+                radial-gradient(at 0% 0%, hsla(252, 87%, 62%, 0.3) 0, transparent 50%), 
+                radial-gradient(at 50% 0%, hsla(270, 80%, 40%, 0.3) 0, transparent 50%),
+                radial-gradient(at 100% 0%, hsla(252, 87%, 62%, 0.3) 0, transparent 50%);
+        }
+        .shimmer {
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite linear;
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary/30">
+<!-- SideNavBar Anchor -->
+<aside class="fixed left-0 top-0 h-full w-[72px] hover:w-[240px] transition-all duration-300 z-[60] overflow-hidden bg-[#131315] flex flex-col py-8 gap-4 shadow-[20px_0_40px_-12px_rgba(0,0,0,0.5)] group">
+<div class="px-6 mb-8 flex items-center gap-4 overflow-hidden whitespace-nowrap">
+<div class="w-8 h-8 rounded-full bg-primary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-white text-xl" style="font-variation-settings: 'FILL' 1;">shield</span>
+</div>
+<span class="text-lg font-black text-[#635BFF] font-headline">QuizKTC</span>
+</div>
+<nav class="flex-1 flex flex-col gap-2">
+<!-- Active: Dashboard -->
+<a class="bg-[#635BFF] text-white rounded-full mx-2 shadow-[0_10px_20px_-5px_hsla(252,87,62,0.4)] inset-shadow-sm flex items-center h-12 px-4 transition-all overflow-hidden group-hover:w-[224px]" href="#">
+<span class="material-symbols-outlined shrink-0" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="ml-4 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap font-medium">Dashboard</span>
+</a>
+<a class="text-slate-500 hover:text-slate-200 flex items-center h-12 px-4 mx-2 hover:bg-[#201f22] rounded-full transition-all overflow-hidden group-hover:w-[224px]" href="#">
+<span class="material-symbols-outlined shrink-0">quiz</span>
+<span class="ml-4 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap font-medium">Quizzes</span>
+</a>
+<a class="text-slate-500 hover:text-slate-200 flex items-center h-12 px-4 mx-2 hover:bg-[#201f22] rounded-full transition-all overflow-hidden group-hover:w-[224px]" href="#">
+<span class="material-symbols-outlined shrink-0">leaderboard</span>
+<span class="ml-4 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap font-medium">Leaderboard</span>
+</a>
+<a class="text-slate-500 hover:text-slate-200 flex items-center h-12 px-4 mx-2 hover:bg-[#201f22] rounded-full transition-all overflow-hidden group-hover:w-[224px]" href="#">
+<span class="material-symbols-outlined shrink-0">history</span>
+<span class="ml-4 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap font-medium">History</span>
+</a>
+<a class="text-slate-500 hover:text-slate-200 flex items-center h-12 px-4 mx-2 hover:bg-[#201f22] rounded-full transition-all overflow-hidden group-hover:w-[224px]" href="#">
+<span class="material-symbols-outlined shrink-0">person</span>
+<span class="ml-4 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap font-medium">Profile</span>
+</a>
+</nav>
+<div class="px-2 mt-auto">
+<button class="w-full bg-primary-container text-on-primary-container py-3 rounded-full font-bold flex items-center justify-center gap-2 shadow-lg hover:scale-105 active:scale-95 transition-all group-hover:px-6">
+<span class="material-symbols-outlined">bolt</span>
+<span class="hidden group-hover:inline">Start Quiz</span>
+</button>
+</div>
+</aside>
+<!-- TopAppBar Anchor -->
+<header class="fixed top-0 w-full z-50 h-[56px] bg-[#0e0e10]/80 backdrop-blur-xl flex justify-between items-center px-6 shadow-[0_20px_40px_-12px_hsla(252,87,62,0.15)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] pl-[88px]">
+<div class="flex items-center gap-2">
+<span class="text-xl font-black text-[#635BFF] font-headline tracking-tighter">QuizKTC</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 bg-surface-container-lowest px-4 py-1.5 rounded-full border border-outline-variant/20">
+<span class="material-symbols-outlined text-secondary text-sm" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+<span class="font-mono text-sm font-bold text-secondary">2,450</span>
+</div>
+<img alt="User Avatar" class="w-8 h-8 rounded-full ring-2 ring-primary/20" data-alt="Portrait of a young professional man with a friendly expression, soft studio lighting, clean minimal dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuApMV1_JJoNe5OhsVv5Eq545MBwynhg5khcy6Vmi9aJpCawb7rjmNBdZ2N6gDRQH7WYuMiyrKb-A5c7eCgA3QOuQbMPADMsOMi8YOd5TG8DdWwYzKuwM_gOwkqIL0zBmUXNwYpq1JYvXL4dEVP90ay8m6avBXSFFXELV23PH4aTYrk8kAAxeMiBoa6_xnjQNIDvYljCgENYG1xHHD4shW9MmgPHzDH3pTTpq_Pmip2I_MbetJdP23-XD9K2AT4G1H4rc-PP2mnV6V8a"/>
+</div>
+</header>
+<!-- Main Content -->
+<main class="pl-[72px] pt-[56px] min-h-screen">
+<div class="max-w-[1400px] mx-auto p-8 lg:p-12">
+<!-- Hero Greeting Band -->
+<section class="mesh-gradient rounded-lg p-8 lg:p-12 mb-12 flex flex-col md:flex-row items-center justify-between gap-8 clay-card relative overflow-hidden">
+<div class="relative z-10">
+<h1 class="text-4xl lg:text-5xl font-headline font-extrabold text-white tracking-tighter mb-4">
+                        Good morning, Arsan! ☀️
+                    </h1>
+<p class="text-lg text-primary-fixed-dim/80 font-medium">Ready to challenge yourself today?</p>
+</div>
+<!-- Progress Circle (Clay-style) -->
+<div class="relative w-40 h-40 flex items-center justify-center z-10">
+<svg class="w-full h-full transform -rotate-90">
+<circle class="text-white/10" cx="80" cy="80" fill="transparent" r="70" stroke="currentColor" stroke-width="12"></circle>
+<circle class="text-primary clay-progress" cx="80" cy="80" fill="transparent" r="70" stroke="currentColor" stroke-dasharray="440" stroke-dashoffset="110" stroke-linecap="round" stroke-width="12"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="font-mono text-3xl font-bold text-white leading-none">75%</span>
+<span class="text-[10px] uppercase tracking-widest text-white/60 font-bold mt-1">Daily Goal</span>
+</div>
+</div>
+<!-- Abstract deco shapes -->
+<div class="absolute -right-20 -bottom-20 w-64 h-64 bg-primary/20 rounded-full blur-[80px]"></div>
+</section>
+<!-- Stats Row -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+<!-- Card 1: Your Points -->
+<div class="h-[160px] bg-surface-container rounded-lg p-6 flex flex-col justify-between clay-card hover:bg-surface-container-high transition-all cursor-pointer group">
+<div class="flex justify-between items-start">
+<span class="text-slate-400 font-bold text-sm tracking-wide">YOUR POINTS</span>
+<span class="material-symbols-outlined text-secondary group-hover:scale-110 transition-transform" style="font-variation-settings: 'FILL' 1;">monetization_on</span>
+</div>
+<div>
+<div class="text-4xl font-mono font-bold bg-gradient-to-r from-secondary to-secondary-fixed bg-clip-text text-transparent">2,450</div>
+<div class="text-xs text-tertiary mt-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">trending_up</span>
+                            +12% from last week
+                        </div>
+</div>
+</div>
+<!-- Card 2: Quizzes Completed -->
+<div class="h-[160px] bg-surface-container rounded-lg p-6 flex flex-col justify-between clay-card hover:bg-surface-container-high transition-all cursor-pointer group">
+<div class="flex justify-between items-start">
+<span class="text-slate-400 font-bold text-sm tracking-wide">QUIZZES COMPLETED</span>
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">auto_stories</span>
+</div>
+<div>
+<div class="text-4xl font-mono font-bold text-on-surface">42</div>
+<div class="text-xs text-slate-500 mt-1">Mastery: Advanced</div>
+</div>
+</div>
+<!-- Card 3: Average Score -->
+<div class="h-[160px] bg-surface-container rounded-lg p-6 flex flex-col justify-between clay-card hover:bg-surface-container-high transition-all cursor-pointer group">
+<div class="flex justify-between items-start">
+<span class="text-slate-400 font-bold text-sm tracking-wide">AVERAGE SCORE</span>
+<span class="material-symbols-outlined text-tertiary group-hover:scale-110 transition-transform">analytics</span>
+</div>
+<div>
+<div class="text-4xl font-mono font-bold text-tertiary">92.4%</div>
+<div class="text-xs text-slate-500 mt-1">Top 5% of Students</div>
+</div>
+</div>
+</section>
+<!-- Main Grid: Live Quizzes & Leaderboard -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+<!-- Live Quizzes Section -->
+<div class="lg:col-span-2 space-y-8">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-4">
+<h2 class="text-2xl font-headline font-extrabold tracking-tight">Live Quizzes</h2>
+<div class="flex items-center gap-2 bg-error/10 text-error px-3 py-1 rounded-full text-xs font-black ring-1 ring-error/20">
+<span class="w-2 h-2 bg-error rounded-full animate-pulse"></span>
+                                LIVE
+                            </div>
+</div>
+<button class="text-primary font-bold text-sm hover:underline">View All</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-1 rounded-[2.2rem] bg-gradient-to-br from-error/20 via-transparent to-primary/20">
+<!-- Live Quiz Card 1 -->
+<div class="bg-surface-container-high rounded-lg p-6 clay-card hover:translate-y-[-4px] transition-transform flex flex-col gap-4">
+<div class="aspect-video w-full rounded-md overflow-hidden relative">
+<img alt="Abstract mathematics and science visualization" class="w-full h-full object-cover grayscale-[0.2] hover:grayscale-0 transition-all" data-alt="Digital representation of complex mathematical formulas and physics concepts, glowing neon lines on dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDoAYIdWwRf3yvdc6ap7BNc53BLrERWVbw5Mb8vnHJ651FfjoxfstEXYJ88DHp2EO5udhOk-UD1dWT0JmabfKO_R6aH4MxgGrTv9ga8jHdO3MpK8cV8xLMMLbyI_gsbIAJrTVMpkpSNXZBjtr-S22aeNJWuoaWNgD1LmclvnDUeV_UqsHW4BOgEgO1C84qvdiLnUgOw31jsskLRpA3LK52MfpZLp44ZaWmKaqaq7G-de1na6TDeN1tvkqn4y3cYPkco0XUZqPxgWd4z"/>
+<div class="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-mono font-bold text-white">
+                                    QUANTUM PHYSICS
+                                </div>
+</div>
+<div>
+<h3 class="font-headline font-bold text-lg mb-1">Principles of Mechanics</h3>
+<p class="text-sm text-slate-400 mb-4 line-clamp-2">Test your knowledge on Newton's laws and particle dynamics.</p>
+<div class="flex items-center justify-between">
+<div class="flex -space-x-2">
+<img alt="Student" class="w-6 h-6 rounded-full border-2 border-surface-container-high" data-alt="Young woman smiling, close up, warm outdoor lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuA_8S_UhS_AP9Ebd8eyi4BmzTWpzZu9Vb9Hh5oDWMicxvYe_5RTnMdtKVikFfa_8zQfmJuWZ46q34dEA9tAm4g7WcBHrs9N5PMqhQqn5zqNGkgX3OJhB-WhZwIOQiXVrBBrxUwY_w3eIu6tdmJodfLMkWV6WI8fsPhVMa8fhxnzyN70ITm2cMjRaseI873zzEDkkdwtVFoH7ETb71IJOuXO0rg9q6GltD0Y5WJISvz8v90Rm6hfw6jcksEKLcL0KzBKn1RUCDrES4vl"/>
+<img alt="Student" class="w-6 h-6 rounded-full border-2 border-surface-container-high" data-alt="Man with beard and glasses looking at camera, studio lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBeTx53s8H47Ig2Fx34L8pEpyRGZjSV_l3eIGi7KeYkxEnXOlSukBeDPruScxiuAZrzbvWJHo_eMUVIDrmGLqe3uFCZRBxK43-8Tf5zt-WsRRgb_ugdY9wzp3f2lOuOJryQFj2g_iUC3c6R4jeAzGij49RvWuuC4t-Pul28JTFSHL39x1Ppla0BJP4eWJSELiLtAybEWdPAYR-4s9DwsBozYqX5loy7lVLPqkHe6e2seLXr0eiW4nY0G9C9QUm8-53X5OCUoeLaDgNp"/>
+<div class="w-6 h-6 rounded-full border-2 border-surface-container-high bg-surface-variant flex items-center justify-center text-[8px] font-bold text-slate-300">+12</div>
+</div>
+<button class="bg-primary text-on-primary px-5 py-2 rounded-full text-sm font-bold shadow-lg shadow-primary/20 active:scale-95 transition-all">Join Now</button>
+</div>
+</div>
+</div>
+<!-- Live Quiz Card 2 -->
+<div class="bg-surface-container-high rounded-lg p-6 clay-card hover:translate-y-[-4px] transition-transform flex flex-col gap-4">
+<div class="aspect-video w-full rounded-md overflow-hidden relative">
+<img alt="Cybersecurity and code visualization" class="w-full h-full object-cover grayscale-[0.2] hover:grayscale-0 transition-all" data-alt="Matrix-like cascading green code on a dark screen with glowing binary patterns and network nodes" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAyisN6l_ir86Vvd3GDIWg2U7asb4Z-_X36ZRwu8SvjaVA6pX24F0OPWH-ZuhZ5LRiYXe7zX-nW-Mj03B1v3vyL7nEnWqoPsiyOZf31RB4EddkY_EQjoz47XEY-OdeWKlEUT9zajTgXdtcCMoSkPq3fQ91SpR_Og4rZPa4XJLIXj1n31Cg39HZYMkbzn63pca1drN3hoMxnREuC8W3Lwg_VpiWApwWNQqLhiyBoqTxXrYnJE31YCbIsKQe0f5ho0YaTGexTu7lRGa8I"/>
+<div class="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-mono font-bold text-white">
+                                    DATA STRUCTURES
+                                </div>
+</div>
+<div>
+<h3 class="font-headline font-bold text-lg mb-1">Binary Trees Mastery</h3>
+<p class="text-sm text-slate-400 mb-4 line-clamp-2">Optimization techniques for balanced search trees and traversals.</p>
+<div class="flex items-center justify-between">
+<div class="flex -space-x-2">
+<img alt="Student" class="w-6 h-6 rounded-full border-2 border-surface-container-high" data-alt="Close up of woman in professional attire, soft natural light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUfZbi3c0v24lzYOH0jrN3EwCNxnKRdmxWzPqZfXJF4Gl7vbGBioVkgSGVRHHKLwmFEIYbZHMnB5DRECy8MYlenZJWEOVM_mnkdV-No1DwEHhoxS5g139k7VsAg89ry1IlxYHZ3hDJKKQgCRrFaBdMkxZo5ya8It0a7L89wIFdhswIx2yZ5y8UqON-gyJGYZm-G7TGnl0Magtf7Mb_tA16M_ZS6fzdiwH2YFRs4dUF6MYbr020e7AQG9KIiF40N8_dYM7TcqBnP8gy"/>
+<img alt="Student" class="w-6 h-6 rounded-full border-2 border-surface-container-high" data-alt="Smiling young man in a urban setting, soft background blur" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBdUAC0-1IkWu0x-yoRReKiGn3c7lyHYNinKQNaIIngvkF3IyPRtO8kWKiIKZSVr7i3SFCcWNxhPkQNxQfgPMhePoQ-sfjMEXtAlFgyU_YciCFErbz4ycYQq1s8PKyynCp8qoCV7Dfs86IXo31vatuA93pnTkuRCN3c5EpdvfdBm8gDhjTRmDOQ_o24SXiJh9uUorS3hjCUyefKoaaYr8dj5OJajIRZaQJVuk3c05Lk_QmCDRe772aAF14JhUg0dl4I14qHzXMfOXcV"/>
+<div class="w-6 h-6 rounded-full border-2 border-surface-container-high bg-surface-variant flex items-center justify-center text-[8px] font-bold text-slate-300">+45</div>
+</div>
+<button class="bg-primary text-on-primary px-5 py-2 rounded-full text-sm font-bold shadow-lg shadow-primary/20 active:scale-95 transition-all">Join Now</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Leaderboard Widget -->
+<div class="space-y-6">
+<div class="flex items-center justify-between">
+<h2 class="text-2xl font-headline font-extrabold tracking-tight">Global Ranks</h2>
+<span class="material-symbols-outlined text-slate-500">more_horiz</span>
+</div>
+<div class="bg-surface-container rounded-lg p-6 clay-card">
+<div class="space-y-4">
+<!-- Top 3 -->
+<div class="flex items-center gap-4 p-3 rounded-md bg-secondary/10 border border-secondary/20">
+<div class="relative">
+<img alt="Lina" class="w-10 h-10 rounded-full" data-alt="Woman smiling, warm golden hour light, soft focus" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAG7CigJxSbqWwExGtSAawBJtfHiHWvsv4ZxAO0tjzHTX-F-jvIafHakwHsr-m9smgtRvwMhlC2F8vZQn9BEnun4y00f5VbI5IiGBuSnjda00WA9mkR6MrMl-BhtscvJJjdK4xxq9ef4K0FOx35BHaXc1HesfC3oL3PqOmLQVwFqyi1XbJQEqf2RnWbX4Y5uTa8poUByw9d4Nqes80fFjAQ77vMiDiF0nMQ8bnlv2czH-30NRDNNGeuyj9gY6HIAqim9sCC4KpHbOyE"/>
+<div class="absolute -top-2 -right-2 bg-secondary text-on-secondary w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black">1</div>
+</div>
+<div class="flex-1">
+<div class="font-bold text-sm">Lina Voss</div>
+<div class="w-full h-1 bg-surface-container-lowest rounded-full mt-1">
+<div class="w-[95%] h-full bg-secondary rounded-full"></div>
+</div>
+</div>
+<div class="font-mono text-sm font-bold text-secondary">15,420</div>
+</div>
+<div class="flex items-center gap-4 p-3 rounded-md bg-slate-400/5 hover:bg-slate-400/10 transition-colors">
+<div class="relative">
+<img alt="Marc" class="w-10 h-10 rounded-full" data-alt="Man in casual wear looking confident, professional lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCnb9WkGIPLtVQ6Zlo47EGBOi5W2OonA6wswSfdxnCcH-WhxM3WNGbGPq__buzdCmcFcG4WFuyeUYjxLoLU1kDawFAW_Sdnr_CIfDQo6146-t7PbUHHOreaEMUB5BLy1GWULKTYoiHhaxgq675AoNw9ej5v1VIpxdF3H887U9muiig20GYPsAf9izSaSfL6uJOL7cw1Kjdi3RKlWAfU87_uO1OBLhRO6g_4Qb6sDlrjKt0zoG7ZLjbo4L0pW1xROZscoz9bCMlG0gvO"/>
+<div class="absolute -top-2 -right-2 bg-slate-300 text-slate-800 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black">2</div>
+</div>
+<div class="flex-1">
+<div class="font-bold text-sm">Marc Julian</div>
+<div class="w-full h-1 bg-surface-container-lowest rounded-full mt-1">
+<div class="w-[88%] h-full bg-slate-300 rounded-full"></div>
+</div>
+</div>
+<div class="font-mono text-sm font-bold text-slate-300">14,890</div>
+</div>
+<!-- User Highlighted Row -->
+<div class="flex items-center gap-4 p-3 rounded-md bg-primary-container text-on-primary-container shadow-lg shadow-primary/20 transform scale-[1.02]">
+<div class="relative">
+<img alt="Arsan" class="w-10 h-10 rounded-full" data-alt="Close up of friendly professional man" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDIqy0JXIxCgeBbwKuKU3SPY22AH1QrgkW0Df0plkhRQkVeZpbRLjL5N3Hj48pa_QprQEoyUiPIagAWeBAQeemC_VTzDvIIOWQblVQ8sSfzh3DkPV54tWHLLifFCXb9iZ4VgXlEF2-K-V_jWAo3BoiDfcyTtU7SuCkqXnajccsW6caK6d4jxWuWkiGlEMzdARVnTZa6OOl10nB-XH2ESXiYPpd4jAxJGFK9hxMZxKee-khapvSK7qVNyJ4qxaYCa0RCRqwZxboJGhN_"/>
+<div class="absolute -top-2 -right-2 bg-white text-primary-container w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black">7</div>
+</div>
+<div class="flex-1">
+<div class="font-bold text-sm">Arsan (You)</div>
+<div class="w-full h-1 bg-white/20 rounded-full mt-1">
+<div class="w-[72%] h-full bg-white rounded-full"></div>
+</div>
+</div>
+<div class="font-mono text-sm font-bold">12,450</div>
+</div>
+<!-- Remaining Top 8 -->
+<div class="flex items-center gap-4 p-3 rounded-md hover:bg-white/5 transition-colors">
+<div class="w-10 text-center font-mono font-bold text-slate-500">08</div>
+<div class="flex-1">
+<div class="font-bold text-sm">Sarah Kim</div>
+<div class="w-full h-1 bg-surface-container-lowest rounded-full mt-1">
+<div class="w-[65%] h-full bg-slate-500 rounded-full"></div>
+</div>
+</div>
+<div class="font-mono text-sm font-bold text-slate-500">11,900</div>
+</div>
+</div>
+<button class="w-full mt-6 py-2 border-t border-outline-variant/10 text-sm font-bold text-slate-400 hover:text-primary transition-colors">
+                            Show Global Leaderboard
+                        </button>
+</div>
+</div>
+</div>
+<!-- Browse Quizzes CTA -->
+<section class="mt-20 flex flex-col items-center justify-center text-center space-y-8">
+<div class="space-y-2">
+<h2 class="text-3xl font-headline font-extrabold tracking-tighter">Hungry for more?</h2>
+<p class="text-slate-400 max-w-md mx-auto">Explore over 5,000+ quizzes across various domains from science to pop culture.</p>
+</div>
+<button class="group relative px-12 py-5 bg-primary-container rounded-full text-on-primary-container font-black text-lg overflow-hidden transition-all hover:scale-105 active:scale-95 shadow-xl shadow-primary/30">
+<div class="shimmer absolute inset-0 pointer-events-none"></div>
+<span class="relative z-10 flex items-center gap-3">
+                        Browse All Quizzes
+                        <span class="material-symbols-outlined transition-transform group-hover:translate-x-1">arrow_forward</span>
+</span>
+</button>
+<div class="flex items-center gap-8 pt-4">
+<div class="flex flex-col items-center">
+<span class="font-mono text-xl font-bold">1.2k+</span>
+<span class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Daily Active</span>
+</div>
+<div class="h-8 w-[1px] bg-outline-variant/20"></div>
+<div class="flex flex-col items-center">
+<span class="font-mono text-xl font-bold">50k+</span>
+<span class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Total Quizzes</span>
+</div>
+<div class="h-8 w-[1px] bg-outline-variant/20"></div>
+<div class="flex flex-col items-center">
+<span class="font-mono text-xl font-bold">24/7</span>
+<span class="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Support</span>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- Footer Space -->
+<footer class="pl-[72px] pb-12 mt-12">
+<div class="max-w-[1400px] mx-auto px-12 flex justify-between items-center text-slate-600 text-xs font-medium">
+<p>© 2024 QuizKTC Digital Sanctuary. All rights reserved.</p>
+<div class="flex gap-6">
+<a class="hover:text-primary transition-colors" href="#">Privacy Policy</a>
+<a class="hover:text-primary transition-colors" href="#">Terms of Service</a>
+<a class="hover:text-primary transition-colors" href="#">Help Center</a>
+</div>
+</div>
+</footer>
+</body></html>

@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Teacher Dashboard | QuizKTC</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-low": "#1c1b1d",
+              "primary": "#cabeff",
+              "inverse-primary": "#603ce2",
+              "surface-variant": "#353437",
+              "tertiary": "#4ae176",
+              "surface-container-lowest": "#0e0e10",
+              "secondary": "#ffb955",
+              "primary-fixed-dim": "#cabeff",
+              "background": "#131315",
+              "tertiary-fixed-dim": "#4ae176",
+              "secondary-fixed": "#ffddb4",
+              "on-secondary-fixed": "#291800",
+              "on-surface-variant": "#c7c4d8",
+              "surface-tint": "#cabeff",
+              "on-secondary-container": "#4f3100",
+              "on-tertiary-fixed-variant": "#005321",
+              "secondary-fixed-dim": "#ffb955",
+              "surface": "#131315",
+              "outline-variant": "#464555",
+              "primary-fixed": "#e6deff",
+              "inverse-surface": "#e5e1e4",
+              "inverse-on-surface": "#313032",
+              "on-error-container": "#ffdad6",
+              "surface-bright": "#39393b",
+              "error-container": "#93000a",
+              "error": "#ffb4ab",
+              "surface-dim": "#131315",
+              "on-primary-fixed-variant": "#4816cb",
+              "on-primary-fixed": "#1c0062",
+              "on-primary": "#31009a",
+              "surface-container-high": "#2a2a2c",
+              "on-tertiary-container": "#f2ffef",
+              "on-primary-container": "#fffaff",
+              "tertiary-container": "#00863b",
+              "on-surface": "#e5e1e4",
+              "outline": "#918fa1",
+              "secondary-container": "#dc9100",
+              "primary-container": "#7656f9",
+              "on-error": "#690005",
+              "on-tertiary-fixed": "#002109",
+              "surface-container-highest": "#353437",
+              "on-secondary": "#452b00",
+              "on-tertiary": "#003915",
+              "on-secondary-fixed-variant": "#633f00",
+              "on-background": "#e5e1e4",
+              "surface-container": "#201f22",
+              "tertiary-fixed": "#6bff8f"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Inter"],
+              "label": ["Inter"],
+              "mono": ["JetBrains Mono"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .clay-card {
+            background: #201f22;
+            box-shadow: 
+                0 20px 40px -12px hsla(252, 87%, 62%, 0.15),
+                inset 0 1px 0 rgba(255,255,255,0.06);
+        }
+        .clay-primary {
+            background: linear-gradient(135deg, #7656f9, #603ce2);
+            box-shadow: 
+                0 10px 20px -5px hsla(252, 87%, 62%, 0.4),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+        .recessed-well {
+            background: #0e0e10;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+        @keyframes pulse-soft {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+        .animate-pulse-soft {
+            animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body antialiased">
+<!-- Sidebar Navigation -->
+<aside class="fixed left-0 top-0 h-full w-[72px] hover:w-[240px] transition-all duration-300 z-[60] overflow-hidden bg-[#131315] flex flex-col py-8 gap-4 shadow-[20px_0_40px_-12px_rgba(0,0,0,0.5)] group">
+<div class="px-6 mb-8 flex items-center gap-3">
+<span class="material-symbols-outlined text-[#635BFF] text-3xl" style="font-variation-settings: 'FILL' 1;">shield</span>
+<span class="font-headline font-black text-[#635BFF] text-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">QuizKTC</span>
+</div>
+<nav class="flex flex-col gap-2">
+<!-- Active Tab -->
+<a class="bg-[#635BFF] text-white rounded-full mx-2 shadow-[0_10px_20px_-5px_hsla(252,87,62,0.4)] inset-shadow-sm flex items-center h-[48px] px-4 gap-4" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-medium opacity-0 group-hover:opacity-100 transition-opacity">Dashboard</span>
+</a>
+<a class="text-slate-500 hover:text-slate-200 flex items-center h-[48px] px-6 gap-4 hover:bg-[#201f22] rounded-full mx-2 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="quiz">quiz</span>
+<span class="font-medium opacity-0 group-hover:opacity-100 transition-opacity">Quizzes</span>
+</a>
+<a class="text-slate-500 hover:text-slate-200 flex items-center h-[48px] px-6 gap-4 hover:bg-[#201f22] rounded-full mx-2 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="leaderboard">leaderboard</span>
+<span class="font-medium opacity-0 group-hover:opacity-100 transition-opacity">Leaderboard</span>
+</a>
+<a class="text-slate-500 hover:text-slate-200 flex items-center h-[48px] px-6 gap-4 hover:bg-[#201f22] rounded-full mx-2 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span class="font-medium opacity-0 group-hover:opacity-100 transition-opacity">History</span>
+</a>
+<a class="text-slate-500 hover:text-slate-200 flex items-center h-[48px] px-6 gap-4 hover:bg-[#201f22] rounded-full mx-2 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-medium opacity-0 group-hover:opacity-100 transition-opacity">Profile</span>
+</a>
+</nav>
+<div class="mt-auto px-2">
+<button class="w-full bg-primary-container text-white py-3 rounded-full flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform overflow-hidden">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+<span class="font-bold opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Start Quiz</span>
+</button>
+</div>
+</aside>
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full z-50 h-[56px] bg-[#0e0e10]/80 backdrop-blur-xl flex justify-between items-center px-6 md:pl-24 w-full shadow-[0_20px_40px_-12px_hsla(252,87,62,0.15)]">
+<div class="flex items-center gap-2">
+<h1 class="font-headline font-black text-xl text-[#635BFF] tracking-tighter uppercase">Teacher Control</h1>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 px-3 py-1 bg-surface-container-lowest rounded-full border border-outline-variant/20">
+<span class="material-symbols-outlined text-secondary text-sm" data-icon="monetization_on">monetization_on</span>
+<span class="font-mono text-sm font-bold text-on-surface">12,450</span>
+</div>
+<img alt="User Avatar" class="w-8 h-8 rounded-full object-cover ring-2 ring-primary/20" data-alt="headshot of a professional female teacher with a kind expression and dark curly hair against a soft library background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBCYMujySgISeU7r-k_aEo5gA1t-frtBawJU7r24mAGquq6hYNfz2M03mdIlatVi014mpNMnT1-Hl-EWMsgn8HqZXJHBo3li_EWc0hixFN_fcnpA435kJ7T_N2w1s6t8F2web6NtTj4BpoGNrc1TKIYhhcoyKVhT-boCd01DzP4hIqpQ4XzHqZgqNZwazXV8xEqpeGKnDKEujqrcykHIsziLQgjkRm7cCDYWQ9wVuZrDgZdi3C1JUlPi8gk95VsCpD0JzqAVfI54bXS"/>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-24 pb-12 px-6 md:ml-24 max-w-7xl mx-auto">
+<!-- Welcome Header -->
+<section class="mb-12">
+<h2 class="font-headline text-4xl md:text-5xl font-extrabold tracking-tighter text-on-surface mb-2">Welcome back, Prof. Sarah</h2>
+<p class="text-slate-400 font-medium">Your digital sanctuary is ready. 3 live sessions are awaiting your supervision.</p>
+</section>
+<!-- Stats Band: 4 Claymorphism Tiles -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+<div class="clay-card rounded-lg p-6 flex flex-col gap-2 relative overflow-hidden group">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-primary-fixed-dim bg-primary/10 p-3 rounded-md" data-icon="inventory_2">inventory_2</span>
+<span class="text-slate-500 text-xs font-bold uppercase tracking-widest">Total</span>
+</div>
+<div class="mt-4">
+<span class="font-mono text-3xl font-bold">142</span>
+<p class="text-slate-400 text-sm">Quizzes Created</p>
+</div>
+</div>
+<div class="clay-card rounded-lg p-6 flex flex-col gap-2 relative overflow-hidden group">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-tertiary bg-tertiary/10 p-3 rounded-md animate-pulse-soft" data-icon="sensors" style="font-variation-settings: 'FILL' 1;">sensors</span>
+<span class="text-tertiary text-xs font-bold uppercase tracking-widest">Live Now</span>
+</div>
+<div class="mt-4">
+<span class="font-mono text-3xl font-bold">03</span>
+<p class="text-slate-400 text-sm">Active Sessions</p>
+</div>
+</div>
+<div class="clay-card rounded-lg p-6 flex flex-col gap-2 relative overflow-hidden group">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-secondary bg-secondary/10 p-3 rounded-md" data-icon="groups">groups</span>
+<span class="text-slate-500 text-xs font-bold uppercase tracking-widest">Impact</span>
+</div>
+<div class="mt-4">
+<span class="font-mono text-3xl font-bold">2.8k</span>
+<p class="text-slate-400 text-sm">Total Students</p>
+</div>
+</div>
+<div class="clay-card rounded-lg p-6 flex flex-col gap-2 relative overflow-hidden group">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-primary bg-primary/10 p-3 rounded-md" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-slate-500 text-xs font-bold uppercase tracking-widest">Quality</span>
+</div>
+<div class="mt-4">
+<span class="font-mono text-3xl font-bold">88%</span>
+<p class="text-slate-400 text-sm">Avg Score</p>
+</div>
+</div>
+</section>
+<!-- Quick Actions Row -->
+<section class="mb-16">
+<h3 class="font-headline text-xl font-bold text-on-surface mb-6 ml-2">Quick Command</h3>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<button class="clay-primary group rounded-lg p-8 flex flex-col items-start gap-4 transition-all hover:translate-y-[-4px] active:scale-95 text-left">
+<div class="bg-white/20 p-4 rounded-full">
+<span class="material-symbols-outlined text-white text-3xl" data-icon="add_circle">add_circle</span>
+</div>
+<div>
+<span class="text-white font-headline text-2xl font-extrabold tracking-tight block">Create Quiz</span>
+<p class="text-white/70 text-sm">Design a new adaptive challenge</p>
+</div>
+</button>
+<button class="clay-card group rounded-lg p-8 flex flex-col items-start gap-4 transition-all hover:translate-y-[-4px] active:scale-95 text-left">
+<div class="bg-surface-container-highest p-4 rounded-full group-hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="monitor_heart">monitor_heart</span>
+</div>
+<div>
+<span class="text-on-surface font-headline text-2xl font-extrabold tracking-tight block">Monitor Live</span>
+<p class="text-slate-400 text-sm">Real-time student supervision</p>
+</div>
+</button>
+<button class="clay-card group rounded-lg p-8 flex flex-col items-start gap-4 transition-all hover:translate-y-[-4px] active:scale-95 text-left">
+<div class="bg-surface-container-highest p-4 rounded-full group-hover:bg-secondary/20 transition-colors">
+<span class="material-symbols-outlined text-secondary text-3xl" data-icon="analytics">analytics</span>
+</div>
+<div>
+<span class="text-on-surface font-headline text-2xl font-extrabold tracking-tight block">Analytics</span>
+<p class="text-slate-400 text-sm">Deep dive into performance data</p>
+</div>
+</button>
+</div>
+</section>
+<!-- Quiz Grid: Teacher Management -->
+<section>
+<div class="flex justify-between items-end mb-8 px-2">
+<div>
+<h3 class="font-headline text-2xl font-bold text-on-surface">Current Curriculum</h3>
+<p class="text-slate-500 text-sm">Manage your active and drafted assessments</p>
+</div>
+<div class="flex gap-2">
+<button class="bg-surface-container rounded-full px-4 py-2 text-sm font-medium hover:bg-surface-bright transition-colors">Recent</button>
+<button class="bg-surface-container rounded-full px-4 py-2 text-sm font-medium hover:bg-surface-bright transition-colors">Live Only</button>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+<!-- Quiz Card 1: LIVE -->
+<div class="clay-card rounded-lg overflow-hidden group hover:shadow-primary/5 transition-all">
+<div class="h-48 relative">
+<img alt="Quantum Physics" class="w-full h-full object-cover" data-alt="abstract visualization of quantum particles and wave functions with glowing violet and teal lines on dark background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuALSgqxIDU2RClHomWZvR3BjnKaCi_xSJi1ZqHJ4uC2D7QkNkCDdNqmSCMDElKhINLVQ-B0_oIMM4OunfA84pf2k6OJGLG36clVl1Ic_BBhRR5YpMpTeGTA2DvmOm-pMkIYZet3k-q7dowhVwY7G3Kn8YHxGRHhLxVnXnW1-J5fG_XBZr2D4MwF3WenFNqFR93VnJIUgjuEfKsP8zATdQOubWl4koaORoL5H36TuReQnCMZElqVlqcpXf41oqZoqkKns_GeQ8DQFQyD"/>
+<div class="absolute top-4 left-4 bg-tertiary/90 text-on-tertiary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg animate-pulse-soft">
+<span class="w-2 h-2 rounded-full bg-on-tertiary"></span>
+                            Live Now
+                        </div>
+</div>
+<div class="p-6">
+<div class="flex justify-between items-start mb-4">
+<h4 class="font-headline font-extrabold text-xl leading-tight">Quantum Mechanics: Week 4 Review</h4>
+</div>
+<div class="flex items-center gap-4 mb-6">
+<div class="flex items-center gap-1 text-slate-400">
+<span class="material-symbols-outlined text-sm" data-icon="groups">groups</span>
+<span class="text-xs font-mono">42 Active</span>
+</div>
+<div class="flex items-center gap-1 text-slate-400">
+<span class="material-symbols-outlined text-sm" data-icon="timer">timer</span>
+<span class="text-xs font-mono">15m left</span>
+</div>
+</div>
+<!-- Teacher Controls Compact Row -->
+<div class="flex gap-2 p-2 recessed-well rounded-md">
+<button class="flex-1 bg-error-container text-on-error-container py-2 rounded-sm flex items-center justify-center gap-1 hover:brightness-110 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="stop_circle">stop_circle</span>
+<span class="text-[10px] font-bold uppercase">Stop</span>
+</button>
+<button class="flex-1 bg-surface-container-high text-on-surface py-2 rounded-sm flex items-center justify-center gap-1 hover:bg-primary/20 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="visibility">visibility</span>
+<span class="text-[10px] font-bold uppercase">Watch</span>
+</button>
+<button class="flex-1 bg-surface-container-high text-on-surface py-2 rounded-sm flex items-center justify-center gap-1 hover:bg-secondary/20 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="bar_chart">bar_chart</span>
+<span class="text-[10px] font-bold uppercase">Data</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Quiz Card 2: INACTIVE -->
+<div class="clay-card rounded-lg overflow-hidden group grayscale hover:grayscale-0 transition-all opacity-80 hover:opacity-100">
+<div class="h-48 relative">
+<img alt="Organic Chemistry" class="w-full h-full object-cover" data-alt="microscopic view of molecular structures with soft hexagonal bokeh and laboratory blue lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBMUo-ZgDBLAjZFQRZWEPrZlPoowLjMTTzKb1n3nocOTSjr81qOT6vaic4xE6MyuegMME756QwqpCITc08lTWoERxUAt1jpTMdAdyk8jrcnzpNHb2adBtxGEMIjURPXpviUfhQuyxbS9sjfBSEWgRtz90ujKLf4x_6rgZAqbvbgAVLXZ5PBFuE9DBkEW1HZpd8DWuG1qUEnObWeocU6eaBNbpYuOnTvkYdyAjWbvvgrKBfXRYgEsp47KV3JmG6m8p8LN76yoh-xg9Er"/>
+</div>
+<div class="p-6">
+<div class="flex justify-between items-start mb-4">
+<h4 class="font-headline font-extrabold text-xl leading-tight">Advanced Organic Chemistry</h4>
+</div>
+<div class="flex items-center gap-4 mb-6">
+<div class="flex items-center gap-1 text-slate-400">
+<span class="material-symbols-outlined text-sm" data-icon="groups">groups</span>
+<span class="text-xs font-mono">0 Joined</span>
+</div>
+<div class="flex items-center gap-1 text-slate-400">
+<span class="material-symbols-outlined text-sm" data-icon="update">update</span>
+<span class="text-xs font-mono">Last: 2d ago</span>
+</div>
+</div>
+<div class="flex gap-2 p-2 recessed-well rounded-md">
+<button class="flex-[2] bg-primary text-on-primary py-2 rounded-sm flex items-center justify-center gap-1 hover:brightness-110 active:scale-95 transition-all shadow-sm">
+<span class="material-symbols-outlined text-sm" data-icon="play_circle" style="font-variation-settings: 'FILL' 1;">play_circle</span>
+<span class="text-[10px] font-bold uppercase">Start Session</span>
+</button>
+<button class="flex-1 bg-surface-container-high text-on-surface py-2 rounded-sm flex items-center justify-center gap-1 hover:bg-surface-bright transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="edit">edit</span>
+<span class="text-[10px] font-bold uppercase">Edit</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Quiz Card 3: LIVE -->
+<div class="clay-card rounded-lg overflow-hidden group hover:shadow-primary/5 transition-all">
+<div class="h-48 relative">
+<img alt="Calculus" class="w-full h-full object-cover" data-alt="complex mathematical formulas scribbled on a dark blackboard with glowing orange chalk accents" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAr4h765vKe-tDQrNic_rPyGVFt77GSsnv1pyeYpQYhoz6NT5rC3k05Pihvd01rZJLZMBz0wfcLEopkre2nwqEoRNCMN3Z0rq296O9AZUJ1jP2obmDbxVN6_rwLW_qnMl4Kllh3OKtMcdcpqt_6_VFOMHwYD-UuSpGpD6dCJ4KOCMZZ0hYmoFiJTfEaKKHheQISZrOdO97wcnIRA2wmMWhGaahes1kQ69yMjrJgp2TbhGHSWygzUFUeSVPgIld9o82vqD14v1dbqSJs"/>
+<div class="absolute top-4 left-4 bg-tertiary/90 text-on-tertiary px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg animate-pulse-soft">
+<span class="w-2 h-2 rounded-full bg-on-tertiary"></span>
+                            Live Now
+                        </div>
+</div>
+<div class="p-6">
+<div class="flex justify-between items-start mb-4">
+<h4 class="font-headline font-extrabold text-xl leading-tight">Differential Calculus Mastery</h4>
+</div>
+<div class="flex items-center gap-4 mb-6">
+<div class="flex items-center gap-1 text-slate-400">
+<span class="material-symbols-outlined text-sm" data-icon="groups">groups</span>
+<span class="text-xs font-mono">112 Active</span>
+</div>
+<div class="flex items-center gap-1 text-slate-400">
+<span class="material-symbols-outlined text-sm" data-icon="timer">timer</span>
+<span class="text-xs font-mono">08m left</span>
+</div>
+</div>
+<div class="flex gap-2 p-2 recessed-well rounded-md">
+<button class="flex-1 bg-error-container text-on-error-container py-2 rounded-sm flex items-center justify-center gap-1 hover:brightness-110 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="stop_circle">stop_circle</span>
+<span class="text-[10px] font-bold uppercase">Stop</span>
+</button>
+<button class="flex-1 bg-surface-container-high text-on-surface py-2 rounded-sm flex items-center justify-center gap-1 hover:bg-primary/20 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="visibility">visibility</span>
+<span class="text-[10px] font-bold uppercase">Watch</span>
+</button>
+<button class="flex-1 bg-surface-container-high text-on-surface py-2 rounded-sm flex items-center justify-center gap-1 hover:bg-secondary/20 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-sm" data-icon="bar_chart">bar_chart</span>
+<span class="text-[10px] font-bold uppercase">Data</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Monitoring Section: Bento Style -->
+<section class="mt-20">
+<h3 class="font-headline text-2xl font-bold text-on-surface mb-8 ml-2">Real-time Performance</h3>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Large Analytics Card -->
+<div class="lg:col-span-2 clay-card rounded-lg p-8">
+<div class="flex justify-between items-center mb-8">
+<div>
+<h4 class="font-headline text-lg font-bold">Class Progression Curve</h4>
+<p class="text-slate-500 text-xs">Live response accuracy across active sessions</p>
+</div>
+<span class="text-tertiary font-mono text-sm">+12.4% vs last week</span>
+</div>
+<div class="h-64 flex items-end justify-between gap-4 px-4">
+<!-- Mock Chart Bars -->
+<div class="w-full bg-surface-container-lowest rounded-t-lg relative group h-[40%]">
+<div class="absolute bottom-0 w-full bg-primary/20 rounded-t-lg h-full group-hover:bg-primary/40 transition-all"></div>
+</div>
+<div class="w-full bg-surface-container-lowest rounded-t-lg relative group h-[65%]">
+<div class="absolute bottom-0 w-full bg-primary/20 rounded-t-lg h-full group-hover:bg-primary/40 transition-all"></div>
+</div>
+<div class="w-full bg-surface-container-lowest rounded-t-lg relative group h-[85%]">
+<div class="absolute bottom-0 w-full bg-primary rounded-t-lg h-full transition-all shadow-[0_-5px_15px_rgba(118,86,249,0.3)]"></div>
+</div>
+<div class="w-full bg-surface-container-lowest rounded-t-lg relative group h-[55%]">
+<div class="absolute bottom-0 w-full bg-primary/20 rounded-t-lg h-full group-hover:bg-primary/40 transition-all"></div>
+</div>
+<div class="w-full bg-surface-container-lowest rounded-t-lg relative group h-[70%]">
+<div class="absolute bottom-0 w-full bg-primary/20 rounded-t-lg h-full group-hover:bg-primary/40 transition-all"></div>
+</div>
+<div class="w-full bg-surface-container-lowest rounded-t-lg relative group h-[95%]">
+<div class="absolute bottom-0 w-full bg-tertiary rounded-t-lg h-full transition-all shadow-[0_-5px_15px_rgba(74,225,118,0.3)]"></div>
+</div>
+</div>
+<div class="flex justify-between mt-4 px-4 font-mono text-[10px] text-slate-500 uppercase tracking-widest">
+<span>08:00</span><span>09:00</span><span>10:00</span><span>11:00</span><span>12:00</span><span>Live</span>
+</div>
+</div>
+<!-- Recent Activity Feed -->
+<div class="clay-card rounded-lg p-8 flex flex-col">
+<h4 class="font-headline text-lg font-bold mb-6">Activity Stream</h4>
+<div class="flex flex-col gap-6">
+<div class="flex gap-4 items-start">
+<div class="w-2 h-2 rounded-full bg-tertiary mt-2"></div>
+<div>
+<p class="text-sm text-on-surface font-medium">Class <span class="text-primary">Calculus 101</span> finished.</p>
+<span class="text-[10px] font-mono text-slate-500 uppercase">2 minutes ago</span>
+</div>
+</div>
+<div class="flex gap-4 items-start">
+<div class="w-2 h-2 rounded-full bg-secondary mt-2"></div>
+<div>
+<p class="text-sm text-on-surface font-medium">New student <span class="text-secondary">Marcus V.</span> achieved 100%.</p>
+<span class="text-[10px] font-mono text-slate-500 uppercase">14 minutes ago</span>
+</div>
+</div>
+<div class="flex gap-4 items-start">
+<div class="w-2 h-2 rounded-full bg-primary mt-2"></div>
+<div>
+<p class="text-sm text-on-surface font-medium">Session <span class="text-primary">Quantum Rev</span> shared to Classroom.</p>
+<span class="text-[10px] font-mono text-slate-500 uppercase">1 hour ago</span>
+</div>
+</div>
+</div>
+<button class="mt-auto w-full py-4 recessed-well rounded-md text-xs font-bold uppercase tracking-widest text-slate-400 hover:text-white transition-colors">View All Logs</button>
+</div>
+</div>
+</section>
+</main>
+<!-- Floating Action Button for Teachers -->
+<button class="fixed bottom-8 right-8 w-16 h-16 rounded-full clay-primary flex items-center justify-center text-white shadow-2xl z-[70] hover:scale-110 active:scale-90 transition-all group">
+<span class="material-symbols-outlined text-3xl" data-icon="rocket_launch" style="font-variation-settings: 'FILL' 1;">rocket_launch</span>
+<span class="absolute right-20 bg-surface-container border border-outline-variant/20 px-4 py-2 rounded-md text-xs font-bold whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Lobby Settings</span>
+</button>
+</body></html>

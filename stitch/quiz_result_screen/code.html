@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>QuizKTC - Results</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-container-low": "#1c1b1d",
+              "primary": "#cabeff",
+              "inverse-primary": "#603ce2",
+              "surface-variant": "#353437",
+              "tertiary": "#4ae176",
+              "surface-container-lowest": "#0e0e10",
+              "secondary": "#ffb955",
+              "primary-fixed-dim": "#cabeff",
+              "background": "#131315",
+              "tertiary-fixed-dim": "#4ae176",
+              "secondary-fixed": "#ffddb4",
+              "on-secondary-fixed": "#291800",
+              "on-surface-variant": "#c7c4d8",
+              "surface-tint": "#cabeff",
+              "on-secondary-container": "#4f3100",
+              "on-tertiary-fixed-variant": "#005321",
+              "secondary-fixed-dim": "#ffb955",
+              "surface": "#131315",
+              "outline-variant": "#464555",
+              "primary-fixed": "#e6deff",
+              "inverse-surface": "#e5e1e4",
+              "inverse-on-surface": "#313032",
+              "on-error-container": "#ffdad6",
+              "surface-bright": "#39393b",
+              "error-container": "#93000a",
+              "error": "#ffb4ab",
+              "surface-dim": "#131315",
+              "on-primary-fixed-variant": "#4816cb",
+              "on-primary-fixed": "#1c0062",
+              "on-primary": "#31009a",
+              "surface-container-high": "#2a2a2c",
+              "on-tertiary-container": "#f2ffef",
+              "on-primary-container": "#fffaff",
+              "tertiary-container": "#00863b",
+              "on-surface": "#e5e1e4",
+              "outline": "#918fa1",
+              "secondary-container": "#dc9100",
+              "primary-container": "#7656f9",
+              "on-error": "#690005",
+              "on-tertiary-fixed": "#002109",
+              "surface-container-highest": "#353437",
+              "on-secondary": "#452b00",
+              "on-tertiary": "#003915",
+              "on-secondary-fixed-variant": "#633f00",
+              "on-background": "#e5e1e4",
+              "surface-container": "#201f22",
+              "tertiary-fixed": "#6bff8f"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Inter"],
+              "label": ["Inter"],
+              "mono": ["JetBrains Mono"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .clay-card {
+            box-shadow: 0 20px 40px -12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+        }
+        .clay-card-primary {
+            box-shadow: 0 20px 40px -12px hsla(252, 87%, 62%, 0.15), inset 0 1px 0 rgba(255,255,255,0.06);
+        }
+        .clay-card-secondary {
+            box-shadow: 0 20px 40px -12px hsla(38, 95%, 58%, 0.15), inset 0 1px 0 rgba(255,255,255,0.06);
+        }
+        .clay-card-tertiary {
+            box-shadow: 0 20px 40px -12px hsla(142, 70%, 55%, 0.15), inset 0 1px 0 rgba(255,255,255,0.06);
+        }
+        .text-editorial {
+            letter-spacing: -0.02em;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body selection:bg-primary-container selection:text-on-primary-container">
+<!-- TopAppBar -->
+<header class="fixed top-0 w-full z-50 h-[56px] bg-[#0e0e10]/80 backdrop-blur-xl shadow-[0_20px_40px_-12px_hsla(252,87,62,0.15)] shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] flex justify-between items-center px-6">
+<div class="text-xl font-black text-[#635BFF] tracking-tighter flex items-center gap-2 font-headline">
+            QuizKTC
+        </div>
+<div class="flex items-center gap-4">
+<div class="bg-white/5 p-2 rounded-full hover:bg-white/10 transition-all duration-200">
+<span class="material-symbols-outlined text-[#635BFF]">monetization_on</span>
+</div>
+<img alt="User Avatar" class="w-8 h-8 rounded-full shadow-[0_4px_12px_rgba(0,0,0,0.3)]" data-alt="Close up portrait of a friendly man with a modern haircut in a tech office setting, soft professional lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCKjO9GjJ493XFidc8M2H4qRpr1JuHoHUqBwH2IBL5WBni_0twb-9-yJ-IyK-CGtSv2XxUGTtTbHsgGbvnSpOkvIo2IKIJugvP1UVLeSDSyMgMoFuAYXy6UcvzPDVzRkE9ifC421_EZKic7uZyS6q6k8x4m73ItndzDy2qyl3azGcoYPGpA0sqs3QA9l4_p7UsSQlw-Dgv5lT3ulOiUTIdoZPipBIinh9LgUoKGMGuTgSlVeITef-ps46cGLP2CxLPeLdvOlQ-t-Hg1"/>
+</div>
+</header>
+<!-- SideNavBar -->
+<nav class="fixed left-0 top-0 h-full w-[72px] hover:w-[240px] transition-all duration-300 z-[60] overflow-hidden bg-[#131315] shadow-[20px_0_40px_-12px_rgba(0,0,0,0.5)] flex flex-col py-8 gap-4">
+<div class="px-6 mb-8 flex items-center gap-4">
+<div class="min-w-[24px] h-[24px] bg-primary rounded-sm flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary text-sm" style="font-variation-settings: 'FILL' 1;">shield</span>
+</div>
+<div class="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+<p class="text-lg font-black text-[#635BFF] font-headline whitespace-nowrap">QuizKTC</p>
+<p class="text-[10px] text-slate-500 font-mono whitespace-nowrap">The Digital Sanctuary</p>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<!-- Dashboard -->
+<a class="text-slate-500 hover:text-slate-200 flex items-center p-4 hover:bg-[#201f22] rounded-full mx-2 transition-all" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="ml-4 font-headline font-bold text-sm whitespace-nowrap">Dashboard</span>
+</a>
+<!-- Quizzes (Active) -->
+<a class="bg-[#635BFF] text-white rounded-full mx-2 shadow-[0_10px_20px_-5px_hsla(252,87,62,0.4)] flex items-center p-4 transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">quiz</span>
+<span class="ml-4 font-headline font-bold text-sm whitespace-nowrap">Quizzes</span>
+</a>
+<!-- Leaderboard -->
+<a class="text-slate-500 hover:text-slate-200 flex items-center p-4 hover:bg-[#201f22] rounded-full mx-2 transition-all" href="#">
+<span class="material-symbols-outlined">leaderboard</span>
+<span class="ml-4 font-headline font-bold text-sm whitespace-nowrap">Leaderboard</span>
+</a>
+<!-- History -->
+<a class="text-slate-500 hover:text-slate-200 flex items-center p-4 hover:bg-[#201f22] rounded-full mx-2 transition-all" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="ml-4 font-headline font-bold text-sm whitespace-nowrap">History</span>
+</a>
+<!-- Profile -->
+<a class="text-slate-500 hover:text-slate-200 flex items-center p-4 hover:bg-[#201f22] rounded-full mx-2 transition-all" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="ml-4 font-headline font-bold text-sm whitespace-nowrap">Profile</span>
+</a>
+</div>
+<div class="mt-auto px-4">
+<button class="w-full bg-[#635BFF] text-white py-3 rounded-full font-headline font-extrabold text-xs shadow-lg active:scale-95 transition-transform">
+                Start Quiz
+            </button>
+</div>
+</nav>
+<!-- Main Canvas -->
+<main class="ml-[72px] pt-[56px] min-h-screen">
+<div class="max-w-6xl mx-auto px-8 py-12">
+<!-- Hero Section: Trophy & Score -->
+<section class="text-center mb-16 relative">
+<div class="flex flex-col items-center">
+<div class="mb-6 relative">
+<span class="material-symbols-outlined text-[120px] text-secondary leading-none drop-shadow-[0_10px_30px_rgba(255,185,85,0.4)]" style="font-variation-settings: 'FILL' 1;">emoji_events</span>
+<!-- Confetti Burst Placeholder Effect -->
+<div class="absolute -top-4 -left-4 w-4 h-4 bg-tertiary rounded-full animate-ping opacity-75"></div>
+<div class="absolute top-10 -right-8 w-3 h-3 bg-primary rounded-full animate-bounce opacity-75"></div>
+</div>
+<h1 class="text-5xl md:text-7xl font-headline font-extrabold text-editorial mb-2 tracking-tighter">
+                        CHAMPION!
+                    </h1>
+<div class="inline-flex items-center gap-2 bg-tertiary/10 text-tertiary px-6 py-2 rounded-full font-mono font-bold text-xl clay-card-tertiary border border-tertiary/20">
+<span class="material-symbols-outlined text-sm">stars</span>
+                        +24 pts
+                    </div>
+</div>
+</section>
+<!-- Results Grid: Bento Style Clay Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+<!-- Score Card -->
+<div class="bg-surface-container clay-card-primary rounded-lg p-8 flex flex-col items-center text-center group transition-all hover:translate-y-[-4px]">
+<p class="text-slate-400 font-headline font-bold text-sm mb-6 uppercase tracking-widest">Global Score</p>
+<div class="relative w-40 h-40 flex items-center justify-center">
+<svg class="w-full h-full transform -rotate-90">
+<circle class="text-surface-container-highest" cx="80" cy="80" fill="transparent" r="70" stroke="currentColor" stroke-width="12"></circle>
+<circle class="text-primary" cx="80" cy="80" fill="transparent" r="70" stroke="currentColor" stroke-dasharray="440" stroke-dashoffset="88" stroke-linecap="round" stroke-width="12"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="font-mono text-4xl font-bold text-on-surface">80%</span>
+<span class="text-[10px] text-slate-500 uppercase font-bold tracking-tighter">Precision</span>
+</div>
+</div>
+<div class="mt-6 font-headline font-extrabold text-primary text-lg">LEVEL UP!</div>
+</div>
+<!-- Time Taken Card -->
+<div class="bg-surface-container clay-card-secondary rounded-lg p-8 flex flex-col items-center text-center group transition-all hover:translate-y-[-4px]">
+<p class="text-slate-400 font-headline font-bold text-sm mb-6 uppercase tracking-widest">Time Spent</p>
+<div class="bg-surface-container-lowest w-full rounded-sm p-6 mb-4 clay-card">
+<span class="font-mono text-5xl font-bold text-secondary tracking-tight italic">04:12</span>
+</div>
+<div class="flex items-center gap-2 text-slate-400">
+<span class="material-symbols-outlined text-secondary text-sm">timer</span>
+<span class="font-body text-sm font-medium">Faster than 92% of users</span>
+</div>
+</div>
+<!-- Accuracy Card -->
+<div class="bg-surface-container clay-card-tertiary rounded-lg p-8 flex flex-col items-center text-center group transition-all hover:translate-y-[-4px]">
+<p class="text-slate-400 font-headline font-bold text-sm mb-6 uppercase tracking-widest">Accuracy</p>
+<div class="flex items-baseline gap-1 mb-4">
+<span class="font-mono text-7xl font-bold text-tertiary tracking-tighter">12</span>
+<span class="text-slate-500 font-mono text-2xl">/ 15</span>
+</div>
+<div class="w-full bg-surface-container-lowest h-2 rounded-full overflow-hidden">
+<div class="h-full bg-tertiary w-[80%] rounded-full shadow-[0_0_15px_rgba(74,225,118,0.4)]"></div>
+</div>
+<p class="mt-4 text-xs font-bold text-tertiary uppercase font-headline">Mastery Achieved</p>
+</div>
+</div>
+<!-- Leaderboard Table -->
+<section class="mb-16">
+<div class="flex items-end justify-between mb-8 px-2">
+<div>
+<h2 class="text-3xl font-headline font-extrabold text-editorial tracking-tighter">Session Leaderboard</h2>
+<p class="text-slate-500 text-sm mt-1">Real-time ranking for 'Advanced Neural Arch' quiz</p>
+</div>
+<div class="bg-surface-container-highest px-4 py-2 rounded-full text-xs font-bold text-primary font-headline">
+                        LIVE UPDATES
+                    </div>
+</div>
+<div class="bg-surface-container clay-card rounded-lg overflow-hidden">
+<table class="w-full text-left">
+<thead>
+<tr class="bg-surface-container-high/50 border-b border-white/5">
+<th class="px-8 py-4 font-headline text-xs font-bold text-slate-400 uppercase tracking-widest">Rank</th>
+<th class="px-8 py-4 font-headline text-xs font-bold text-slate-400 uppercase tracking-widest">Contender</th>
+<th class="px-8 py-4 font-headline text-xs font-bold text-slate-400 uppercase tracking-widest">Speed</th>
+<th class="px-8 py-4 font-headline text-xs font-bold text-slate-400 uppercase tracking-widest text-right">Points</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-white/5">
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-6">
+<span class="font-mono text-secondary font-bold text-xl italic">#1</span>
+</td>
+<td class="px-8 py-6">
+<div class="flex items-center gap-3">
+<img alt="Rank 1" class="w-10 h-10 rounded-full" data-alt="Portrait of a focused professional wearing glasses against a neutral grey studio background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCPbEzGEcOJ5ASuw3q_AoWqejgB70hrsyRd73Mx4uwc7u_duIbjbUFXRVLZO1IGNzL-W2_fTW7lD70IgjbRk7dtBPKhHucquZyEYJuqtBJlKZsn6OWNk68ynDWLd37mAlU1jOyddmFdcrI8KEcfRklMztsurY7kaG0f6k-KFc4ve7JXQscZx0pxFjAhkEW0MyB64IxGmdF7snjpDhoG5sRQR8JxO-u7WbASnEgbig0MnYccecdZPAuU0m4ULIN_UwZCrnwQIKcimOnN"/>
+<span class="font-headline font-bold">Alex_Quantum</span>
+</div>
+</td>
+<td class="px-8 py-6 font-mono text-slate-400">03:45</td>
+<td class="px-8 py-6 text-right font-mono font-bold text-primary">2,450</td>
+</tr>
+<tr class="bg-primary/5 hover:bg-primary/10 transition-colors group relative">
+<td class="px-8 py-6">
+<span class="font-mono text-slate-200 font-bold text-xl italic">#2</span>
+</td>
+<td class="px-8 py-6">
+<div class="flex items-center gap-3">
+<img alt="Your Rank" class="w-10 h-10 rounded-full border-2 border-primary" data-alt="Portrait of a young executive man in a modern office environment with blurred lights in background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBNMt0XUcr-BXUmuTGROPHa2AvZ4uI0JTyCRLlyWyXJjt4dkCDz-0xOXXe1S4xF3b5gOpU-RQAjXsK_GV9Okb9NBCk7tACtkzVs1xzbifNLGzbsALI-r33n2reins8XaWKMIXpjuGHfI5PQs1gGhkaj_HhvruTOBU6QKMq5L2z8t5NBqWlCgPJFNcSn81_YzLc1ZA8Eaq5DfeIwiug8EB0-wL2YcN8vcNosBR9wKN4tAGRVc29cm3q38eubQVxL6hJ8pgjzTZjAf7QJ"/>
+<span class="font-headline font-bold text-primary">You</span>
+</div>
+</td>
+<td class="px-8 py-6 font-mono text-slate-400">04:12</td>
+<td class="px-8 py-6 text-right font-mono font-bold text-primary">2,380</td>
+</tr>
+<tr class="hover:bg-white/5 transition-colors group">
+<td class="px-8 py-6">
+<span class="font-mono text-slate-500 font-bold text-xl italic">#3</span>
+</td>
+<td class="px-8 py-6">
+<div class="flex items-center gap-3">
+<img alt="Rank 3" class="w-10 h-10 rounded-full" data-alt="Portrait of a young woman with a warm smile, outdoor urban setting with sunset light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCyAaxpC9Deju1wZuqs7dkhqNF7rHJhfqcS9iqUVSYMifKNEJ6noPRHgW5QCjBMoxys7EmjxHEjFJHyfmWiWI-qhUtpdTQVGK47WBVjsT8l1iD-NtVp7SbRHy6JBxekD_924FZHDM8ouVGeFuDyhqZQXOmy7PXYA9MxItYY4-DWyzQUa4TEr7sjSmxL6XMw4159Ugs9KPBwg3tnnlksNdW83sOEPRQFJzPE1UGptAvkkBi8DcOyYSrqJsSUm7b0vjOR6q4myuS-lKn9"/>
+<span class="font-headline font-bold">Sarah_Dev</span>
+</div>
+</td>
+<td class="px-8 py-6 font-mono text-slate-400">04:55</td>
+<td class="px-8 py-6 text-right font-mono font-bold text-primary">2,110</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- Actions -->
+<div class="flex flex-col md:flex-row items-center justify-center gap-6 mb-24">
+<button class="w-full md:w-auto px-12 py-4 rounded-full font-headline font-extrabold text-sm border-2 border-outline-variant text-on-surface hover:bg-white/5 transition-all active:scale-95">
+                    Review Answers
+                </button>
+<button class="w-full md:w-auto px-12 py-4 rounded-full font-headline font-extrabold text-sm bg-[#635BFF] text-white shadow-[0_20px_40px_-12px_hsla(252,87,62,0.4)] hover:shadow-primary/60 transition-all active:scale-95">
+                    Return Home
+                </button>
+</div>
+</div>
+</main>
+<!-- Background Decoration -->
+<div class="fixed top-0 right-0 -z-10 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[120px] pointer-events-none"></div>
+<div class="fixed bottom-0 left-0 -z-10 w-[400px] h-[400px] bg-secondary/5 rounded-full blur-[100px] pointer-events-none"></div>
+</body></html>

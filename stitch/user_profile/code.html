@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed": "#002109",
+              "on-error": "#690005",
+              "surface-container-highest": "#353437",
+              "on-tertiary": "#003915",
+              "on-secondary-fixed-variant": "#633f00",
+              "on-secondary": "#452b00",
+              "on-background": "#e5e1e4",
+              "tertiary-fixed": "#6bff8f",
+              "surface-container": "#201f22",
+              "tertiary-container": "#00863b",
+              "on-primary-container": "#fffaff",
+              "on-surface": "#e5e1e4",
+              "outline": "#918fa1",
+              "secondary-container": "#dc9100",
+              "primary-container": "#7656f9",
+              "on-primary-fixed": "#1c0062",
+              "surface-container-high": "#2a2a2c",
+              "on-tertiary-container": "#f2ffef",
+              "on-primary": "#31009a",
+              "surface-dim": "#131315",
+              "on-primary-fixed-variant": "#4816cb",
+              "surface-bright": "#39393b",
+              "error-container": "#93000a",
+              "error": "#ffb4ab",
+              "surface-tint": "#cabeff",
+              "on-secondary-container": "#4f3100",
+              "on-tertiary-fixed-variant": "#005321",
+              "surface": "#131315",
+              "secondary-fixed-dim": "#ffb955",
+              "outline-variant": "#464555",
+              "primary-fixed": "#e6deff",
+              "inverse-surface": "#e5e1e4",
+              "inverse-on-surface": "#313032",
+              "on-error-container": "#ffdad6",
+              "surface-container-lowest": "#0e0e10",
+              "secondary": "#ffb955",
+              "primary-fixed-dim": "#cabeff",
+              "background": "#131315",
+              "tertiary-fixed-dim": "#4ae176",
+              "secondary-fixed": "#ffddb4",
+              "on-surface-variant": "#c7c4d8",
+              "on-secondary-fixed": "#291800",
+              "surface-container-low": "#1c1b1d",
+              "primary": "#cabeff",
+              "inverse-primary": "#603ce2",
+              "surface-variant": "#353437",
+              "tertiary": "#4ae176"
+            },
+            fontFamily: {
+              "headline": ["Plus Jakarta Sans"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "1rem", "lg": "2rem", "xl": "3rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .clay-card {
+            background: linear-gradient(145deg, rgba(53, 52, 55, 0.4), rgba(32, 31, 34, 0.2));
+            box-shadow: 
+                0 20px 40px -12px hsla(252, 87%, 62%, 0.05),
+                inset 0 1px 0 rgba(255,255,255,0.06);
+            backdrop-filter: blur(12px);
+        }
+        .clay-card-primary {
+            background: linear-gradient(145deg, rgba(118, 86, 249, 0.15), rgba(118, 86, 249, 0.05));
+            box-shadow: 
+                0 20px 40px -12px hsla(252, 87%, 62%, 0.15),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .text-editorial {
+            letter-spacing: -0.02em;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background font-body min-h-screen pb-24 md:pb-0 md:pl-72">
+<!-- SideNavBar (Desktop Shell) -->
+<aside class="hidden md:flex flex-col h-screen w-72 fixed left-0 top-0 border-r-0 bg-zinc-900 shadow-[20px_0_40px_-12px_hsla(252,87%,62%,0.05)] py-6 z-50">
+<div class="px-8 mb-10">
+<h2 class="text-indigo-500 font-headline font-extrabold text-2xl tracking-tighter">QuizKTC</h2>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="text-zinc-500 mx-4 my-1 flex items-center p-4 hover:text-zinc-300 hover:bg-zinc-800/50 rounded-2xl transition-all scale-[0.98] duration-200" href="#">
+<span class="material-symbols-outlined mr-4" data-icon="dashboard">dashboard</span>
+<span class="font-headline font-bold text-sm">Dashboard</span>
+</a>
+<a class="text-zinc-500 mx-4 my-1 flex items-center p-4 hover:text-zinc-300 hover:bg-zinc-800/50 rounded-2xl transition-all scale-[0.98] duration-200" href="#">
+<span class="material-symbols-outlined mr-4" data-icon="auto_awesome">auto_awesome</span>
+<span class="font-headline font-bold text-sm">Quiz Wizard</span>
+</a>
+<a class="text-zinc-500 mx-4 my-1 flex items-center p-4 hover:text-zinc-300 hover:bg-zinc-800/50 rounded-2xl transition-all scale-[0.98] duration-200" href="#">
+<span class="material-symbols-outlined mr-4" data-icon="sensors">sensors</span>
+<span class="font-headline font-bold text-sm">Live Monitor</span>
+</a>
+<a class="text-zinc-500 mx-4 my-1 flex items-center p-4 hover:text-zinc-300 hover:bg-zinc-800/50 rounded-2xl transition-all scale-[0.98] duration-200" href="#">
+<span class="material-symbols-outlined mr-4" data-icon="analytics">analytics</span>
+<span class="font-headline font-bold text-sm">Analytics</span>
+</a>
+<a class="text-zinc-500 mx-4 my-1 flex items-center p-4 hover:text-zinc-300 hover:bg-zinc-800/50 rounded-2xl transition-all scale-[0.98] duration-200" href="#">
+<span class="material-symbols-outlined mr-4" data-icon="leaderboard">leaderboard</span>
+<span class="font-headline font-bold text-sm">Leaderboard</span>
+</a>
+<a class="bg-indigo-500/10 text-indigo-400 rounded-2xl mx-4 my-1 flex items-center p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] scale-[0.98] duration-200" href="#">
+<span class="material-symbols-outlined mr-4" data-icon="account_circle">account_circle</span>
+<span class="font-headline font-bold text-sm">Profile</span>
+</a>
+</nav>
+<div class="mt-auto px-4 space-y-1">
+<a class="text-zinc-500 flex items-center p-4 hover:text-zinc-300 transition-all" href="#">
+<span class="material-symbols-outlined mr-4" data-icon="settings">settings</span>
+<span class="font-headline font-bold text-sm">Settings</span>
+</a>
+</div>
+</aside>
+<!-- Top Navigation (Mobile) -->
+<header class="md:hidden fixed top-0 w-full z-50 bg-zinc-950/80 backdrop-blur-xl flex justify-between items-center px-8 h-20 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+<span class="text-2xl font-black tracking-tighter text-indigo-500 dark:text-indigo-400">QuizKTC</span>
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-zinc-500" data-icon="notifications">notifications</span>
+<div class="w-10 h-10 rounded-full bg-surface-container overflow-hidden border border-white/10">
+<img alt="User profile avatar" data-alt="Stylized 3D avatar of a young creative professional with short dark hair and modern glasses on a soft purple background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBD_yM0RxOLcEN-bXkHBJHvxcX72uQJdLxd6Sp_7K0wNx9NCX2sRBv1xOsz3yBaBNs8iSiAbiiZ907s8y9SnzZqXMiy2EFlxtgikeQblW2YOBAyih8lBrCCrHkCcG75qu4QATDcC7Fy8z99lePzY3seg4X55LYg2hNWD00ouLKMVEnMH1fScSpSGnUvqRMjfegPFZ5sonfEhKvn96zqOjRoMIYreDFTgRoABNkrZAI8jjPnWta94M9DNUwuKrF6gMasJlaIkd8YF-bw"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="max-w-7xl mx-auto px-6 pt-24 md:pt-12 pb-12">
+<!-- Profile Hero Section -->
+<section class="mb-16">
+<div class="relative clay-card rounded-lg p-8 md:p-12 overflow-hidden flex flex-col md:flex-row items-center md:items-end gap-8">
+<!-- Decorative Glows -->
+<div class="absolute -top-24 -right-24 w-64 h-64 bg-primary/10 blur-[100px] rounded-full"></div>
+<div class="absolute -bottom-24 -left-24 w-64 h-64 bg-secondary/5 blur-[100px] rounded-full"></div>
+<!-- Avatar & Status -->
+<div class="relative shrink-0">
+<div class="w-32 h-32 md:w-48 md:h-48 rounded-full border-4 border-surface-container overflow-hidden shadow-2xl">
+<img alt="User profile avatar" class="w-full h-full object-cover" data-alt="Vibrant 3D rendered character portrait with clean lines and expressive features in a modern digital sanctuary aesthetic" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAfY3jDRKFLMFIxRNhXOhiXRCeNF78ghszhRtdR7Q0ptZffwKn4aiAddR9CrE7p0UEkMqu71nIXblpBE5VTSo4CAvf9SwjkQMTKpJiCWugTjfjSJftJmE64stBQoFnannvo0wcb3QW991Q7S8hAPt55TVv4rYOCaESpJhEp1-jdxuhmK7ky8K3c6wkphxPSoI_u9_TqIPDu5jGzyWY3vr4DBlLcZtP14oBIdTRLvxNIQkOSh9Em9dsSlb7flwkrHsUSiJ6eg6p3ns4v"/>
+</div>
+<div class="absolute bottom-2 right-2 md:bottom-6 md:right-6 w-6 h-6 md:w-8 md:h-8 bg-tertiary rounded-full border-4 border-background shadow-lg shadow-tertiary/20"></div>
+</div>
+<!-- Profile Info -->
+<div class="flex-1 text-center md:text-left space-y-4">
+<div class="flex flex-wrap items-center justify-center md:justify-start gap-3">
+<span class="px-4 py-1.5 rounded-full bg-primary-container/20 text-primary-fixed text-xs font-bold uppercase tracking-widest">Teacher</span>
+<span class="px-4 py-1.5 rounded-full bg-secondary-container/20 text-secondary text-xs font-bold uppercase tracking-widest">Master Educator</span>
+</div>
+<h1 class="text-4xl md:text-6xl font-headline font-extrabold text-editorial text-on-background">Professor Alexander</h1>
+<p class="text-on-surface-variant text-lg max-w-xl leading-relaxed">Curating the future of gamified education. Digital Sanctuary Architect &amp; Interactive Quiz Master.</p>
+</div>
+<!-- Profile Actions -->
+<div class="flex gap-4">
+<button class="px-6 py-3 bg-primary text-on-primary font-headline font-bold rounded-full shadow-[0_10px_20px_rgba(99,91,255,0.4)] active:scale-95 transition-transform duration-200">
+                        Edit Profile
+                    </button>
+<button class="w-12 h-12 flex items-center justify-center bg-surface-container-highest rounded-full text-secondary active:scale-95 transition-all">
+<span class="material-symbols-outlined" data-icon="share">share</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Claymorphism Stat Tiles -->
+<section class="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 mb-16">
+<!-- Completed -->
+<div class="clay-card rounded-lg p-6 flex flex-col items-center text-center space-y-2">
+<span class="material-symbols-outlined text-primary mb-2 text-3xl" data-icon="task_alt">task_alt</span>
+<span class="font-data text-2xl font-bold text-on-background">1,284</span>
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Completed</span>
+</div>
+<!-- Points -->
+<div class="clay-card-primary rounded-lg p-6 flex flex-col items-center text-center space-y-2">
+<span class="material-symbols-outlined text-secondary mb-2 text-3xl" data-icon="stars" style="font-variation-settings: 'FILL' 1;">stars</span>
+<span class="font-data text-2xl font-bold text-secondary">42.5K</span>
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Points</span>
+</div>
+<!-- Score -->
+<div class="clay-card rounded-lg p-6 flex flex-col items-center text-center space-y-2">
+<span class="material-symbols-outlined text-tertiary mb-2 text-3xl" data-icon="leaderboard">leaderboard</span>
+<span class="font-data text-2xl font-bold text-on-background">98.2%</span>
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Avg Score</span>
+</div>
+<!-- Achievements -->
+<div class="clay-card rounded-lg p-6 flex flex-col items-center text-center space-y-2">
+<span class="material-symbols-outlined text-indigo-400 mb-2 text-3xl" data-icon="emoji_events">emoji_events</span>
+<span class="font-data text-2xl font-bold text-on-background">14</span>
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Awards</span>
+</div>
+<!-- Streak -->
+<div class="clay-card rounded-lg p-6 flex flex-col items-center text-center space-y-2 col-span-2 md:col-span-1">
+<span class="material-symbols-outlined text-error mb-2 text-3xl" data-icon="local_fire_department" style="font-variation-settings: 'FILL' 1;">local_fire_department</span>
+<span class="font-data text-2xl font-bold text-on-background">32</span>
+<span class="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Day Streak</span>
+</div>
+</section>
+<!-- Bottom Layout: Profile Detail & Activity -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-12 items-start">
+<!-- Achievements Sidebar (Visual) -->
+<div class="lg:col-span-1 space-y-8">
+<h3 class="text-xl font-headline font-extrabold tracking-tight text-on-background flex items-center gap-2">
+                    Recent Unlocks
+                </h3>
+<div class="space-y-4">
+<div class="flex items-center gap-4 p-4 clay-card rounded-md">
+<div class="w-12 h-12 rounded-full bg-secondary-container/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary" data-icon="workspace_premium" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
+</div>
+<div>
+<p class="font-headline font-bold text-sm text-on-background">Quiz Virtuoso</p>
+<p class="text-xs text-on-surface-variant">100% score on 5 consecutive tests</p>
+</div>
+</div>
+<div class="flex items-center gap-4 p-4 clay-card rounded-md">
+<div class="w-12 h-12 rounded-full bg-primary-container/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" data-icon="rocket_launch">rocket_launch</span>
+</div>
+<div>
+<p class="font-headline font-bold text-sm text-on-background">Speed Runner</p>
+<p class="text-xs text-on-surface-variant">Finished a quiz in under 60 seconds</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Activity Timeline Section -->
+<div class="lg:col-span-2 space-y-8">
+<div class="flex items-center justify-between">
+<h3 class="text-xl font-headline font-extrabold tracking-tight text-on-background">Activity Timeline</h3>
+<button class="text-primary text-sm font-bold flex items-center gap-1 hover:underline">
+                        View Archive <span class="material-symbols-outlined text-sm" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<div class="relative pl-8 space-y-12">
+<!-- Vertical Line -->
+<div class="absolute left-3.5 top-2 bottom-2 w-0.5 bg-surface-container-highest"></div>
+<!-- Timeline Item 1 -->
+<div class="relative">
+<div class="absolute -left-10 top-0 w-5 h-5 rounded-full bg-primary ring-4 ring-background"></div>
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<span class="text-editorial font-headline font-bold text-on-background">Created "Advanced Quantum Mechanics" Quiz</span>
+<span class="font-data text-xs text-on-surface-variant">2h ago</span>
+</div>
+<div class="p-6 rounded-lg bg-surface-container-low border border-white/5 space-y-3">
+<div class="flex gap-4">
+<div class="w-16 h-16 rounded bg-surface-container-highest overflow-hidden">
+<img alt="Quiz preview" class="w-full h-full object-cover" data-alt="Microscopic visualization of atomic particles glowing with vibrant cyan and magenta energy in a deep void" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCguTNSxefWXt4TdqSk0Nuv0HcJjCd146bck1ays1151OYhoMNt044O3tSLRlNHGk1yWZEbff0YqlXFmwNbX___3G7PcR377DqEPSaswIlYMU-KMKE55Ieoz5JfFCKHi-FoTjINm3UO5vhDIRyGTG1go-NThZU0ByaiNaIuZ7cEXfpWU_klgfD7ELXcQshgSnccdXDMOBZvcs_EnLl_cXZDaaoAxNS69RX5IwRAWq5_8HH7MGvxHfnKwaHMSJEIMFCzMg0Ne31fL4Pv"/>
+</div>
+<div class="flex-1">
+<p class="text-sm text-on-surface-variant leading-relaxed">System-wide live event with 124 concurrent participants. Average retention rate was 92%.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Timeline Item 2 -->
+<div class="relative">
+<div class="absolute -left-10 top-0 w-5 h-5 rounded-full bg-secondary ring-4 ring-background"></div>
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<span class="text-editorial font-headline font-bold text-on-background">Earned "The Sanctuary Architect" Badge</span>
+<span class="font-data text-xs text-on-surface-variant">1d ago</span>
+</div>
+<p class="text-on-surface-variant text-sm pl-0">Recognized for maintaining a positive community environment for 30 consecutive days.</p>
+</div>
+</div>
+<!-- Timeline Item 3 -->
+<div class="relative">
+<div class="absolute -left-10 top-0 w-5 h-5 rounded-full bg-surface-container-highest ring-4 ring-background"></div>
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<span class="text-editorial font-headline font-bold text-on-background">Updated Professor Profile Settings</span>
+<span class="font-data text-xs text-on-surface-variant">3d ago</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Shell) -->
+<nav class="md:hidden fixed bottom-0 left-0 w-full flex justify-around items-end px-6 pb-6 bg-zinc-950/90 backdrop-blur-2xl rounded-t-[2.5rem] z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+<a class="flex flex-col items-center justify-center text-zinc-500 pb-2 active:scale-90 transition-transform duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="text-[10px] font-bold uppercase tracking-widest Inter mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-zinc-500 pb-2 active:scale-90 transition-transform duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="quiz">quiz</span>
+<span class="text-[10px] font-bold uppercase tracking-widest Inter mt-1">Quizzes</span>
+</a>
+<a class="flex flex-col items-center justify-center text-zinc-500 pb-2 active:scale-90 transition-transform duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="podcasts">podcasts</span>
+<span class="text-[10px] font-bold uppercase tracking-widest Inter mt-1">Live</span>
+</a>
+<a class="flex flex-col items-center justify-center text-zinc-500 pb-2 active:scale-90 transition-transform duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="bar_chart">bar_chart</span>
+<span class="text-[10px] font-bold uppercase tracking-widest Inter mt-1">Stats</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-indigo-600 text-white rounded-full w-14 h-14 -translate-y-4 shadow-[0_10px_20px_rgba(99,91,255,0.4)] active:scale-90 transition-transform duration-300" href="#">
+<span class="material-symbols-outlined" data-icon="person" style="font-variation-settings: 'FILL' 1;">person</span>
+</a>
+</nav>
+</body></html>
