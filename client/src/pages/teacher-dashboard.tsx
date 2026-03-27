@@ -21,18 +21,24 @@ const stagger = { animate: { transition: { staggerChildren: 0.08 } } };
 export default function TeacherDashboard() {
   const { user } = useAuth();
 
-  const { data: quizzes, isLoading } = useQuery<Quiz[]>({
+  const { data: quizzes, isLoading: loadingQuizzes } = useQuery<Quiz[]>({
     queryKey: ["/api/quizzes/teacher"],
+  });
+
+  const { data: statsData, isLoading: loadingStats } = useQuery({
+    queryKey: [`/api/users/${user?.id}/stats`],
+    enabled: !!user?.id,
   });
 
   const activeQuizzes = quizzes?.filter((q) => q.isActive) || [];
   const totalQuizzes = quizzes?.length || 0;
   const liveNow = activeQuizzes.length;
+  const isLoading = loadingQuizzes || loadingStats;
 
   const stats = [
     {
       label: "Total Quizzes",
-      value: totalQuizzes,
+      value: statsData?.totalQuizzes || totalQuizzes,
       icon: LayoutGrid,
       color: "hsl(var(--primary))",
       bg: "hsl(var(--primary) / 0.12)",
@@ -47,14 +53,14 @@ export default function TeacherDashboard() {
     },
     {
       label: "Active Students",
-      value: totalQuizzes * 8, // Estimated
+      value: statsData?.studentsReached || 0,
       icon: Users,
       color: "hsl(145 63% 48%)",
       bg: "hsl(145 63% 42% / 0.12)",
     },
     {
       label: "Avg Quality",
-      value: "94%",
+      value: `${statsData?.averageScore || 0}%`,
       icon: Award,
       color: "hsl(38 95% 58%)",
       bg: "hsl(38 95% 58% / 0.12)",

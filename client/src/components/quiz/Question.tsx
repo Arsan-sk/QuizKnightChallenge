@@ -105,8 +105,13 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
 
   const handleOptionChange = useCallback((index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const newOptions = [...options];
-    newOptions[index] = e.target.value;
+    const oldOption = newOptions[index];
+    const newValue = e.target.value;
+    newOptions[index] = newValue;
     setOptions(newOptions);
+    
+    // Auto-update correct answer string to match the new value if it was the selected answer
+    setCorrectAnswer(prev => (prev === oldOption && oldOption !== "") ? newValue : prev);
   }, [options]);
 
   const handleQuestionImageChange = useCallback((url: string | null) => {
@@ -132,7 +137,7 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
 
   return (
     <motion.div
-      className="border p-6 rounded-lg relative bg-white dark:bg-slate-900 shadow-sm"
+      className="p-6 relative bg-transparent"
       whileHover={{ scale: 1.01, boxShadow: "0 4px 14px rgba(0, 0, 0, 0.1)" }}
       transition={{ duration: 0.2 }}
       initial={{ opacity: 0, y: 20 }}
@@ -168,7 +173,7 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
                 value={questionText}
                 onChange={handleQuestionTextChange}
                 placeholder="Enter your question"
-                className="transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-[#1c1c21] border-white/5 text-white h-12 rounded-xl"
               />
             </div>
 
@@ -204,13 +209,13 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
               }
               className="flex space-x-4"
             >
-              <div className="flex items-center space-x-2 border rounded-md px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer">
+              <div className="flex items-center space-x-2 border border-white/5 bg-[#1c1c21] rounded-xl px-4 py-3 hover:bg-white/5 transition-colors cursor-pointer text-white">
                 <RadioGroupItem value="mcq" id={`mcq-${questionId}`} />
-                <Label htmlFor={`mcq-${questionId}`}>Multiple Choice</Label>
+                <Label htmlFor={`mcq-${questionId}`} className="cursor-pointer">Multiple Choice</Label>
               </div>
-              <div className="flex items-center space-x-2 border rounded-md px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer">
+              <div className="flex items-center space-x-2 border border-white/5 bg-[#1c1c21] rounded-xl px-4 py-3 hover:bg-white/5 transition-colors cursor-pointer text-white">
                 <RadioGroupItem value="true_false" id={`true_false-${questionId}`} />
-                <Label htmlFor={`true_false-${questionId}`}>True/False</Label>
+                <Label htmlFor={`true_false-${questionId}`} className="cursor-pointer">True/False</Label>
               </div>
             </RadioGroup>
           </div>
@@ -227,7 +232,7 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
                 max="100"
                 value={points}
                 onChange={(e) => setPoints(parseInt(e.target.value) || 0)}
-                className="w-24 transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+                className="w-24 transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-[#1c1c21] border-white/5 text-white h-11 rounded-xl"
               />
               <span className="text-xs text-muted-foreground">pts</span>
             </div>
@@ -270,10 +275,9 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
                   <motion.div
                     key={`option-${questionId}-${index}`}
                     className={cn(
-                      "border rounded-md p-3 relative transition-all",
-                      activeSection === `option-${index}` && "ring-2 ring-primary/30",
-                      isCorrect && "bg-green-50 dark:bg-green-900/20 border-green-300",
-                      !isCorrect && "hover:border-primary/30"
+                      "border rounded-xl p-3 relative transition-all bg-[#1c1c21]",
+                      activeSection === `option-${index}` && "ring-2 ring-indigo-500/30",
+                      isCorrect ? "border-emerald-500/50 bg-emerald-500/5" : "border-white/5 hover:border-white/10"
                     )}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -298,18 +302,18 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
 
                     <div className="flex items-center gap-3">
                       <div className={cn(
-                        "font-medium text-sm w-7 h-7 flex items-center justify-center rounded-full transition-colors",
+                        "font-medium text-sm w-7 h-7 flex items-center justify-center rounded-full transition-colors shrink-0",
                         isCorrect
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
-                          : "bg-muted text-muted-foreground"
+                          ? "bg-emerald-500/20 text-emerald-400"
+                          : "bg-white/5 text-zinc-500"
                       )}>
                         {index + 1}
                       </div>
 
                       <Input
                         className={cn(
-                          "flex-1 transition-all",
-                          isCorrect && "border-green-200 focus:border-green-300 focus:ring-green-200/30"
+                          "flex-1 transition-all bg-[#131316] border-white/5 text-white h-11 rounded-lg",
+                          isCorrect && "border-emerald-500/30 focus:border-emerald-500 focus:ring-emerald-500/20"
                         )}
                         value={option}
                         onChange={(e) => handleOptionChange(index, e)}
@@ -317,25 +321,27 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
                         id={optionInputId}
                       />
                       <div className="flex items-center gap-2">
-                        {option.trim() !== "" && (
                           <motion.div
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.95 }}
+                            whileHover={option.trim() !== "" ? { scale: 1.1 } : {}}
+                            whileTap={option.trim() !== "" ? { scale: 0.95 } : {}}
+                            className={option.trim() === "" ? "opacity-50 cursor-not-allowed" : ""}
                           >
                             <Button
                               type="button"
                               size="icon"
                               variant={isCorrect ? "default" : "outline"}
                               className={cn(
-                                "h-8 w-8 transition-all",
-                                isCorrect && "bg-green-600 hover:bg-green-700 text-white border-green-600",
-                                !isCorrect && "hover:bg-green-50 hover:border-green-200 dark:hover:bg-green-900/20"
+                                "h-9 w-9 transition-all rounded-lg shrink-0",
+                                isCorrect 
+                                  ? "bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-500" 
+                                  : "bg-transparent border-white/10 text-zinc-500 hover:text-white hover:bg-white/5"
                               )}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 markAsCorrect(index);
                               }}
-                              title="Mark as correct answer"
+                              disabled={option.trim() === ""}
+                              title={option.trim() === "" ? "Enter text first to mark as correct" : "Mark as correct answer"}
                             >
                               <motion.div
                                 initial={{ scale: isCorrect ? 1 : 0.5, opacity: isCorrect ? 1 : 0.7 }}
@@ -349,7 +355,6 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
                               </motion.div>
                             </Button>
                           </motion.div>
-                        )}
                         {questionType === "mcq" && (
                           <ImageUpload
                             value={optionImages[index] || ""}
@@ -391,7 +396,6 @@ function QuestionTake({
   userAnswer = "",
   showResult = false
 }: QuestionTakeProps) {
-  // Add safety check for question options
   const options = question?.options || [];
   const correctAnswer = question?.correctAnswer || "";
   const questionText = question?.questionText || "";
@@ -399,27 +403,29 @@ function QuestionTake({
   const optionImages = question?.optionImages || [];
 
   return (
-    <div className="space-y-4">
-      <h3 className="text-xl font-medium mb-4">{questionText}</h3>
+    <div className="space-y-8 flex flex-col items-center pt-4">
+      <h3 className="text-2xl md:text-3xl font-bold text-center text-white leading-tight max-w-3xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+        {questionText}
+      </h3>
 
       {imageUrl && (
-        <div className="mb-4">
+        <div className="w-full max-w-2xl mx-auto rounded-2xl overflow-hidden border border-white/10 shadow-xl bg-black/40">
           <img
             src={imageUrl}
-            alt="Question"
-            className="max-w-full h-auto rounded-md border"
+            alt="Question reference"
+            className="w-full h-auto object-contain max-h-[300px]"
           />
         </div>
       )}
 
-      <div className="text-xs text-muted-foreground mb-2 italic">
-        Select an answer by clicking anywhere on the option or using number keys (1-{options.length || 4})
+      <div className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 text-center -mb-2">
+        Select the correct answer
       </div>
 
       <RadioGroup
         value={userAnswer}
         onValueChange={onChange}
-        className="space-y-3"
+        className="w-full max-w-2xl space-y-4"
       >
         {options.map((option, index) => {
           const isCorrect = showResult && option === correctAnswer;
@@ -427,95 +433,81 @@ function QuestionTake({
           const isSelected = userAnswer === option;
           const optionImage = optionImages[index];
 
+          // Alphabet label: A, B, C, D...
+          const labelChar = String.fromCharCode(65 + index);
+
           return (
             <motion.div
               key={`take-option-${index}`}
               className={cn(
-                "border rounded-md p-3 relative transition-all cursor-pointer",
-                isCorrect && "bg-green-50 dark:bg-green-900/20 border-green-300",
-                isIncorrect && "bg-red-50 dark:bg-red-900/20 border-red-300",
-                isSelected && !showResult && "bg-primary/5 border-primary",
-                !showResult && "hover:border-primary/50 hover:bg-muted/10"
+                "w-full rounded-2xl p-5 md:p-6 transition-all cursor-pointer relative overflow-hidden flex flex-col justify-center",
+                isCorrect ? "bg-emerald-500/10 border-2 border-emerald-500 text-emerald-100" 
+                : isIncorrect ? "bg-red-500/10 border-2 border-red-500 text-red-100" 
+                : isSelected && !showResult ? "bg-indigo-500/10 border-2 border-indigo-400 shadow-[0_0_30px_rgba(99,102,241,0.15)] text-white" 
+                : !showResult ? "bg-[#131316] border-2 border-transparent hover:border-white/10 text-zinc-300" : "bg-[#131316] opacity-50 border-transparent text-zinc-500"
               )}
-              whileHover={!showResult ? { scale: 1.005, boxShadow: "0 4px 12px rgba(0,0,0,0.05)" } : {}}
+              whileHover={!showResult ? { scale: 1.01, y: -2 } : {}}
+              whileTap={!showResult ? { scale: 0.99 } : {}}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
+              transition={{ delay: index * 0.1, type: "spring", stiffness: 300, damping: 25 }}
               onClick={() => !showResult && onChange(option)}
             >
-              {isCorrect && (
-                <motion.div
-                  className="absolute -right-3 -top-3 bg-green-500 rounded-full p-1 text-white border-2 border-white dark:border-gray-900"
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  <CheckIcon className="h-4 w-4" />
-                </motion.div>
+              {isSelected && !showResult && (
+                <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 rounded-full blur-[40px] pointer-events-none" />
               )}
+              
+              <div className="flex items-center gap-5 relative z-10 w-full">
+                {/* Selection Circle/Ring */}
+                <div className="shrink-0 flex items-center justify-center">
+                   <div className={cn(
+                     "w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all",
+                     isCorrect ? "bg-emerald-500 border-emerald-500 text-white"
+                     : isIncorrect ? "bg-red-500 border-red-500 text-white"
+                     : isSelected && !showResult ? "border-indigo-400"
+                     : "border-zinc-600"
+                   )}>
+                      {isCorrect && <CheckCircle className="w-4 h-4 text-white" />}
+                      {isIncorrect && <XCircle className="w-4 h-4 text-white" />}
+                      {isSelected && !showResult && <div className="w-3 h-3 bg-indigo-400 rounded-full" />}
+                   </div>
+                </div>
 
-              {isIncorrect && (
-                <motion.div
-                  className="absolute -right-3 -top-3 bg-red-500 rounded-full p-1 text-white border-2 border-white dark:border-gray-900"
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.2 }}
-                >
-                  <X className="h-4 w-4" />
-                </motion.div>
-              )}
-
-              <div className="flex items-center space-x-2">
-                <div className={cn(
-                  "flex items-center gap-2 flex-1",
-                  isCorrect && "text-green-600 dark:text-green-400 font-medium",
-                  isIncorrect && "text-red-600 dark:text-red-400 font-medium"
-                )}>
-                  <div className={cn(
-                    "font-medium text-sm w-7 h-7 flex items-center justify-center rounded-full transition-colors",
-                    isSelected && !showResult && "bg-primary text-white",
-                    isCorrect
-                      ? "bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300"
-                      : isIncorrect
-                        ? "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300"
-                        : !isSelected && "bg-muted text-muted-foreground"
-                  )}>
-                    {index + 1}
-                  </div>
-
+                <div className="flex-1 flex gap-2">
+                  <span className={cn(
+                    "font-bold shrink-0", 
+                    isCorrect ? "text-emerald-400" : isIncorrect ? "text-red-400" : isSelected ? "text-indigo-300" : "text-zinc-500"
+                  )}>{labelChar})</span>
+                  
                   <RadioGroupItem
                     value={option}
                     id={`option-take-${index}`}
                     disabled={showResult}
-                    className="sr-only" // Visually hide but keep accessible
+                    className="sr-only"
                   />
                   <Label
                     htmlFor={`option-take-${index}`}
                     className={cn(
-                      "flex items-center w-full text-base cursor-pointer",
-                      isCorrect && "text-green-600 dark:text-green-400 font-medium",
-                      isIncorrect && "text-red-600 dark:text-red-400 font-medium",
-                      isSelected && !showResult && "font-medium text-primary"
+                      "text-[15px] md:text-base font-medium cursor-pointer leading-relaxed",
+                      isCorrect ? "text-emerald-300" 
+                      : isIncorrect ? "text-red-300" 
+                      : isSelected ? "text-white" : "text-zinc-300"
                     )}
                   >
                     {option}
                   </Label>
                 </div>
-
-                {isSelected && !showResult && (
-                  <div className="flex items-center justify-center w-6 h-6 rounded-full bg-primary/10">
-                    <CheckIcon className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                )}
               </div>
 
               {optionImage && (
-                <div className="mt-3">
-                  <img
-                    src={optionImage}
-                    alt={`Option ${index + 1}`}
-                    className="max-w-full h-auto rounded-md border mt-2"
-                  />
+                <div className="mt-4 ml-12">
+                  <div className="bg-black/50 rounded-xl overflow-hidden inline-block border border-white/5">
+                    <img
+                      src={optionImage}
+                      alt={`Option ${labelChar}`}
+                      className="max-h-[150px] w-auto"
+                    />
+                  </div>
                 </div>
               )}
             </motion.div>
@@ -526,24 +518,31 @@ function QuestionTake({
       {showResult && (
         <motion.div
           className={cn(
-            "mt-4 p-3 rounded-md border",
+            "mt-8 p-6 rounded-2xl border flex items-center gap-4 max-w-2xl w-full",
             userAnswer === correctAnswer
-              ? "bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800"
-              : "bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800"
+              ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+              : "bg-red-500/10 border-red-500/30 text-red-400"
           )}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
           {userAnswer === correctAnswer ? (
-            <p className="text-green-600 dark:text-green-400 font-medium flex items-center gap-2">
-              <CheckCircle className="h-4 w-4" />
-              Correct!
-            </p>
+            <>
+              <CheckCircle className="w-8 h-8 text-emerald-400 shrink-0" />
+              <div>
+                 <h4 className="font-bold text-emerald-300 text-lg">Correct!</h4>
+                 <p className="text-emerald-400/80 text-sm">You selected the right answer.</p>
+              </div>
+            </>
           ) : (
-            <p className="text-red-600 dark:text-red-400 font-medium">
-              Incorrect. The correct answer is: {correctAnswer}
-            </p>
+            <>
+              <XCircle className="w-8 h-8 text-red-500 shrink-0" />
+              <div>
+                 <h4 className="font-bold text-red-400 text-lg">Incorrect</h4>
+                 <p className="text-red-400/80 text-sm">The correct answer was: <strong className="text-red-300">{correctAnswer}</strong></p>
+              </div>
+            </>
           )}
         </motion.div>
       )}

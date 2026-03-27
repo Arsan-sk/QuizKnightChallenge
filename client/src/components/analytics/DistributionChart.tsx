@@ -1,150 +1,64 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Pie, Cell, Legend, ResponsiveContainer, Tooltip, Sector } from "recharts";
-import { ScoreDistribution } from "@/types/analytics";
-import { PieChartIcon } from "lucide-react";
-import { useState } from "react";
+﻿import { ScoreDistribution } from "@/types/analytics";
+import { motion } from "framer-motion";
 
 interface DistributionChartProps {
   data: ScoreDistribution[];
 }
 
 export function DistributionChart({ data }: DistributionChartProps) {
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
-
-  // Skip rendering if no data
-  if (!data || data.every(item => item.count === 0)) {
-    return (
-      <Card className="h-full">
-        <CardHeader>
-          <CardTitle>Score Distribution</CardTitle>
-          <CardDescription>How student scores are distributed</CardDescription>
-        </CardHeader>
-        <CardContent className="h-[300px] flex items-center justify-center">
-          <p className="text-muted-foreground">No data available</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Calculate total for percentages
-  const total = data.reduce((sum, item) => sum + item.count, 0);
-
-  // Convert data to a format suitable for recharts with percentages
-  const chartData = data.map(item => ({
-    name: item.scoreRange,
-    value: item.count,
-    percentage: total > 0 ? (item.count / total) * 100 : 0,
-  }));
-
-  // Colors for different ranges
-  const COLORS = [
-    "#ef4444", // red for 0-59%
-    "#f59e0b", // amber for 60-69%
-    "#6366f1", // indigo for 70-79%
-    "#0ea5e9", // blue for 80-89%
-    "#16a34a", // green for 90-100%
+  // Map standard ranges to our UI labels
+  const mappedData = [
+    { label: "FAIL", count: data.find(d => d.scoreRange.includes("0-59"))?.count || 0 },
+    { label: "BELOW AVG", count: data.find(d => d.scoreRange.includes("60-69"))?.count || 0 },
+    { label: "AVERAGE", count: data.find(d => d.scoreRange.includes("70-79"))?.count || 0 },
+    { label: "ABOVE AVG", count: data.find(d => d.scoreRange.includes("80-89"))?.count || 0 },
+    { label: "DISTINCTION", count: data.find(d => d.scoreRange.includes("90-100"))?.count || 0 },
   ];
 
-  const onPieEnter = (_: any, index: number) => {
-    setActiveIndex(index);
-  };
-
-  const onPieLeave = () => {
-    setActiveIndex(null);
-  };
-
-  // Custom active shape for better highlighting
-  const renderActiveShape = (props: any) => {
-    const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent } = props;
-    
-    return (
-      <g>
-        <text x={cx} y={cy - 10} dy={8} textAnchor="middle" fill="#888">
-          {payload.name}
-        </text>
-        <text x={cx} y={cy + 10} dy={8} textAnchor="middle" fill="#333" fontWeight="bold">
-          {`${payload.value} (${(percent * 100).toFixed(1)}%)`}
-        </text>
-        <Sector
-          cx={cx}
-          cy={cy}
-          innerRadius={innerRadius}
-          outerRadius={outerRadius + 10}
-          startAngle={startAngle}
-          endAngle={endAngle}
-          fill={fill}
-        />
-        <Sector
-          cx={cx}
-          cy={cy}
-          startAngle={startAngle}
-          endAngle={endAngle}
-          innerRadius={outerRadius + 6}
-          outerRadius={outerRadius + 10}
-          fill={fill}
-        />
-      </g>
-    );
-  };
+  const maxCount = Math.max(...mappedData.map(d => d.count), 1); // Avoid division by zero
+  const total = mappedData.reduce((acc, curr) => acc + curr.count, 0);
 
   return (
-    <Card className="h-full">
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle>Score Distribution</CardTitle>
-            <CardDescription>How student scores are distributed</CardDescription>
-          </div>
-          <PieChartIcon className="h-5 w-5 text-muted-foreground" />
+    <div className="bg-[#1c1c21] rounded-[2rem] p-8 border border-white/5 shadow-xl h-full flex flex-col relative overflow-hidden">
+      <div className="flex justify-between items-center mb-12">
+        <h3 className="text-xl font-bold text-white tracking-tight">Score Distribution</h3>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-indigo-300 shadow-[0_0_10px_rgba(165,180,252,0.8)]" />
+          <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Students</span>
         </div>
-      </CardHeader>
-      <CardContent>
-        <div className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={chartData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                outerRadius={90}
-                innerRadius={40}
-                fill="#8884d8"
-                dataKey="value"
-                nameKey="name"
-                activeIndex={activeIndex !== null ? activeIndex : undefined}
-                activeShape={renderActiveShape}
-                onMouseEnter={onPieEnter}
-                onMouseLeave={onPieLeave}
+      </div>
+
+      <div className="flex-1 flex items-end justify-between gap-4 mt-auto relative z-10 px-2">
+        {mappedData.map((item, i) => {
+          const heightPercent = total === 0 ? 10 : Math.max((item.count / maxCount) * 100, 10);
+          const opacityScale = total === 0 ? 0.2 : 0.3 + (item.count / maxCount) * 0.7;
+
+          return (
+            <div key={item.label} className="flex flex-col items-center w-full group">
+              <div
+                className="w-full relative flex items-end justify-center"       
+                style={{ height: "240px" }}
               >
-                {chartData.map((entry, index) => (
-                  <Cell 
-                    key={`cell-${index}`} 
-                    fill={COLORS[index % COLORS.length]} 
-                    stroke="white"
-                    strokeWidth={2}
-                  />
-                ))}
-              </Pie>
-              <Tooltip 
-                formatter={(value, name, props) => [
-                  `${value} student${value !== 1 ? 's' : ''} (${props.payload.percentage.toFixed(1)}%)`, 
-                  name
-                ]}
-              />
-              <Legend 
-                layout="horizontal" 
-                verticalAlign="bottom" 
-                align="center"
-                formatter={(value, entry, index) => {
-                  const item = chartData[index];
-                  return `${value} (${item?.percentage.toFixed(1)}%)`;
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: `${heightPercent}%`, opacity: opacityScale }}
+                  transition={{ duration: 1, delay: i * 0.1, type: "spring", stiffness: 50 }}
+                  style={{ opacity: opacityScale }}
+                  className="w-full rounded-t-[20px] transition-all duration-300 bg-gradient-to-t from-indigo-500 to-indigo-300 shadow-[0_0_30px_rgba(165,180,252,0.3)]"
+                />
+                {/* Tooltip on hover */}
+                <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-[#131316] text-white text-xs font-bold py-1.5 px-3 rounded-lg border border-white/10 pointer-events-none">
+                  {item.count} Student{item.count !== 1 ? "s" : ""}
+                </div>
+              </div>
+              <div className="h-px w-full bg-white/5 mt-4 mb-4" />
+              <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest text-center">
+                {item.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
-} 
+}

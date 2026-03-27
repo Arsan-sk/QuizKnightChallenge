@@ -12,9 +12,7 @@ export type MenuItem = {
 export const teacherMenu: MenuItem[] = [
   { key: 'dashboard', title: 'Dashboard', route: '/teacher', icon: Home },
   { key: 'create', title: 'Create Quiz', route: '/teacher/quiz/create', icon: PlusCircle, cta: true },
-  { key: 'quizzes', title: 'My Quizzes', route: '/teacher', icon: List },
-  { key: 'analytics', title: 'Analytics', route: '/quiz-analytics', icon: BarChart2 },
-  { key: 'students', title: 'Students', route: '/teacher', icon: Users },
+  { key: 'history', title: 'History & Results', route: '/history', icon: List },
   { key: 'profile', title: 'Profile', route: '/profile', icon: User },
   { key: 'signout', title: 'Sign Out', route: '/signout', icon: LogOut },
 ];

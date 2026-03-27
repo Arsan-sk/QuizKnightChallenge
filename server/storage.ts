@@ -116,7 +116,7 @@ export class DatabaseStorage implements IStorage {
         : 0;
         
       // Get global rank
-      const leaderboard = await this.getGlobalLeaderboard(100);
+      const leaderboard = await this.getGlobalLeaderboard(0); let winStreak = 0; for (const r of results) { if (r.score >= 70) { winStreak++; } else { break; } }
       const rank = leaderboard.findIndex(entry => entry.id === userId) + 1;
       
       return {
@@ -125,7 +125,7 @@ export class DatabaseStorage implements IStorage {
           quizzesTaken,
           totalScore,
           averageScore,
-          globalRank: rank > 0 ? rank : null
+          globalRank: rank > 0 ? rank : null, winStreak: winStreak
         },
         achievements: userAchievementsList
       };

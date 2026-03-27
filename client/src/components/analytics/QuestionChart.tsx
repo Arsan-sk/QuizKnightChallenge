@@ -1,164 +1,76 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { QuestionStat } from "@/types/analytics";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, LabelList } from "recharts";
-import { formatTime, getScoreColor } from "@/utils/analytics";
-import { useState } from "react";
+import { motion } from "framer-motion";
 
 interface QuestionChartProps {
   data: QuestionStat[];
 }
 
 export function QuestionChart({ data }: QuestionChartProps) {
-  const [activeBar, setActiveBar] = useState<number | null>(null);
+  // Sort by lowest success rate to find the "Toughest" questions
+  const toughestQuestions = [...data]
+    .map(q => {
+      const successRate = q.totalAttempts > 0 ? (q.correctCount / q.totalAttempts) * 100 : 0;
+      return { ...q, successRate };
+    })
+    .sort((a, b) => a.successRate - b.successRate)
+    .slice(0, 4); // Take top 4 toughest
 
-  // Skip rendering if no data
-  if (!data || !Array.isArray(data) || data.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Question Performance</CardTitle>
-          <CardDescription>No question data available</CardDescription>
-        </CardHeader>
-        <CardContent className="h-80 flex items-center justify-center">
-          <p className="text-muted-foreground">No data to display</p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Prepare data for the chart
-  const chartData = data.map((q, index) => {
-    const correctPercentage = q.totalAttempts > 0
-      ? (q.correctCount / q.totalAttempts) * 100
-      : 0;
-
-    return {
-      id: q.questionId,
-      name: `Q${index + 1}`,
-      correctPercentage: parseFloat(correctPercentage.toFixed(1)),
-      averageTime: q.averageTime,
-      questionText: q.questionText,
-      correctCount: q.correctCount,
-      totalAttempts: q.totalAttempts,
-      index: index,
-    };
-  });
-
-  const handleMouseEnter = (_, index) => {
-    setActiveBar(index);
+  const getProgressColor = (rate: number) => {
+    if (rate <= 30) return "bg-rose-400";
+    if (rate <= 50) return "bg-rose-400/80";
+    if (rate <= 70) return "bg-amber-400";
+    return "bg-emerald-400";
   };
 
-  const handleMouseLeave = () => {
-    setActiveBar(null);
-  };
-
-  // Customize the tooltip
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div className="custom-tooltip bg-white dark:bg-gray-800 p-3 border rounded-md shadow-md">
-          <p className="font-semibold">{data.questionText}</p>
-          <p className="text-sm text-muted-foreground">
-            Correct: {data.correctCount} / {data.totalAttempts} ({data.correctPercentage}%)
-          </p>
-          <p className="text-sm text-muted-foreground">
-            Avg. time: {formatTime(data.averageTime)}
-          </p>
-        </div>
-      );
-    }
-    return null;
+  const getTextColor = (rate: number) => {
+    if (rate <= 30) return "text-rose-400";
+    if (rate <= 50) return "text-rose-400/80";
+    if (rate <= 70) return "text-amber-400";
+    return "text-emerald-400";
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex justify-between items-center">
-          <div>
-            <CardTitle>Question Performance</CardTitle>
-            <CardDescription>Success rate and time spent per question</CardDescription>
+    <div className="bg-[#1c1c21] rounded-[2rem] p-8 border border-white/5 shadow-xl h-full flex flex-col">
+      <h3 className="text-xl font-bold text-white tracking-tight mb-8">Toughest Questions</h3>
+      
+      <div className="space-y-6 flex-1">
+        {toughestQuestions.length === 0 ? (
+          <div className="flex items-center justify-center h-full text-zinc-500 font-medium text-sm">
+            No question data available yet.
           </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-              barGap={10}
-              barSize={25}
-            >
-              <CartesianGrid strokeDasharray="3 3" opacity={0.4} />
-              <XAxis
-                dataKey="name"
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                yAxisId="left"
-                orientation="left"
-                domain={[0, 100]}
-                tickFormatter={(value) => `${value}%`}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                yAxisId="right"
-                orientation="right"
-                domain={[0, 'dataMax']}
-                tickFormatter={(value) => `${value}s`}
-                axisLine={false}
-                tickLine={false}
-              />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }} />
-              <Legend />
-              <Bar
-                yAxisId="left"
-                dataKey="correctPercentage"
-                name="Success Rate (%)"
-                radius={[4, 4, 0, 0]}
-                onMouseEnter={handleMouseEnter}
-                onMouseLeave={handleMouseLeave}
-              >
-                {chartData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={getChartColor(entry.correctPercentage)}
-                    fillOpacity={activeBar === index ? 1 : 0.8}
-                    stroke={activeBar === index ? '#000' : 'none'}
-                    strokeWidth={activeBar === index ? 1 : 0}
+        ) : (
+          toughestQuestions.map((q, i) => {
+            return (
+              <div key={q.questionId} className="w-full relative group">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="text-xs font-bold text-zinc-300 truncate pr-4 max-w-[200px]">
+                    Q{i + 1}. {q.questionText}
+                  </span>
+                  <span className={`text-[11px] font-bold ${getTextColor(q.successRate)} shrink-0`}>
+                    {Math.round(q.successRate)}% Success
+                  </span>
+                </div>
+                <div className="w-full h-1.5 bg-[#131316] rounded-full overflow-hidden border border-white/5">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${q.successRate}%` }}
+                    transition={{ duration: 1, delay: i * 0.1, ease: "easeOut" }}
+                    className={`h-full ${getProgressColor(q.successRate)} rounded-full shadow-[0_0_10px_currentColor]`}
                   />
-                ))}
-                <LabelList
-                  dataKey="correctPercentage"
-                  position="top"
-                  formatter={(value) => `${value}%`}
-                  style={{ fontSize: '11px' }}
-                />
-              </Bar>
-              <Bar
-                yAxisId="right"
-                dataKey="averageTime"
-                name="Avg. Time (s)"
-                fill="#3b82f6"
-                radius={[4, 4, 0, 0]}
-                opacity={0.8}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
-    </Card>
+                </div>
+                {/* Tooltip for N/M */}
+                <div className="absolute top-0 right-[80px] -translate-y-full opacity-0 group-hover:opacity-100 transition-opacity bg-[#131316] text-[#a5b4fc] text-[10px] font-bold px-3 py-1.5 rounded-lg pointer-events-none whitespace-nowrap z-10 shadow-xl border border-indigo-500/20 shadow-indigo-500/10">
+                  {q.correctCount} / {q.totalAttempts} Correct
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <button className="w-full mt-8 bg-white/5 hover:bg-white/10 text-white text-xs font-bold uppercase tracking-widest py-4 rounded-xl transition-colors border border-white/5 shadow-sm">
+        Review All {data.length} Questions
+      </button>
+    </div>
   );
 }
-
-// Helper function to get color based on correctness percentage
-function getChartColor(percentage: number): string {
-  if (percentage >= 80) return '#10b981'; // green
-  if (percentage >= 70) return '#22c55e'; // lime-green
-  if (percentage >= 60) return '#facc15'; // yellow
-  if (percentage >= 50) return '#f97316'; // orange
-  return '#ef4444'; // red
-} 

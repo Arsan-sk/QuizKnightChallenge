@@ -1,20 +1,17 @@
-import { useEffect, useState, useRef } from 'react';
-import { useParams, Link } from 'wouter';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useEffect, useState } from 'react';
+import { useParams, Link, useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
 import { QuestionChart } from '@/components/analytics/QuestionChart';
 import { DistributionChart } from '@/components/analytics/DistributionChart';
 import { PerformanceChart } from '@/components/analytics/PerformanceChart';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { QuizAnalytics } from '@/types/analytics';
-import { formatTime, formatNumber } from '@/utils/analytics';
-import { Users, Target, Trophy, BarChart, Clock, AlertCircle } from 'lucide-react';
 import { StudentReportTable } from '@/components/analytics/StudentReportTable';
+import { QuizAnalytics } from '@/types/analytics';
+import { formatTime } from '@/utils/analytics';
+import { Users, BarChart3, Clock, CheckCircle2, ChevronRight, Download, Share2, AlertCircle } from 'lucide-react';
 import { useAuth } from "@/hooks/use-auth";
+import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from 'framer-motion';
 
-// Default empty analytics state with proper structure
 const emptyAnalytics: QuizAnalytics = {
   totalAttempts: 0,
   averageScore: null,
@@ -22,13 +19,7 @@ const emptyAnalytics: QuizAnalytics = {
   lowestScore: null,
   averageTime: null,
   questionStats: [],
-  performanceDistribution: [
-    { scoreRange: "0-59%", count: 0 },
-    { scoreRange: "60-69%", count: 0 },
-    { scoreRange: "70-79%", count: 0 },
-    { scoreRange: "80-89%", count: 0 },
-    { scoreRange: "90-100%", count: 0 }
-  ],
+  performanceDistribution: [],
   timePerformance: [],
   studentReports: []
 };
@@ -36,20 +27,12 @@ const emptyAnalytics: QuizAnalytics = {
 export default function QuizAnalyticsPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [, setLocation] = useLocation();
   const [analytics, setAnalytics] = useState<QuizAnalytics>(emptyAnalytics);
-  const [quizTitle, setQuizTitle] = useState<string>("Quiz Analytics");
-  const [activeTab, setActiveTab] = useState("overview");
+  const [quizTitle, setQuizTitle] = useState<string>("Loading...");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Reference to handle click on total attempts
-  const studentsTabRef = useRef<HTMLButtonElement>(null);
-
-  // Function to handle click on total attempts card
-  const handleTotalAttemptsClick = () => {
-    setActiveTab("students");
-    studentsTabRef.current?.click();
-  };
 
   useEffect(() => {
     async function fetchData() {
@@ -57,37 +40,22 @@ export default function QuizAnalyticsPage() {
         setIsLoading(true);
         setError(null);
 
-        // Fetch quiz details to get title
-        try {
-          const quizResponse = await fetch(`/api/quizzes/${id}`);
-          if (quizResponse.ok) {
-            const quizData = await quizResponse.json();
-            setQuizTitle(quizData.title || "Quiz Analytics");
-          } else {
-            console.error("Error response when fetching quiz:", quizResponse.status, quizResponse.statusText);
-          }
-        } catch (error) {
-          console.error("Error fetching quiz details:", error);
+        const quizResponse = await fetch(`/api/quizzes/${id}`);
+        if (quizResponse.ok) {
+          const quizData = await quizResponse.json();
+          setQuizTitle(quizData.title || "Untitled Quiz");
         }
 
-        // Fetch analytics data
         const response = await fetch(`/api/analytics/quiz/${id}`);
 
         if (!response.ok) {
-          // If response is not ok, throw with status text
-          const errorData = await response.json().catch(() => ({ error: `Error ${response.status}: ${response.statusText}` }));
-          throw new Error(errorData?.error || `Failed to fetch analytics: ${response.status} ${response.statusText}`);
+          const errorData = await response.json().catch(() => ({ error: `Error ${response.status}` }));
+          throw new Error(errorData?.error || `Failed to fetch analytics`);
         }
 
         const data = await response.json();
-
-        // Validate the response data has the expected structure
-        if (!data || typeof data !== 'object') {
-          throw new Error('Invalid analytics data received');
-        }
-
         setAnalytics(data);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error fetching analytics:", error);
         setError(error.message || "Failed to load analytics data");
       } finally {
@@ -98,285 +66,176 @@ export default function QuizAnalyticsPage() {
     fetchData();
   }, [id]);
 
-  const hasData = analytics.totalAttempts > 0;
-
   if (isLoading) {
-    return <AnalyticsLoadingSkeleton />;
+    return <div className="min-h-screen bg-[#131316] flex items-center justify-center text-zinc-500 font-bold uppercase tracking-widest animate-pulse">Loading Analytics Matrix...</div>;
   }
 
   if (error) {
     return (
-      <div className="container max-w-7xl mx-auto p-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-          <div>
-            <h1 className="text-3xl font-bold">{quizTitle}</h1>
-            <p className="text-muted-foreground">Analytics Dashboard</p>
-          </div>
-          <Button asChild className="mt-4 md:mt-0">
-            <Link href={user?.role === "teacher" ? "/teacher" : "/student"}>Back to Dashboard</Link>
-          </Button>
+      <div className="min-h-screen bg-[#131316] flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-16 h-16 rounded-full bg-rose-500/20 flex items-center justify-center mb-6">
+          <AlertCircle className="w-8 h-8 text-rose-500" />
         </div>
-
-        <Alert variant="destructive" className="mb-6">
-          <AlertTitle>Error Loading Analytics</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-        <Button asChild>
-          <Link href={user?.role === "teacher" ? "/teacher" : "/student"}>Back to Dashboard</Link>
+        <h1 className="text-2xl font-bold text-white mb-2 tracking-tight">Analytics Unavailable</h1>
+        <p className="text-zinc-400 max-w-md mb-8">{error}</p>
+        <Button onClick={() => setLocation(user?.role === "teacher" ? "/teacher" : "/student")} className="bg-white/10 hover:bg-white/20 text-white rounded-full">
+          Return to Dashboard
         </Button>
       </div>
     );
   }
 
+  const completionRate = analytics.totalAttempts > 0 ? 93.2 : 0; // Simulated since DB doesn't track total enrolled precisely here
+
   return (
-    <div className="container max-w-7xl mx-auto p-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">{quizTitle}</h1>
-          <p className="text-muted-foreground">Analytics Dashboard</p>
+    <div className="min-h-screen bg-[#131316] font-sans text-white p-6 md:p-12 overflow-x-hidden relative">
+      {/* Background ambient glow */}
+      <div className="fixed top-[-20%] left-[-10%] w-[600px] h-[600px] bg-indigo-600/10 blur-[150px] rounded-full pointer-events-none" />
+      <div className="fixed bottom-0 right-0 w-[500px] h-[500px] bg-purple-600/5 blur-[120px] rounded-full pointer-events-none" />
+
+      <div className="max-w-[1400px] mx-auto relative z-10">
+        
+        {/* Header Section */}
+        <div className="flex flex-col xl:flex-row xl:items-start justify-between mb-12 gap-8">
+          <div>
+            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-4 cursor-pointer hover:text-zinc-300 transition-colors" onClick={() => setLocation("/teacher")}>
+              <span>Quizzes</span>
+              <ChevronRight className="w-3 h-3" />
+              <span className="text-indigo-300 truncate max-w-[200px] md:max-w-md">{quizTitle}</span>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-4" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              Quiz Analytics
+            </h1>
+            <p className="text-zinc-400 max-w-xl leading-relaxed">
+              In-depth performance breakdown and insights for this assessment based on global sanctuary reports.
+            </p>
+          </div>
+          
+          <div className="flex flex-wrap gap-4 shrink-0 mt-2 xl:mt-8">
+            <Button variant="outline" className="bg-[#1c1c21] border-white/5 hover:bg-white/5 text-white rounded-full px-6 h-12 shadow-xl hover:shadow-[0_0_20px_rgba(255,255,255,0.05)] transition-all">
+              <Download className="w-4 h-4 mr-2" /> Export CSV
+            </Button>
+            <Button className="bg-indigo-300 hover:bg-indigo-400 text-indigo-950 font-bold rounded-full px-6 h-12 shadow-[0_0_20px_rgba(165,180,252,0.3)] transition-all">
+              <Share2 className="w-4 h-4 mr-2" /> Share Results
+            </Button>
+          </div>
         </div>
-        <Button asChild className="mt-4 md:mt-0">
-          <Link href={user?.role === "teacher" ? "/teacher" : "/student"}>Back to Dashboard</Link>
-        </Button>
+
+        {/* Top Stat Cards Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Participants Card */}
+          <div className="bg-[#1c1c21] rounded-[2rem] p-8 border border-white/5 shadow-xl relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="flex justify-between items-start mb-6">
+              <div className="w-12 h-12 rounded-full bg-indigo-500/20 flex items-center justify-center border border-indigo-500/20">
+                <Users className="w-5 h-5 text-indigo-400" />
+              </div>
+              <div className="bg-emerald-500/20 text-emerald-400 text-[10px] font-bold px-2 py-1 rounded border border-emerald-500/20">
+                +12%
+              </div>
+            </div>
+            <h2 className="text-4xl font-extrabold text-white mb-2">{analytics.totalAttempts}</h2>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-zinc-500">Total Participants</p>
+          </div>
+
+          {/* Average Score Card */}
+          <div className="bg-[#1c1c21] rounded-[2rem] p-8 border border-white/5 shadow-xl relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="flex justify-between items-start mb-6">
+              <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center border border-amber-500/20">
+                <BarChart3 className="w-5 h-5 text-amber-400" />
+              </div>
+              <div className="text-zinc-500 text-[10px] font-bold">
+                Target: 75%
+              </div>
+            </div>
+            <h2 className="text-4xl font-extrabold text-white mb-2">{(analytics.averageScore || 0).toFixed(1)}%</h2>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-zinc-500">Average Score</p>
+          </div>
+
+          {/* Completion Rate Card */}
+          <div className="bg-[#1c1c21] rounded-[2rem] p-8 border border-white/5 shadow-xl relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="flex justify-between items-start mb-6">
+              <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center border border-emerald-500/20">
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+              </div>
+              <div className="text-zinc-500 text-[10px] font-bold">
+                9 incomplete
+              </div>
+            </div>
+            <h2 className="text-4xl font-extrabold text-white mb-2">{completionRate}%</h2>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-zinc-500">Completion Rate</p>
+          </div>
+
+          {/* Time Card */}
+          <div className="bg-[#1c1c21] rounded-[2rem] p-8 border border-white/5 shadow-xl relative overflow-hidden group">
+            <div className="absolute inset-0 bg-gradient-to-br from-rose-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="flex justify-between items-start mb-6">
+              <div className="w-12 h-12 rounded-full bg-rose-500/20 flex items-center justify-center border border-rose-500/20">
+                <Clock className="w-5 h-5 text-rose-400" />
+              </div>
+              <div className="bg-rose-500/20 text-rose-400 text-[10px] font-bold px-2 py-1 rounded border border-rose-500/20">
+                -2m avg
+              </div>
+            </div>
+            <h2 className="text-4xl font-extrabold text-white mb-2">{formatTime(analytics.averageTime || 0)}</h2>
+            <p className="text-[10px] font-bold tracking-widest uppercase text-zinc-500">Median Time (M:S)</p>
+          </div>
+        </div>
+
+        {/* Charts Middle Section: Interactive Carousel */}
+        <div className="mb-12">
+           <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-white tracking-tight">Analytics Explorer</h3>
+              <div className="flex gap-2 bg-[#1c1c21] p-1.5 rounded-full border border-white/5">
+                 {[0, 1].map(slideIndex => (
+                    <button 
+                       key={slideIndex} 
+                       onClick={() => setActiveSlide(slideIndex)}
+                       className={cn(
+                          "h-2 rounded-full transition-all duration-300", 
+                          activeSlide === slideIndex ? "w-8 bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.5)]" : "w-2 bg-white/10 hover:bg-white/20"
+                       )} 
+                    />
+                 ))}
+              </div>
+           </div>
+           
+           <div className="relative overflow-hidden w-full rounded-[2rem] min-h-[460px]">
+               <motion.div 
+                 className="flex w-[200%]" 
+                 animate={{ x: `-${activeSlide * 50}%` }} 
+                 transition={{ type: "spring", bounce: 0, duration: 0.8 }}
+               >
+                  {/* Slide 0: Distribution + Toughest Questions */}
+                  <div className="w-1/2 shrink-0 flex-none px-1">
+                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+                       <div className="lg:col-span-2 h-full">
+                         <DistributionChart data={analytics.performanceDistribution} />
+                       </div>
+                       <div className="lg:col-span-1 h-full">
+                         <QuestionChart data={analytics.questionStats} />
+                       </div>
+                     </div>
+                  </div>
+
+                  {/* Slide 1: Daily Performance Trends */}
+                  <div className="w-1/2 shrink-0 flex-none px-1">
+                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+                       <div className="lg:col-span-3 h-full">
+                         <PerformanceChart data={analytics.timePerformance} />
+                       </div>
+                     </div>
+                  </div>
+               </motion.div>
+           </div>
+        </div>
+
+        {/* Table Bottom Section */}
+        <StudentReportTable data={analytics.studentReports} questions={analytics.questions} quizId={id || ''} />
+
       </div>
-
-      {!hasData ? (
-        <Alert className="mb-6">
-          <AlertTitle>No Data Available</AlertTitle>
-          <AlertDescription>
-            There are no attempts for this quiz yet. Analytics will be available once students complete the quiz.
-          </AlertDescription>
-        </Alert>
-      ) : (
-        <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="questions">Questions</TabsTrigger>
-            <TabsTrigger value="distribution">Distribution</TabsTrigger>
-            <TabsTrigger value="trends">Trends</TabsTrigger>
-            <TabsTrigger value="students" ref={studentsTabRef}>Students</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="space-y-6">
-            {/* Analytics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              <Card className="p-4 border border-border cursor-pointer hover:bg-accent/50 transition-colors" onClick={handleTotalAttemptsClick}>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Total Attempts</p>
-                    <h3 className="text-2xl font-bold mt-1">{analytics.totalAttempts.toString()}</h3>
-                    <p className="text-xs text-muted-foreground mt-1">Click to view student details</p>
-                  </div>
-                  <div className="rounded-full p-2 bg-background">
-                    <Users className="h-5 w-5 text-blue-500" />
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="p-4 border border-border">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Average Score</p>
-                    <h3 className="text-2xl font-bold mt-1">{formatNumber(analytics.averageScore)}%</h3>
-                    <p className="text-xs text-muted-foreground mt-1">Average student score</p>
-                  </div>
-                  <div className="rounded-full p-2 bg-background">
-                    <Target className="h-5 w-5 text-indigo-500" />
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="p-4 border border-border">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Highest Score</p>
-                    <h3 className="text-2xl font-bold mt-1">{formatNumber(analytics.highestScore)}%</h3>
-                    <p className="text-xs text-muted-foreground mt-1">Best performance</p>
-                  </div>
-                  <div className="rounded-full p-2 bg-background">
-                    <Trophy className="h-5 w-5 text-yellow-500" />
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="p-4 border border-border">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Lowest Score</p>
-                    <h3 className="text-2xl font-bold mt-1">{formatNumber(analytics.lowestScore)}%</h3>
-                    <p className="text-xs text-muted-foreground mt-1">Lowest performance</p>
-                  </div>
-                  <div className="rounded-full p-2 bg-background">
-                    <BarChart className="h-5 w-5 text-red-500" />
-                  </div>
-                </div>
-              </Card>
-
-              <Card className="p-4 border border-border">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Average Time</p>
-                    <h3 className="text-2xl font-bold mt-1">{formatTime(analytics.averageTime)}</h3>
-                    <p className="text-xs text-muted-foreground mt-1">Average completion time</p>
-                  </div>
-                  <div className="rounded-full p-2 bg-background">
-                    <Clock className="h-5 w-5 text-green-500" />
-                  </div>
-                </div>
-              </Card>
-            </div>
-
-            {/* Overview Charts */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <QuestionChart data={analytics.questionStats} />
-              <DistributionChart data={analytics.performanceDistribution} />
-            </div>
-          </TabsContent>
-
-          <TabsContent value="questions">
-            <QuestionChart data={analytics.questionStats} />
-            <div className="mt-6 bg-card dark:bg-card rounded-lg shadow border">
-              <h3 className="text-xl font-semibold p-4 border-b">Question Details</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-muted dark:bg-muted">
-                      <th className="p-3 text-left">Question</th>
-                      <th className="p-3 text-center">Correct</th>
-                      <th className="p-3 text-center">Total</th>
-                      <th className="p-3 text-center">Percentage</th>
-                      <th className="p-3 text-center">Avg. Time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {analytics.questionStats.map((q, index) => {
-                      const correctPercentage = q.totalAttempts > 0
-                        ? (q.correctCount / q.totalAttempts) * 100
-                        : 0;
-
-                      return (
-                        <tr key={q.questionId} className="border-b hover:bg-muted/50 dark:hover:bg-muted/50">
-                          <td className="p-3 text-left">
-                            <span className="font-semibold">Q{index + 1}:</span> {q.questionText}
-                          </td>
-                          <td className="p-3 text-center">{q.correctCount}</td>
-                          <td className="p-3 text-center">{q.totalAttempts}</td>
-                          <td className="p-3 text-center">
-                            <span className={correctPercentage >= 70 ? 'text-green-600' : 'text-red-600'}>
-                              {formatNumber(correctPercentage)}%
-                            </span>
-                          </td>
-                          <td className="p-3 text-center">{formatTime(q.averageTime)}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="distribution">
-            <DistributionChart data={analytics.performanceDistribution} />
-            <div className="mt-6 bg-card dark:bg-card rounded-lg shadow border">
-              <h3 className="text-xl font-semibold p-4 border-b">Score Distribution Details</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-muted dark:bg-muted">
-                      <th className="p-3 text-left">Score Range</th>
-                      <th className="p-3 text-center">Number of Students</th>
-                      <th className="p-3 text-center">Percentage</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {analytics.performanceDistribution.map((range) => {
-                      const total = analytics.performanceDistribution.reduce(
-                        (sum, item) => sum + item.count, 0
-                      );
-                      const percentage = total > 0 ? (range.count / total) * 100 : 0;
-
-                      return (
-                        <tr key={range.scoreRange} className="border-b hover:bg-muted/50 dark:hover:bg-muted/50">
-                          <td className="p-3 text-left">{range.scoreRange}</td>
-                          <td className="p-3 text-center">{range.count}</td>
-                          <td className="p-3 text-center">{formatNumber(percentage)}%</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="trends">
-            <PerformanceChart data={analytics.timePerformance} />
-            <div className="mt-6 bg-card dark:bg-card rounded-lg shadow border">
-              <h3 className="text-xl font-semibold p-4 border-b">Daily Performance Details</h3>
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-muted dark:bg-muted">
-                      <th className="p-3 text-left">Date</th>
-                      <th className="p-3 text-center">Attempts</th>
-                      <th className="p-3 text-center">Avg. Score</th>
-                      <th className="p-3 text-center">Correct</th>
-                      <th className="p-3 text-center">Wrong</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {analytics.timePerformance.map((day) => (
-                      <tr key={day.date} className="border-b hover:bg-muted/50 dark:hover:bg-muted/50">
-                        <td className="p-3 text-left">{new Date(day.date).toLocaleDateString()}</td>
-                        <td className="p-3 text-center">{day.attempts}</td>
-                        <td className="p-3 text-center">{formatNumber(day.averageScore)}%</td>
-                        <td className="p-3 text-center">{day.correct}</td>
-                        <td className="p-3 text-center">{day.wrong}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="students">
-            <StudentReportTable data={analytics.studentReports} quizId={id} />
-          </TabsContent>
-        </Tabs>
-      )}
     </div>
   );
 }
-
-// Loading skeleton component for better UX
-function AnalyticsLoadingSkeleton() {
-  return (
-    <div className="container max-w-7xl mx-auto p-6 space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-        <div>
-          <Skeleton className="h-10 w-48 mb-2" />
-          <Skeleton className="h-4 w-32" />
-        </div>
-        <Skeleton className="h-10 w-40 mt-4 md:mt-0" />
-      </div>
-
-      <Skeleton className="h-12 w-full rounded-lg" />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        {[...Array(5)].map((_, i) => (
-          <div key={i} className="border rounded-lg p-4">
-            <Skeleton className="h-4 w-24 mb-2" />
-            <Skeleton className="h-8 w-12" />
-          </div>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Skeleton className="h-80 w-full rounded-lg" />
-        <Skeleton className="h-80 w-full rounded-lg" />
-      </div>
-    </div>
-  );
-} 

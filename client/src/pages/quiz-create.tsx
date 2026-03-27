@@ -2,10 +2,9 @@ import { useState, useEffect, useCallback, memo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { insertQuizSchema, insertQuestionSchema } from "@shared/schema";
 import { useLocation } from "wouter";
 import { useMutation } from "@tanstack/react-query";
-import { Form } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,26 +19,24 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Question } from "@/components/quiz/Question";
 import { apiRequest } from "@/lib/queryClient";
 import { motion, AnimatePresence } from "framer-motion";
-import { useDebouncedCallback } from "use-debounce";
 import { useToast } from "@/hooks/use-toast";
 import {
   Plus,
-  Book,
-  FileQuestion,
-  Clock,
-  GraduationCap,
-  PenTool,
-  Lightbulb,
-  Sparkles,
   ArrowRight,
-  BookOpen,
-  LayoutList
+  Lightbulb,
+  Info,
+  ListChecks,
+  Settings2,
+  Eye,
+  Trash2,
+  Smile,
+  Brain,
+  Zap,
+  CheckCircle2,
+  Circle
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 
-// Create a simplified schema for the form only
 const quizFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string(),
@@ -47,46 +44,22 @@ const quizFormSchema = z.object({
   isPublic: z.boolean(),
   quizType: z.enum(["standard", "live"]),
   duration: z.number().optional(),
-  targetYear: z.number().optional()
+  targetYear: z.string().optional(),
+  targetBranch: z.string().optional()
 });
 
-// Create a memoized version of the Question component to prevent re-renders
 const MemoizedQuestion = memo(Question, (prevProps, nextProps) => {
-  // Always return true for edit mode questions to prevent any re-renders from parent
-  // The component will internally manage its own state and update the parent only when needed
   if (prevProps.mode === 'edit' && nextProps.mode === 'edit') {
-    // If the question's ID changed, we need to re-render
-    if (prevProps.question?.id !== nextProps.question?.id) {
-      return false;
-    }
-
-    // Otherwise, never re-render from parent changes
-    // The component will update internal state as needed
+    if (prevProps.question?.id !== nextProps.question?.id) return false;
     return true;
   }
-
-  // Default comparison for other modes
   return false;
 });
-
-// Add motion styling to CardFooter for layout control
-const AnimatedCardFooter = ({ children, className, ...props }: React.ComponentPropsWithoutRef<typeof CardFooter>) => (
-  <CardFooter className={`bg-muted/20 border-t py-3 ${className}`} {...props}>
-    <motion.div
-      className="w-full flex justify-between"
-      layout="position"
-    >
-      {children}
-    </motion.div>
-  </CardFooter>
-);
 
 export default function QuizCreate() {
   const [, setLocation] = useLocation();
   const [questions, setQuestions] = useState<any[]>([]);
-  const [quizType, setQuizType] = useState<"standard" | "live">("standard");
-  const [currentStep, setCurrentStep] = useState<"details" | "questions">("details");
-  const [isPreview, setIsPreview] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
   const [formValid, setFormValid] = useState(false);
   const { toast } = useToast();
 
@@ -95,38 +68,40 @@ export default function QuizCreate() {
     defaultValues: {
       title: "",
       description: "",
-      difficulty: "easy",
+      difficulty: "easy" as "easy" | "medium" | "hard",
       isPublic: true,
-      quizType: "standard",
+      quizType: "standard" as "standard" | "live",
       duration: 30,
     },
     mode: "onChange"
   });
 
-  useEffect(() => {
-    const subscription = form.watch((formValues) => {
-      const titleValue = formValues.title as string || "";
-      setFormValid(titleValue.trim().length > 0);
-    });
+  const { watch, setValue } = form;
+  const watchTitle = watch("title");
+  const watchDescription = watch("description");
+  const watchDifficulty = watch("difficulty");
+  const watchType = watch("quizType");
 
-    return () => subscription.unsubscribe();
-  }, [form]);
+  useEffect(() => {
+    setFormValid(watchTitle.trim().length > 0);
+  }, [watchTitle]);
 
   const createQuizMutation = useMutation({
     mutationFn: async (data: any) => {
       const res = await apiRequest("POST", "/api/quizzes", data);
       const quiz = await res.json();
-
-      // Create questions
       for (const question of questions) {
         await apiRequest("POST", `/api/quizzes/${quiz.id}/questions`, question);
       }
-
       return quiz;
     },
     onSuccess: () => {
+      toast({ title: "Quiz Created", description: "Your quiz is now live." });
       setLocation("/teacher");
     },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to create quiz", variant: "destructive" });
+    }
   });
 
   const addQuestion = useCallback((e?: React.MouseEvent) => {
@@ -134,127 +109,20 @@ export default function QuizCreate() {
       e.preventDefault();
       e.stopPropagation();
     }
-
-    const newQuestion = {
+    setQuestions(prev => [...prev, {
       questionText: "",
       questionType: "mcq",
       options: ["", "", "", ""],
       correctAnswer: "",
       points: 2,
-    };
-
-    setQuestions(prevQuestions => [...prevQuestions, newQuestion]);
+    }]);
   }, []);
 
   const updateQuestion = useCallback((index: number, question: any) => {
-    setQuestions(prevQuestions => {
-      // Create a new array with all the previous questions
-      const newQuestions = [...prevQuestions];
-      const currentQuestion = { ...newQuestions[index] };
-      let hasChanged = false;
-
-      // Now we only update the specific fields that changed
-      // This approach prevents unnecessary state updates and re-renders
-
-      // Only update specific fields if they've changed
-      if (question.questionText !== undefined &&
-        currentQuestion.questionText !== question.questionText) {
-        currentQuestion.questionText = question.questionText;
-        hasChanged = true;
-      }
-
-      // Handle options changes
-      if (question.options !== undefined) {
-        // If options length changed, we need a full update
-        if (!currentQuestion.options ||
-          currentQuestion.options.length !== question.options.length) {
-          currentQuestion.options = [...question.options];
-          hasChanged = true;
-        } else {
-          // Check if any individual options changed
-          let optionsChanged = false;
-          for (let i = 0; i < question.options.length; i++) {
-            if (currentQuestion.options[i] !== question.options[i]) {
-              // Create a new options array only if we find a change
-              if (!optionsChanged) {
-                currentQuestion.options = [...currentQuestion.options];
-                optionsChanged = true;
-              }
-              currentQuestion.options[i] = question.options[i];
-            }
-          }
-          if (optionsChanged) {
-            hasChanged = true;
-          }
-        }
-      }
-
-      // Handle question type changes (structural)
-      if (question.questionType !== undefined &&
-        currentQuestion.questionType !== question.questionType) {
-        currentQuestion.questionType = question.questionType;
-        hasChanged = true;
-      }
-
-      // Handle correct answer changes
-      if (question.correctAnswer !== undefined &&
-        currentQuestion.correctAnswer !== question.correctAnswer) {
-        currentQuestion.correctAnswer = question.correctAnswer;
-        hasChanged = true;
-      }
-
-      // Handle image changes
-      if (question.imageUrl !== undefined &&
-        currentQuestion.imageUrl !== question.imageUrl) {
-        currentQuestion.imageUrl = question.imageUrl;
-        hasChanged = true;
-      }
-
-      // Handle option image changes
-      if (question.optionImages !== undefined) {
-        if (!currentQuestion.optionImages) {
-          currentQuestion.optionImages = [...question.optionImages];
-          hasChanged = true;
-        } else {
-          let imagesChanged = false;
-          // Only create a new array if the length is different or a value has changed
-          if (currentQuestion.optionImages.length !== question.optionImages.length) {
-            currentQuestion.optionImages = [...question.optionImages];
-            hasChanged = true;
-          } else {
-            // Check individual image URLs
-            for (let i = 0; i < question.optionImages.length; i++) {
-              if (currentQuestion.optionImages[i] !== question.optionImages[i]) {
-                // Create a new array only if we find a change
-                if (!imagesChanged) {
-                  currentQuestion.optionImages = [...currentQuestion.optionImages];
-                  imagesChanged = true;
-                }
-                currentQuestion.optionImages[i] = question.optionImages[i];
-              }
-            }
-            if (imagesChanged) {
-              hasChanged = true;
-            }
-          }
-        }
-      }
-
-      // Handle points changes
-      if (question.points !== undefined &&
-        currentQuestion.points !== question.points) {
-        currentQuestion.points = question.points;
-        hasChanged = true;
-      }
-
-      // Only update the state if something has actually changed
-      if (!hasChanged) {
-        return prevQuestions; // Return the original array to prevent re-renders
-      }
-
-      // Update the question in our new array and return
-      newQuestions[index] = currentQuestion;
-      return newQuestions;
+    setQuestions(prev => {
+      const newQ = [...prev];
+      newQ[index] = { ...newQ[index], ...question };
+      return newQ;
     });
   }, []);
 
@@ -262,36 +130,6 @@ export default function QuizCreate() {
     setQuestions(questions => questions.filter((_, i) => i !== index));
   }, []);
 
-  const handleQuizTypeChange = useCallback((value: string) => {
-    const type = value as "standard" | "live";
-    setQuizType(type);
-    form.setValue("quizType", type);
-  }, [form]);
-
-  const nextStep = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    setCurrentStep("questions");
-  };
-
-  const prevStep = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    setCurrentStep("details");
-  };
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case "easy": return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
-      case "medium": return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400";
-      case "hard": return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
-      default: return "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400";
-    }
-  };
-
-  // Move the handleSubmit function above where it's used in renderQuestionsSection
   const handleSubmit = async (data: any) => {
     if (questions.length === 0) {
       toast({
@@ -299,32 +137,18 @@ export default function QuizCreate() {
         description: "Please add at least one question to your quiz",
         variant: "destructive"
       });
+      setCurrentStep(2);
       return;
     }
 
-    // Validate that all questions have a correct answer selected
     for (let i = 0; i < questions.length; i++) {
-      const question = questions[i];
-      if (!question.correctAnswer) {
+      if (!questions[i].correctAnswer) {
         toast({
           title: "Missing correct answer",
-          description: `Question ${i + 1} does not have a correct answer selected. Please select one.`,
+          description: `Question ${i + 1} does not have a correct answer selected.`,
           variant: "destructive"
         });
-
-        // Switch to questions tab if not already there
-        if (currentStep !== "questions") {
-          setCurrentStep("questions");
-        }
-
-        // Scroll to the question
-        setTimeout(() => {
-          const element = document.getElementById(`question-wrapper-${i}`);
-          if (element) {
-            element.scrollIntoView({ behavior: "smooth", block: "center" });
-          }
-        }, 100);
-
+        setCurrentStep(2);
         return;
       }
     }
@@ -332,386 +156,422 @@ export default function QuizCreate() {
     createQuizMutation.mutate(data);
   };
 
-  // Handler for the create quiz button that validates the form first
-  const handleCreateQuizClick = useCallback(() => {
-    // Trigger form validation
-    form.trigger().then(isValid => {
-      if (isValid) {
-        // If form is valid, get the values and submit
-        const formData = form.getValues();
-        handleSubmit(formData);
-      } else {
-        // If form is invalid, show an error
-        toast({
-          title: "Invalid form data",
-          description: "Please check the form for errors",
-          variant: "destructive"
-        });
-      }
-    });
-  }, [form, handleSubmit]);
+  const nextStep = () => {
+    if (currentStep < 3) setCurrentStep(curr => curr + 1);
+    else form.handleSubmit(handleSubmit)();
+  };
 
-  // Button event handlers need to stop propagation and prevent default
-  const handleButtonClick = useCallback((handler: Function) => (e: React.MouseEvent) => {
-    // Stop event from bubbling up and triggering form submission
-    e.stopPropagation();
-    e.preventDefault();
-    handler(e);
-  }, []);
+  const getStepText = (step: number) => {
+    switch (step) {
+      case 1: return "Define the core identity of your challenge. Set the tone and difficulty for your students.";
+      case 2: return "Develop engaging questions. Add media and set the correct answers.";
+      case 3: return "Configure time limits, public access, and live participation rules.";
+      default: return "";
+    }
+  };
 
-  // Memoized render functions to prevent unnecessary re-renders
-  const renderQuizDetails = useCallback(() => (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key="details-form"
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: 20 }}
-        transition={{ duration: 0.3 }}
-        className="space-y-6"
-        layout="position"
-      >
-        <Card className="overflow-hidden">
-          <CardHeader className="bg-primary/5 border-b">
-            <CardTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5" />
-              Quiz Information
-            </CardTitle>
-            <CardDescription>Enter the basic details about your quiz</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6 space-y-4">
+  const stepLabels = [
+    { id: 1, label: "1. Info", icon: Info },
+    { id: 2, label: "2. Questions", icon: ListChecks },
+    { id: 3, label: "3. Settings", icon: Settings2 }
+  ];
+
+  const renderInfoStep = () => (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Left Column: Form Fields */}
+      <div className="lg:col-span-2 space-y-6">
+        <div className="bg-[#1c1c21] rounded-[2rem] p-8 border border-white/5 shadow-xl">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-1.5 h-6 bg-indigo-300 rounded-full shadow-[0_0_10px_rgba(165,180,252,0.5)]" />
+            <h2 className="text-xl font-bold text-white">Basic Information</h2>
+          </div>
+          
+          <div className="space-y-6">
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Book className="h-4 w-4" />
-                Quiz Title
-              </label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest pl-1">QUIZ TITLE</label>
               <Input
                 {...form.register("title")}
-                placeholder="Enter an engaging title for your quiz"
-                className="transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+                placeholder="e.g., Quantum Mechanics Fundamentals"
+                className="bg-[#131316] border-white/5 text-white h-14 rounded-xl focus-visible:ring-indigo-500/50"
               />
-              {form.formState.errors.title && (
-                <p className="text-sm text-red-500">{form.formState.errors.title.message?.toString()}</p>
-              )}
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <FileQuestion className="h-4 w-4" />
-                Description
-              </label>
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest pl-1">DESCRIPTION</label>
               <Textarea
                 {...form.register("description")}
-                placeholder="Describe what this quiz is about and what students will learn"
-                className="min-h-24 transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
+                placeholder="Explain the learning objectives and scope of this quiz..."
+                className="bg-[#131316] border-white/5 text-white min-h-[120px] rounded-xl focus-visible:ring-indigo-500/50 resize-none"
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center gap-2">
-                  <Lightbulb className="h-4 w-4" />
-                  Difficulty Level
-                </label>
-                <Select
-                  onValueChange={(value) =>
-                    form.setValue("difficulty", value as "easy" | "medium" | "hard")
-                  }
-                  defaultValue="easy"
-                >
-                  <SelectTrigger className="transition-all focus:border-primary focus:ring-2 focus:ring-primary/20">
-                    <SelectValue placeholder="Select difficulty" />
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest pl-1">SUBJECT</label>
+                <Select defaultValue="physics">
+                  <SelectTrigger className="bg-[#131316] border-white/5 text-white h-14 rounded-xl">
+                    <SelectValue placeholder="Select a Subject" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="easy" className="flex items-center">
-                      <span className="flex items-center gap-2">
-                        <Badge variant="outline" className={getDifficultyColor("easy")}>Easy</Badge>
-                        <span className="text-muted-foreground text-xs">For beginners</span>
-                      </span>
-                    </SelectItem>
-                    <SelectItem value="medium">
-                      <span className="flex items-center gap-2">
-                        <Badge variant="outline" className={getDifficultyColor("medium")}>Medium</Badge>
-                        <span className="text-muted-foreground text-xs">Intermediate level</span>
-                      </span>
-                    </SelectItem>
-                    <SelectItem value="hard">
-                      <span className="flex items-center gap-2">
-                        <Badge variant="outline" className={getDifficultyColor("hard")}>Hard</Badge>
-                        <span className="text-muted-foreground text-xs">Advanced concepts</span>
-                      </span>
-                    </SelectItem>
+                  <SelectContent className="bg-[#1c1c21] border-zinc-800 text-white">
+                    <SelectItem value="physics">Physics</SelectItem>
+                    <SelectItem value="compsci">Computer Science</SelectItem>
+                    <SelectItem value="math">Mathematics</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-
               <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center gap-2">
-                  <LayoutList className="h-4 w-4" />
-                  Quiz Type
-                </label>
-                <Select
-                  onValueChange={handleQuizTypeChange}
-                  defaultValue="standard"
-                >
-                  <SelectTrigger className="transition-all focus:border-primary focus:ring-2 focus:ring-primary/20">
-                    <SelectValue placeholder="Select quiz type" />
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest pl-1">LANGUAGE</label>
+                <Select defaultValue="en">
+                  <SelectTrigger className="bg-[#131316] border-white/5 text-white h-14 rounded-xl">
+                    <SelectValue placeholder="English (US)" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="standard">
-                      <span className="flex items-center gap-2">
-                        <Badge variant="outline" className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400">Standard</Badge>
-                        <span className="text-muted-foreground text-xs">Always available</span>
-                      </span>
-                    </SelectItem>
-                    <SelectItem value="live">
-                      <span className="flex items-center gap-2">
-                        <Badge variant="outline" className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400">Live</Badge>
-                        <span className="text-muted-foreground text-xs">Teacher-controlled timing</span>
-                      </span>
-                    </SelectItem>
+                  <SelectContent className="bg-[#1c1c21] border-zinc-800 text-white">
+                    <SelectItem value="en">English (US)</SelectItem>
+                    <SelectItem value="es">Spanish</SelectItem>
                   </SelectContent>
                 </Select>
-                {quizType === "live" && (
-                  <motion.p
-                    className="text-xs text-muted-foreground mt-1 italic"
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                  >
-                    Live quizzes can be started and stopped by the teacher. Students can only take the quiz when it's active.
-                  </motion.p>
-                )}
               </div>
             </div>
+          </div>
+        </div>
 
-            <AnimatePresence>
-              {quizType === "live" && (
-                <motion.div
-                  className="space-y-2"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                >
-                  <label className="text-sm font-medium flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    Duration (minutes)
-                  </label>
-                  <Input
-                    type="number"
-                    min="1"
-                    max="180"
-                    defaultValue="30"
-                    onChange={(e) => form.setValue("duration", parseInt(e.target.value))}
-                    className="transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  />
-                </motion.div>
+        <div className="bg-[#1c1c21] rounded-[2rem] p-8 border border-white/5 shadow-xl">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-1.5 h-6 bg-[#f59e0b] rounded-full shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
+            <h2 className="text-xl font-bold text-white">Difficulty Level</h2>
+          </div>
+          <p className="text-sm text-zinc-400 mb-8">This determines the adaptive logic applied to questions.</p>
+
+          <div className="grid grid-cols-3 gap-4">
+            {/* Easy */}
+            <button 
+              type="button"
+              onClick={() => setValue("difficulty", "easy")}
+              className={`relative h-40 rounded-2xl border flex flex-col items-center justify-center gap-4 transition-all ${
+                watchDifficulty === 'easy' 
+                  ? 'bg-[#1e293b]/50 border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.1)]' 
+                  : 'bg-[#131316] border-white/5 hover:border-white/10'
+              }`}
+            >
+              {watchDifficulty === 'easy' && (
+                <div className="absolute -top-2 -right-2 w-6 h-6 bg-[#f59e0b] rounded-full flex items-center justify-center text-white text-[10px] border-[3px] border-[#1c1c21]">
+                  ✓
+                </div>
               )}
-            </AnimatePresence>
-
-            <div className="flex items-center space-x-2 pt-2">
-              <Checkbox
-                id="isPublic"
-                defaultChecked={true}
-                onCheckedChange={(checked) => {
-                  form.setValue("isPublic", checked === true);
-                }}
-              />
-              <label htmlFor="isPublic" className="text-sm font-medium flex items-center gap-2">
-                <GraduationCap className="h-4 w-4" />
-                Make quiz public for all students
-              </label>
-            </div>
-          </CardContent>
-          <AnimatedCardFooter>
-            <div></div> {/* Empty div for flex justification */}
-            <Button
-              type="button"
-              onClick={handleButtonClick(() => setCurrentStep("questions"))}
-              className={`transition-all ${!formValid ? 'opacity-50 cursor-not-allowed' : ''}`}
-              disabled={!formValid}
-            >
-              Next: Add Questions
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </AnimatedCardFooter>
-        </Card>
-      </motion.div>
-    </AnimatePresence>
-  ), [form, quizType, formValid, handleButtonClick, handleQuizTypeChange, getDifficultyColor]);
-
-  const renderQuestionsSection = useCallback(() => (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key="questions-section"
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: -20 }}
-        transition={{ duration: 0.3 }}
-        className="space-y-6"
-        layout="position"
-      >
-        <Card>
-          <CardHeader className="bg-primary/5 border-b flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <PenTool className="h-5 w-5" />
-                Add Questions
-              </CardTitle>
-              <CardDescription>Create questions for your quiz</CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                type="button"
-                onClick={handleButtonClick(() => setCurrentStep("details"))}
-              >
-                Back to Details
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleButtonClick(addQuestion)}
-                className="gap-1"
-              >
-                <Plus className="h-4 w-4" />
-                Add Question
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-6 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800"
-              layout="position"
-            >
-              <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300 mb-1 flex items-center gap-2">
-                <Lightbulb className="h-4 w-4" />
-                Quick Tip
-              </h3>
-              <p className="text-xs text-blue-700 dark:text-blue-400">
-                You can now directly mark an option as the correct answer by clicking the checkmark icon next to it.
-                The correct answer will be highlighted in green. No need to select it separately!
-              </p>
-            </motion.div>
-
-            {questions.length === 0 ? (
-              <motion.div
-                className="text-center py-12 border-2 border-dashed rounded-lg flex flex-col items-center justify-center"
-                whileHover={{ scale: 1.01 }}
-                transition={{ duration: 0.2 }}
-                layout="position"
-              >
-                <Sparkles className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Start by adding a question</h3>
-                <p className="text-muted-foreground max-w-md mb-6">
-                  Your quiz needs at least one question. Click the button below to add your first question.
-                </p>
-                <Button
-                  type="button"
-                  onClick={handleButtonClick(addQuestion)}
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add First Question
-                </Button>
-              </motion.div>
-            ) : (
-              <div className="space-y-6">
-                <AnimatePresence mode="popLayout">
-                  {questions.map((question, index) => (
-                    <motion.div
-                      key={`question-wrapper-${index}`}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                      transition={{ duration: 0.3 }}
-                      layout
-                      layoutId={`question-${index}`}
-                    >
-                      <div className="flex items-center gap-2 mb-2">
-                        <Badge variant="outline" className="bg-primary/10">Question {index + 1}</Badge>
-                        {question.questionType === "mcq" && <Badge variant="outline">Multiple Choice</Badge>}
-                        {question.questionType === "true_false" && <Badge variant="outline">True/False</Badge>}
-                      </div>
-                      <MemoizedQuestion
-                        question={question}
-                        onChange={(q) => updateQuestion(index, q)}
-                        onRemove={() => removeQuestion(index)}
-                        mode="edit"
-                      />
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-
-                {questions.length > 0 && (
-                  <motion.div
-                    className="flex justify-center pt-4"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                    layout="position"
-                  >
-                    <Button
-                      type="button"
-                      onClick={handleButtonClick(addQuestion)}
-                      variant="outline"
-                      className="px-8"
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Another Question
-                    </Button>
-                  </motion.div>
-                )}
+              <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                <Smile className="w-6 h-6 text-emerald-400" />
               </div>
-            )}
-          </CardContent>
-          <AnimatedCardFooter>
-            <Button
-              variant="outline"
+              <div className="text-center">
+                <p className="font-bold text-white">Easy</p>
+                <p className="text-[9px] uppercase tracking-widest text-zinc-500 mt-1">FUNDAMENTALS</p>
+              </div>
+            </button>
+
+            {/* Medium */}
+            <button 
               type="button"
-              onClick={handleButtonClick(() => setCurrentStep("details"))}
+              onClick={() => setValue("difficulty", "medium")}
+              className={`relative h-40 rounded-2xl flex flex-col items-center justify-center gap-4 transition-all ${
+                watchDifficulty === 'medium' 
+                  ? 'bg-indigo-300 border-[3px] border-indigo-200 shadow-[0_0_30px_rgba(165,180,252,0.3)]' 
+                  : 'bg-[#131316] border border-white/5 hover:border-white/10'
+              }`}
             >
-              Back to Details
-            </Button>
-            <Button
+              {watchDifficulty === 'medium' && (
+                <div className="absolute -top-2 -right-2 w-6 h-6 bg-[#f59e0b] rounded-full flex items-center justify-center text-[#42331c] font-bold text-[10px] border-[3px] border-[#1c1c21] z-10">
+                  ✓
+                </div>
+              )}
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${watchDifficulty === 'medium' ? 'bg-[#1c1c21]/10' : 'bg-indigo-500/20'}`}>
+                <Brain className={`w-6 h-6 ${watchDifficulty === 'medium' ? 'text-indigo-950' : 'text-indigo-400'}`} />
+              </div>
+              <div className="text-center">
+                <p className={`font-bold ${watchDifficulty === 'medium' ? 'text-indigo-950' : 'text-white'}`}>Medium</p>
+                <p className={`text-[9px] uppercase tracking-widest mt-1 ${watchDifficulty === 'medium' ? 'text-indigo-900/60 font-bold' : 'text-zinc-500'}`}>STANDARD</p>
+              </div>
+            </button>
+
+            {/* Hard */}
+            <button 
               type="button"
-              onClick={handleButtonClick(handleCreateQuizClick)}
-              className="min-w-32"
-              disabled={createQuizMutation.isPending || questions.length === 0}
+              onClick={() => setValue("difficulty", "hard")}
+              className={`relative h-40 rounded-2xl border flex flex-col items-center justify-center gap-4 transition-all ${
+                watchDifficulty === 'hard' 
+                  ? 'bg-[#3f1d1d]/50 border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.1)]' 
+                  : 'bg-[#131316] border-white/5 hover:border-white/10'
+              }`}
             >
-              {createQuizMutation.isPending ? "Creating..." : "Create Quiz"}
+              {watchDifficulty === 'hard' && (
+                <div className="absolute -top-2 -right-2 w-6 h-6 bg-[#f59e0b] rounded-full flex items-center justify-center text-white text-[10px] border-[3px] border-[#1c1c21]">
+                  ✓
+                </div>
+              )}
+              <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
+                <Zap className="w-6 h-6 text-red-500" />
+              </div>
+              <div className="text-center">
+                <p className="font-bold text-white">Hard</p>
+                <p className="text-[9px] uppercase tracking-widest text-zinc-500 mt-1">ADVANCED</p>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Column: Tips & Preview */}
+      <div className="space-y-6">
+        {/* Teacher Tip Card */}
+        <div className="bg-[#1c1c21] rounded-[2rem] p-8 border border-white/5 shadow-xl relative overflow-hidden">
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-300 to-[#a855f7]" />
+          
+          <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center mb-5">
+            <Lightbulb className="w-5 h-5 text-indigo-200" />
+          </div>
+          
+          <h3 className="text-lg font-bold text-white mb-3" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Teacher Tip</h3>
+          <p className="text-sm text-zinc-400 leading-relaxed mb-6">
+            A clear, descriptive title helps students find your quiz in the library. Use the description to set expectations about time limits and question types.
+          </p>
+          
+          <div className="bg-[#131316] rounded-2xl p-5 border border-white/5">
+            <p className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold mb-4">CHECKLIST</p>
+            <ul className="space-y-3">
+              <li className="flex gap-3 text-sm text-zinc-300 items-start">
+                {watchTitle.length > 0 ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /> : <Circle className="w-4 h-4 text-zinc-600 shrink-0 mt-0.5" />}
+                <span>Title entered</span>
+              </li>
+              <li className="flex gap-3 text-sm text-zinc-300 items-start">
+                {watchDescription.length >= 20 ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" /> : <Circle className="w-4 h-4 text-zinc-600 shrink-0 mt-0.5" />}
+                <span>Minimum 20 char description</span>
+              </li>
+              <li className="flex gap-3 text-sm text-zinc-300 items-start">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <span>Subject categorized</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Dummy Quiz Preview Card */}
+        <div className="bg-[#1c1c21] rounded-[2rem] p-6 border border-white/5 shadow-xl">
+          <p className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold mb-4 ml-2">QUIZ CARD PREVIEW</p>
+          <div className="bg-[#131316] rounded-2xl overflow-hidden border border-white/5 aspect-square flex flex-col">
+            <div className="h-1/2 bg-gradient-to-br from-[#4f46e5] to-[#7c3aed] relative p-4 flex flex-col justify-end">
+              <Badge className="bg-[#f59e0b] text-[#42331c] hover:bg-[#f59e0b] font-bold uppercase text-[9px] self-start border-none">PHYSICS</Badge>
+            </div>
+            <div className="p-4 space-y-3 flex-1 flex flex-col justify-end pb-6">
+               <div className="w-3/4 h-4 bg-white/10 rounded-full" />
+               <div className="w-full h-3 bg-white/5 rounded-full" />
+               <div className="flex justify-between items-center mt-4">
+                 <div className="flex gap-1">
+                   <div className="w-4 h-4 rounded-full bg-white/10" />
+                   <div className="w-4 h-4 rounded-full bg-white/10" />
+                 </div>
+                 <div className="w-12 h-3 bg-white/10 rounded-full" />
+               </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderQuestionsStep = () => (
+    <div className="space-y-6">
+      <div className="bg-[#1c1c21] rounded-[2rem] p-8 border border-white/5 shadow-xl max-w-4xl mx-auto">
+        <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+           <div>
+              <h2 className="text-xl font-bold text-white mb-1">Add Questions</h2>
+              <p className="text-zinc-400 text-sm">Create specific challenges for your students.</p>
+           </div>
+           <Button onClick={addQuestion} className="bg-white/10 hover:bg-white/20 text-white rounded-full">
+             <Plus className="w-4 h-4 mr-2" /> Add Question
+           </Button>
+        </div>
+
+        {questions.length === 0 ? (
+          <div className="py-16 text-center">
+            <div className="w-16 h-16 bg-[#131316] rounded-full mx-auto flex items-center justify-center mb-4">
+               <ListChecks className="w-8 h-8 text-zinc-600" />
+            </div>
+            <h3 className="text-lg font-bold text-white mb-2">No Questions Yet</h3>
+            <p className="text-zinc-500 mb-6">Start building your quiz by adding the first question.</p>
+            <Button onClick={addQuestion} className="bg-indigo-500 hover:bg-indigo-600 text-white rounded-full px-8 shadow-[0_0_20px_rgba(99,102,241,0.2)]">
+              Create First Question
             </Button>
-          </AnimatedCardFooter>
-        </Card>
-      </motion.div>
-    </AnimatePresence>
-  ), [questions, addQuestion, updateQuestion, removeQuestion, handleButtonClick, createQuizMutation.isPending, handleCreateQuizClick]);
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {questions.map((question, index) => (
+              <div key={index} className="bg-[#131316] rounded-2xl border border-white/5 p-1 relative overflow-hidden">
+                <div className="flex items-center gap-2 mb-4 p-4 pb-0">
+                  <Badge className="bg-indigo-500/20 text-indigo-300 border-none font-bold">Question {index + 1}</Badge>
+                </div>
+                <MemoizedQuestion
+                  question={question}
+                  onChange={(q) => updateQuestion(index, q)}
+                  onRemove={() => removeQuestion(index)}
+                  mode="edit"
+                />
+              </div>
+            ))}
+            <div className="flex justify-center mt-8">
+              <Button onClick={addQuestion} variant="outline" className="border-dashed border-white/10 text-zinc-400 hover:text-white bg-transparent hover:bg-white/5 rounded-xl px-12 py-8 h-auto">
+                <Plus className="w-4 h-4 mr-2" /> Add Another Question
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderSettingsStep = () => (
+    <div className="space-y-6 max-w-4xl mx-auto">
+       <div className="bg-[#1c1c21] rounded-[2rem] p-8 border border-white/5 shadow-xl">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-1.5 h-6 bg-purple-500 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.5)]" />
+            <h2 className="text-xl font-bold text-white">Quiz Settings</h2>
+          </div>
+          
+          <div className="space-y-8">
+             <div className="space-y-3">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest pl-1">QUIZ MODE</label>
+                <Select onValueChange={(val) => setValue("quizType", val as "standard"|"live")} defaultValue={watchType}>
+                  <SelectTrigger className="bg-[#131316] border-white/5 text-white h-14 rounded-xl">
+                    <SelectValue placeholder="Select Quiz Type" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-[#1c1c21] border-zinc-800 text-white">
+                    <SelectItem value="standard">Standard (Always Available)</SelectItem>
+                    <SelectItem value="live">Live Event (Teacher Controlled)</SelectItem>
+                  </SelectContent>
+                </Select>
+             </div>
+
+             {watchType === 'live' && (
+               <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest pl-1">TIME DURATION (MINUTES)</label>
+                  <Input type="number" {...form.register('duration')} className="bg-[#131316] border-white/5 text-white h-14 rounded-xl focus-visible:ring-indigo-500/50" />
+               </div>
+             )}
+
+             <div className="bg-[#131316] border border-white/5 rounded-2xl p-6 flex items-start gap-4">
+                <Checkbox id="public" defaultChecked onCheckedChange={(c) => setValue("isPublic", c === true)} className="mt-1" />
+                <div>
+                   <label htmlFor="public" className="font-bold text-white block mb-1">Make Quiz Public</label>
+                   <p className="text-sm text-zinc-500">Allow any student in the sanctuary to discover and attempt this quiz across the global networks.</p>
+                </div>
+             </div>
+          </div>
+       </div>
+    </div>
+  );
+
+
 
   return (
-    <div className="container mx-auto p-8 max-w-4xl">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="mb-8"
-      >
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Sparkles className="h-7 w-7 text-primary" />
-          Create New Quiz
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Design an engaging quiz for your students with questions and options
-        </p>
-      </motion.div>
+    <Form {...form}>
+      <div className="min-h-screen bg-[#131316] text-white p-6 pb-32 font-sans relative overflow-x-hidden">
+        {/* Glow Effects */}
+        <div className="fixed top-0 left-[20%] w-[500px] h-[500px] bg-indigo-600/5 rounded-full blur-[120px] pointer-events-none" />
+        <div className="fixed bottom-0 right-0 w-[600px] h-[600px] bg-purple-600/5 rounded-full blur-[150px] pointer-events-none" />
 
-      <Form {...form}>
-        <div className="space-y-6" id="quiz-form">
-          <AnimatePresence mode="wait">
-            {currentStep === "details" ? renderQuizDetails() : renderQuestionsSection()}
-          </AnimatePresence>
+        <div className="max-w-6xl mx-auto space-y-10 relative z-10 pt-4">
+          
+          {/* Header section */}
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-extrabold text-white mb-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Quiz Creation Wizard</h1>
+              <p className="text-zinc-400 text-sm md:text-base max-w-xl">{getStepText(currentStep)}</p>
+            </div>
+            
+            <div className="bg-[#1c1c21] rounded-full px-5 py-2.5 flex items-center gap-4 border border-white/5 shadow-lg shrink-0">
+              <span className="font-extrabold text-white text-base">0{currentStep}</span>
+              <div className="w-24 md:w-32 h-1.5 bg-[#131316] rounded-full overflow-hidden inset-shadow-sm">
+                <div 
+                  className="h-full bg-gradient-to-r from-indigo-400 to-[#a855f7] rounded-full transition-all duration-500" 
+                  style={{ width: `${(currentStep / 3) * 100}%` }} 
+                />
+              </div>
+              <span className="text-xs text-zinc-500 font-bold">/ 03</span>
+            </div>
+          </div>
+
+          {/* Stepper Tabs */}
+          <div className="flex gap-2 p-1.5 bg-[#1c1c21] rounded-2xl border border-white/5 w-fit">
+            {stepLabels.map((step) => {
+              const Icon = step.icon;
+              const isActive = currentStep === step.id;
+              const isPast = currentStep > step.id;
+              
+              return (
+                <button
+                  key={step.id}
+                  type="button"
+                  onClick={() => setCurrentStep(step.id)}
+                  disabled={step.id > currentStep && !formValid}
+                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                    isActive 
+                      ? 'bg-indigo-300 text-indigo-950 shadow-[0_0_15px_rgba(165,180,252,0.3)]' 
+                      : isPast
+                        ? 'text-white hover:bg-white/5'
+                        : 'text-zinc-500 hover:text-zinc-300'
+                  }`}
+                >
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-indigo-950' : isPast ? 'text-indigo-400' : ''}`} />
+                  {step.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Content Area */}
+          <div className="min-h-[500px]">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentStep}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3 }}
+              >
+                {currentStep === 1 && renderInfoStep()}
+                {currentStep === 2 && renderQuestionsStep()}
+                {currentStep === 3 && renderSettingsStep()}
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </div>
-      </Form>
-    </div>
+        
+        {/* Fixed bottom bar */}
+        <div className="fixed bottom-0 left-0 right-0 bg-[#09090b]/80 backdrop-blur-xl border-t border-white/5 py-4 px-6 md:px-12 flex justify-between items-center z-50">
+          <Button variant="ghost" className="text-zinc-400 hover:text-white" onClick={() => setLocation("/teacher")}>
+            <Trash2 className="w-4 h-4 mr-2" /> Discard Draft
+          </Button>
+          
+          <div className="flex items-center gap-4">
+            <Button variant="outline" className="hidden md:flex bg-[#1c1c21] border-white/5 text-zinc-300 hover:bg-white/5 hover:text-white rounded-xl">
+              Save as Draft
+            </Button>
+            <Button 
+              type="button"
+              className={`font-bold px-8 h-12 rounded-xl flex items-center shadow-lg transition-all ${
+                (!formValid) || createQuizMutation.isPending
+                  ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed shadow-none'
+                  : 'bg-indigo-300 hover:bg-indigo-400 text-indigo-950 hover:shadow-[0_0_20px_rgba(165,180,252,0.5)]'
+              }`}
+              onClick={nextStep}
+              disabled={(!formValid) || createQuizMutation.isPending}
+            >
+              {currentStep < 3 ? (
+                <>Next Step <ArrowRight className="w-4 h-4 ml-2" /></>
+              ) : (
+                createQuizMutation.isPending ? "Creating..." : "Launch Quiz"
+              )}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Form>
   );
 }

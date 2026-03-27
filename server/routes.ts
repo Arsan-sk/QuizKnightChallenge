@@ -17,28 +17,27 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import { createClient } from '@supabase/supabase-js';
 
 // ES Module equivalent for __dirname
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Initialize Supabase Storage Client
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrlFull = supabaseUrl ?? "https://fmzwbrjdlnechdquodig.supabase.co"; // Fallback to user provided URL
+const supabase = (supabaseUrlFull && supabaseKey) ? createClient(supabaseUrlFull, supabaseKey) : null;
+
 // Set up storage for image uploads
 const uploadDir = path.join(__dirname, '../uploads');
 
-// Ensure uploads directory exists
+// Ensure uploads directory exists (keep for backward compatibility with existing files)
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-const storage_upload = multer.diskStorage({
-  destination: uploadDir,
-  filename: (req, file, cb) => {
-    // Generate unique filename
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const ext = path.extname(file.originalname);
-    cb(null, `quiz-image-${uniqueSuffix}${ext}`);
-  }
-});
+const storage_upload = multer.memoryStorage();
 
 const upload = multer({
   storage: storage_upload,
@@ -73,7 +72,7 @@ export function registerRoutes(app: Express): Server {
   app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
   // Image upload endpoint
-  app.post('/api/upload', upload.single('image'), (req, res) => {
+  app.post('/api/upload', upload.single('image'), async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
         return res.status(401).json({ error: "Authentication required" });
@@ -83,9 +82,42 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: 'No file uploaded' });
       }
 
-      // Create URL for the uploaded file
-      const fileUrl = `/uploads/${req.file.filename}`;
-      return res.json({ url: fileUrl });
+      if (supabase) {
+        // Generate unique filename
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(req.file.originalname);
+        const filename = `quiz-image-${uniqueSuffix}${ext}`;
+
+        // Ensure bucket exists or just upload directly
+        const { data, error } = await supabase.storage
+          .from('quiz-images')
+          .upload(filename, req.file.buffer, {
+            contentType: req.file.mimetype,
+            upsert: false
+          });
+
+        if (error) {
+           // If error is bucket not found, try to create it and retry
+           if (error.message.includes('Bucket not found') || error.message.includes('does not exist') || error.message.includes('not find')) {
+               console.log('Bucket "quiz-images" not found, attempting to create it...');
+               await supabase.storage.createBucket('quiz-images', { public: true });
+               const retryRes = await supabase.storage.from('quiz-images').upload(filename, req.file.buffer, {
+                 contentType: req.file.mimetype,
+               });
+               if (retryRes.error) throw new Error(retryRes.error.message);
+           } else {
+               throw new Error(error.message);
+           }
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('quiz-images')
+          .getPublicUrl(filename);
+          
+        return res.json({ url: publicUrl });
+      } else {
+        throw new Error('Supabase client not initialized. Cannot handle image upload.');
+      }
     } catch (error: any) {
       console.error('Error uploading image:', error);
       return res.status(500).json({
@@ -857,7 +889,11 @@ export function registerRoutes(app: Express): Server {
           correctAnswers: result.correctAnswers,
           wrongAnswers: result.wrongAnswers,
           timeTaken: result.timeTaken,
-          completedAt: result.completedAt
+          completedAt: result.completedAt,
+          answers: parseAnswersField(result.answers),
+          tabSwitchCount: result.tabSwitchCount || 0,
+          copyPasteAttempts: result.copyPasteAttempts || 0,
+          proctoringFlags: result.proctoringFlags || 0
         };
       });
 
@@ -1043,7 +1079,8 @@ export function registerRoutes(app: Express): Server {
         questionStats,
         performanceDistribution,
         timePerformance,
-        studentReports
+        studentReports,
+        questions
       });
     } catch (error) {
       console.error("Error generating analytics:", error);

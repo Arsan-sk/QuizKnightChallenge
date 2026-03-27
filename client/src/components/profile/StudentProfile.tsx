@@ -129,14 +129,14 @@ export function StudentProfile({ profile }: StudentProfileProps) {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
                 >
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <TrendingUp className="h-5 w-5" />
+                    <div className="clay-card p-6 h-full flex flex-col">
+                        <div className="mb-6">
+                            <h3 className="text-xl font-bold flex items-center gap-2 text-[hsl(var(--foreground))]" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                                <TrendingUp className="h-5 w-5 text-blue-500" />
                                 Level Progress
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex flex-col items-center space-y-4">
+                            </h3>
+                        </div>
+                        <div className="flex flex-col items-center justify-center flex-1 space-y-4">
                             <ProgressRing
                                 progress={levelProgress}
                                 size={140}
@@ -144,11 +144,11 @@ export function StudentProfile({ profile }: StudentProfileProps) {
                                 color="#3b82f6"
                                 label={`Level ${level}`}
                             />
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm font-medium text-[hsl(var(--muted-foreground))] bg-[hsl(var(--muted)/0.2)] px-4 py-1.5 rounded-full">
                                 {100 - levelProgress} points to Level {level + 1}
                             </p>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
                 </motion.div>
 
                 <motion.div
@@ -156,25 +156,26 @@ export function StudentProfile({ profile }: StudentProfileProps) {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 }}
                 >
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Award className="h-5 w-5" />
+                    <div className="clay-card p-6 h-full flex flex-col">
+                        <div className="mb-6">
+                            <h3 className="text-xl font-bold flex items-center gap-2 text-[hsl(var(--foreground))]" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                                <Award className="h-5 w-5 text-purple-500" />
                                 Leaderboard Rank
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex flex-col items-center space-y-4">
-                            <div className="text-center">
-                                <div className="text-6xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                                    #{rank}
+                            </h3>
+                        </div>
+                        <div className="flex flex-col items-center justify-center flex-1 space-y-4 relative">
+                            <div className="absolute inset-0 bg-gradient-to-b from-purple-500/5 to-transparent rounded-full blur-2xl pointer-events-none" />
+                            <div className="text-center relative z-10 w-full">
+                                <div className="text-6xl font-black bg-gradient-to-r from-purple-500 via-pink-500 to-red-500 bg-clip-text text-transparent transform hover:scale-105 transition-transform drop-shadow-sm" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                                    {rank > 0 ? `#${rank}` : 'Unranked'}
                                 </div>
-                                <p className="text-sm text-muted-foreground mt-2">
-                                    {profile.branch && `${profile.branch} - `}
-                                    {profile.year && `${profile.year} Year`}
+                                <p className="text-sm font-medium text-[hsl(var(--muted-foreground))] mt-4 bg-[hsl(var(--muted)/0.15)] inline-block px-4 py-1.5 rounded-full">
+                                    {profile.branch ? `${profile.branch} ` : 'Global '}
+                                    {profile.year ? `· ${profile.year} Year` : 'Rank'}
                                 </p>
                             </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
                 </motion.div>
             </div>
 
@@ -202,11 +203,11 @@ export function StudentProfile({ profile }: StudentProfileProps) {
                 </TabsContent>
 
                 <TabsContent value="activity" className="mt-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Recent Quiz Results</CardTitle>
-                        </CardHeader>
-                        <CardContent>
+                    <div className="clay-card p-6">
+                        <div className="mb-6">
+                            <h3 className="text-xl font-bold text-[hsl(var(--foreground))]" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Recent Quiz Results</h3>
+                        </div>
+                        <div>
                             {recentResults.length > 0 ? (
                                 <div className="space-y-3">
                                     {(recentResults || []).slice(0, 5).map((result: any, index: number) => (
@@ -215,30 +216,52 @@ export function StudentProfile({ profile }: StudentProfileProps) {
                                             initial={{ opacity: 0, x: -20 }}
                                             animate={{ opacity: 1, x: 0 }}
                                             transition={{ delay: index * 0.1 }}
-                                            className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                                            className="flex items-center justify-between p-4 rounded-xl border border-[hsl(var(--border))] hover:bg-[hsl(var(--muted)/0.3)] transition-colors group cursor-default shadow-sm hover:shadow"
                                         >
-                                            <div>
-                                                <p className="font-medium">Quiz #{result.quizId}</p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {new Date(result.completedAt).toLocaleDateString()}
-                                                </p>
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-lg bg-[hsl(var(--primary)/0.1)] flex items-center justify-center text-[hsl(var(--primary))] font-bold group-hover:scale-110 transition-transform">
+                                                    #{result.quizId}
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold text-[hsl(var(--foreground))]">Quiz Completion</p>
+                                                    <p className="text-xs text-[hsl(var(--muted-foreground))] font-medium flex items-center gap-1.5 mt-0.5">
+                                                        <Calendar className="w-3 h-3" />
+                                                        {new Date(result.completedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                    </p>
+                                                </div>
                                             </div>
-                                            <div className="text-right">
-                                                <p className="font-bold text-lg">{result.score}%</p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    +{result.pointsEarned ?? (result.correctAnswers ? result.correctAnswers * 2 : 0)} pts
-                                                </p>
+                                            <div className="text-right flex items-center gap-4">
+                                                <div className="text-right hidden sm:block">
+                                                    <p className="text-[10px] uppercase font-bold text-[hsl(var(--muted-foreground))] tracking-wider">Score</p>
+                                                    <p className={`font-bold text-lg ${result.score >= 80 ? 'text-[#10b981]' : result.score >= 60 ? 'text-[#f59e0b]' : 'text-[#ef4444]'}`}>
+                                                        {result.score}%
+                                                    </p>
+                                                </div>
+                                                <div className="px-3 py-1.5 rounded-lg bg-[#f59e0b]/10 border border-[#f59e0b]/20 text-right min-w-[70px]">
+                                                    <p className="text-[10px] uppercase font-bold text-[#f59e0b] tracking-wider text-center">Points</p>
+                                                    <p className="text-sm font-black text-[#f59e0b] text-center">
+                                                        +{result.pointsEarned ?? (result.correctAnswers ? result.correctAnswers * 2 : 0)}
+                                                    </p>
+                                                </div>
                                             </div>
                                         </motion.div>
                                     ))}
                                 </div>
                             ) : (
-                                <p className="text-muted-foreground text-center py-8">
-                                    No quiz results yet. Start taking quizzes to see your activity!
-                                </p>
+                                <div className="text-center py-12 bg-[hsl(var(--muted)/0.1)] rounded-xl border border-dashed border-[hsl(var(--border))]">
+                                    <div className="w-16 h-16 rounded-full bg-[hsl(var(--muted)/0.2)] flex items-center justify-center mx-auto mb-4">
+                                        <BookOpen className="w-8 h-8 text-[hsl(var(--muted-foreground))]" />
+                                    </div>
+                                    <p className="text-[hsl(var(--muted-foreground))] font-medium mb-1">
+                                        No quiz results yet
+                                    </p>
+                                    <p className="text-sm text-[hsl(var(--text-2))]">
+                                        Start taking quizzes to see your activity!
+                                    </p>
+                                </div>
                             )}
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
                 </TabsContent>
             </Tabs>
         </div>

@@ -79,6 +79,9 @@ export const results = pgTable("results", {
   // Store the user's answers as a JSON string
   answers: text("answers"),
   pointsEarned: integer("points_earned").default(0), // Points earned for this attempt
+  tabSwitchCount: integer("tab_switch_count").default(0),
+  copyPasteAttempts: integer("copy_paste_attempts").default(0),
+  proctoringFlags: integer("proctoring_flags").default(0),
   completedAt: timestamp("completed_at").defaultNow(),
 });
 
@@ -185,6 +188,9 @@ export const insertResultSchema = createInsertSchema(results).pick({
   wrongAnswers: true,
   timeTaken: true,
   pointsEarned: true,
+  tabSwitchCount: true,
+  copyPasteAttempts: true,
+  proctoringFlags: true,
 });
 
 // For submission we accept the user's answers so the server can
@@ -192,6 +198,9 @@ export const insertResultSchema = createInsertSchema(results).pick({
 export const submitResultSchema = z.object({
   userAnswers: z.array(z.string()),
   timeTaken: z.number().optional(),
+  tabSwitchCount: z.number().optional(),
+  copyPasteAttempts: z.number().optional(),
+  proctoringFlags: z.number().optional(),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;

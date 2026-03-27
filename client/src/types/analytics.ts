@@ -27,6 +27,10 @@ export interface StudentReport {
   wrongAnswers: number;
   timeTaken: number;
   completedAt: string;
+  answers?: string[];
+  tabSwitchCount?: number;
+  copyPasteAttempts?: number;
+  proctoringFlags?: number;
 }
 
 export interface QuizAnalytics {
@@ -48,4 +52,7 @@ export interface QuizAnalytics {
   
   // Student reports
   studentReports: StudentReport[];
+  
+  // Full question data
+  questions?: any[];
 } 

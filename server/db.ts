@@ -17,14 +17,17 @@ if (!process.env.DATABASE_URL) {
   // We'll still initialize the objects, but they won't connect to a real database
   // This allows the app to start for development purposes
 }
+const connectionString = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL || 'postgresql://fake';
+const isSupabase = connectionString.includes('supabase.co') || connectionString.includes('supabase.com');
 
 // Create pool with either real connection string or empty string (will fail gracefully)
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://fake',
+  connectionString,
   // Add connection options to handle retries and timeouts
   max: 10,
-  connectionTimeoutMillis: 5000,
-  idleTimeoutMillis: 30000
+  connectionTimeoutMillis: 15000,
+  idleTimeoutMillis: 30000,
+  ...(isSupabase ? { ssl: { rejectUnauthorized: false } } : {})
 });
 
 // Test the database connection
@@ -43,59 +46,56 @@ export const db = drizzle(pool, { schema });
 async function applySchemaChanges() {
   try {
     console.log('Applying schema changes...');
+    // Add a small delay to avoid race conditions on startup
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Check if using fake connection String
+    if (connectionString === 'postgresql://fake') {
+      console.log('Using fake database, skipping schema changes');
+      return;
+    }
+
     const client = await pool.connect();
+    console.log('Got client for schema changes');
 
-    // Create branch enum type if it doesn't exist
-    await client.query(`
-      DO $$ BEGIN
-        CREATE TYPE "public"."branch" AS ENUM('CS', 'AIML', 'DS', 'ECS', 'ECE', 'CE', 'ME');
-      EXCEPTION
-        WHEN duplicate_object THEN null;
-      END $$;
-    `);
+    // Check if branch enum type exists
+    const branchEnumResult = await client.query(`SELECT 1 FROM pg_type WHERE typname = 'branch'`);
+    if (branchEnumResult.rowCount === 0) {
+      await client.query(`CREATE TYPE "public"."branch" AS ENUM('CS', 'AIML', 'DS', 'ECS', 'ECE', 'CE', 'ME');`);
+    }
 
-    // Create year enum type if it doesn't exist
-    await client.query(`
-      DO $$ BEGIN
-        CREATE TYPE "public"."year" AS ENUM('1st', '2nd', '3rd', '4th');
-      EXCEPTION
-        WHEN duplicate_object THEN null;
-      END $$;
-    `);
+    // Check if year enum type exists
+    const yearEnumResult = await client.query(`SELECT 1 FROM pg_type WHERE typname = 'year'`);
+    if (yearEnumResult.rowCount === 0) {
+      await client.query(`CREATE TYPE "public"."year" AS ENUM('1st', '2nd', '3rd', '4th');`);
+    }
 
-    // Add new columns to users table if they don't exist
-    await client.query(`
-      DO $$ BEGIN
-        ALTER TABLE "users" ADD COLUMN "name" text;
-        ALTER TABLE "users" ADD COLUMN "profile_picture" text;
-        ALTER TABLE "users" ADD COLUMN "bio" text;
-        ALTER TABLE "users" ADD COLUMN "branch" text;
-        ALTER TABLE "users" ADD COLUMN "year" text;
-        ALTER TABLE "users" ADD COLUMN "updated_at" timestamp DEFAULT now();
-      EXCEPTION
-        WHEN duplicate_column THEN null;
-      END $$;
-    `);
+    // Function to add column if it doesn't exist
+    const addColumnIfNotExists = async (table: string, column: string, type: string, defaultVal: string = '') => {
+      const colResult = await client.query(
+        `SELECT 1 FROM information_schema.columns WHERE table_name = $1 AND column_name = $2`,
+        [table, column]
+      );
+      if (colResult.rowCount === 0) {
+        await client.query(`ALTER TABLE "${table}" ADD COLUMN "${column}" ${type} ${defaultVal}`);
+      }
+    };
 
-    // Add new columns to quizzes table if they don't exist
-    await client.query(`
-      DO $$ BEGIN
-        ALTER TABLE "quizzes" ADD COLUMN "target_branch" text;
-        ALTER TABLE "quizzes" ADD COLUMN "target_year" text;
-      EXCEPTION
-        WHEN duplicate_column THEN null;
-      END $$;
-    `);
+    // Add new columns to users table
+    await addColumnIfNotExists('users', 'name', 'text');
+    await addColumnIfNotExists('users', 'profile_picture', 'text');
+    await addColumnIfNotExists('users', 'bio', 'text');
+    await addColumnIfNotExists('users', 'branch', 'text');
+    await addColumnIfNotExists('users', 'year', 'text');
+    await addColumnIfNotExists('users', 'updated_at', 'timestamp', 'DEFAULT now()');
 
-    // Add new columns to questions table if they don't exist
-    await client.query(`
-      DO $$ BEGIN
-        ALTER TABLE "questions" ADD COLUMN "image_url" text;
-        ALTER TABLE "questions" ADD COLUMN "option_images" text[];
-      EXCEPTION
-        WHEN duplicate_column THEN null;
-      END $$;
-    `);
+    // Add new columns to quizzes table
+    await addColumnIfNotExists('quizzes', 'target_branch', 'text');
+    await addColumnIfNotExists('quizzes', 'target_year', 'text');
+
+    // Add new columns to questions table
+    await addColumnIfNotExists('questions', 'image_url', 'text');
+    await addColumnIfNotExists('questions', 'option_images', 'text[]');
 
     // Create achievements table if it doesn't exist
     await client.query(`
@@ -131,14 +131,10 @@ async function applySchemaChanges() {
       );
     `);
 
-    // Add points_earned column to results table if it doesn't exist
-    await client.query(`
-      DO $$ BEGIN
-        ALTER TABLE "results" ADD COLUMN "points_earned" integer DEFAULT 0;
-      EXCEPTION
-        WHEN duplicate_column THEN null;
-      END $$;
-    `);
+    await addColumnIfNotExists('results', 'points_earned', 'integer', 'DEFAULT 0');
+    await addColumnIfNotExists('results', 'tab_switch_count', 'integer', 'DEFAULT 0');
+    await addColumnIfNotExists('results', 'copy_paste_attempts', 'integer', 'DEFAULT 0');
+    await addColumnIfNotExists('results', 'proctoring_flags', 'integer', 'DEFAULT 0');
 
     client.release();
     console.log('Schema changes applied successfully');

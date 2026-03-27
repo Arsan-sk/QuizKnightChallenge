@@ -9,7 +9,7 @@ import { QuizProgress } from "@/components/ui/quiz-progress";
 import { CountdownTimer } from "@/components/ui/countdown-timer";
 import { QuestionTransition } from "@/components/ui/question-transition";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, Trophy, Clock, CheckCircle, XCircle, Search, FileQuestion, ArrowLeft, ArrowRight, Send, HelpCircle, Keyboard, Award, ClipboardCheck, ListChecks, Medal, Home, X, Circle, Sun, Moon, AlertTriangle } from "lucide-react";
+import { Loader2, Trophy, Clock, CheckCircle, XCircle, Search, FileQuestion, ArrowLeft, ArrowRight, Send, HelpCircle, Keyboard, Award, ClipboardCheck, ListChecks, Medal, Home, X, Circle, Sun, Moon, AlertTriangle, Sword } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 // NavBar removed per request
 import { useToast } from "@/hooks/use-toast";
@@ -646,361 +646,180 @@ export default function QuizTake() {
     const openQuestionReview = () => setShowReview(true);
 
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
-        <div className="container mx-auto px-4 py-8">
+      <div className="min-h-screen bg-[#09090b] text-white flex flex-col font-sans relative overflow-x-hidden selection:bg-indigo-500/30">
+        {/* Glow Effects */}
+        <div className="fixed top-[-20%] left-[-10%] w-[500px] h-[500px] bg-emerald-600/20 rounded-full blur-[120px] pointer-events-none z-0" />
+        <div className="fixed bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-indigo-600/10 rounded-full blur-[150px] pointer-events-none z-0" />
+
+        <div className="container mx-auto px-4 py-12 lg:py-20 relative z-10 flex flex-col items-center min-h-screen justify-center">
+          
+          {/* Main Results Gamified Card */}
           <motion.div
-            className="max-w-4xl mx-auto"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
+            className="w-full max-w-2xl bg-[#1c1c21] rounded-[2rem] p-8 md:p-12 border border-white/5 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] text-center relative overflow-hidden"
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.6, type: "spring", stiffness: 200, damping: 25 }}
           >
+            {/* Top decorative gradient line */}
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-emerald-400 via-indigo-500 to-purple-500" />
+            
             <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
+              initial={{ opacity: 0, scale: 0.5 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30, delay: 0.2 }}
-              className="mb-8 text-center"
+              transition={{ delay: 0.3, type: "spring", stiffness: 300, damping: 20 }}
+              className="mx-auto w-24 h-24 bg-emerald-500/10 rounded-full flex items-center justify-center mb-6 relative"
             >
-              <motion.div
-                className="inline-flex items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30 p-4 mb-4"
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 300, damping: 25, delay: 0.3 }}
-              >
-                <Trophy className="h-12 w-12 text-green-600 dark:text-green-400" />
-              </motion.div>
-              <h1 className="text-3xl font-bold mb-2">Quiz Completed!</h1>
-              <p className="text-muted-foreground">
-                Great job! You've completed the quiz. Here's your performance.
-              </p>
+               <div className="absolute inset-0 bg-emerald-500/20 rounded-full blur-xl animate-pulse" />
+               <Trophy className="w-12 h-12 text-emerald-400 relative z-10" />
             </motion.div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                whileHover={{ scale: 1.03 }}
-                className="h-full"
-              >
-                <Card className="overflow-hidden border-t-4 border-primary h-full flex flex-col shadow-md hover:shadow-lg transition-all duration-300">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="flex items-center text-lg">
-                      <Award className="mr-2 h-5 w-5 text-primary" />
-                      Your Score
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-center flex-grow flex flex-col justify-center pb-6">
-                    <motion.div
-                      initial={{ scale: 0.5 }}
-                      animate={{ scale: 1 }}
-                      transition={{ type: "spring", stiffness: 300, damping: 25, delay: 0.5 }}
-                      className="relative"
-                    >
-                      <div className="relative inline-flex mb-1">
-                        <div className="absolute inset-0 flex items-center justify-center">
-                          <span className="text-4xl font-bold">{quizResult.score}%</span>
-                        </div>
-                        <svg className="w-28 h-28 transform -rotate-90" viewBox="0 0 100 100">
-                          <circle
-                            className="text-muted/20 stroke-current"
-                            strokeWidth="10"
-                            cx="50"
-                            cy="50"
-                            r="40"
-                            fill="transparent"
-                          />
-                          <motion.circle
-                            className="text-primary stroke-current"
-                            strokeWidth="10"
-                            strokeLinecap="round"
-                            cx="50"
-                            cy="50"
-                            r="40"
-                            fill="transparent"
-                            strokeDasharray="251.2"
-                            initial={{ strokeDashoffset: 251.2 }}
-                            animate={{ strokeDashoffset: 251.2 - (251.2 * quizResult.score) / 100 }}
-                            transition={{ duration: 1.5, delay: 0.7, ease: "easeOut" }}
-                          />
-                        </svg>
-                        <motion.div
-                          className="absolute w-3 h-3 bg-primary rounded-full"
-                          style={{
-                            top: "50%",
-                            left: "50%",
-                            x: "-50%",
-                            y: "-50%",
-                            rotate: -90 + ((quizResult.score / 100) * 360) + "deg",
-                            transformOrigin: "40px 0px"
-                          }}
-                          initial={{ opacity: 0 }}
-                          animate={{
-                            opacity: 1,
-                            scale: [1, 1.2, 1],
-                          }}
-                          transition={{
-                            delay: 2.2,
-                            duration: 1.5,
-                            repeat: Infinity,
-                            repeatType: "reverse"
-                          }}
-                        />
-                      </div>
-                    </motion.div>
-                    <p className="text-muted-foreground text-sm mt-2">
-                      {quizResult.correctAnswers} correct out of {quizResult.totalQuestions} questions
-                    </p>
-                  </CardContent>
-                </Card>
-              </motion.div>
+            <h1 className="text-4xl md:text-5xl font-extrabold mb-4" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              Congratulations!
+            </h1>
+            
+            <motion.div 
+               className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 font-bold px-5 py-2 rounded-full mb-10"
+               initial={{ opacity: 0, y: 10 }}
+               animate={{ opacity: 1, y: 0 }}
+               transition={{ delay: 0.5 }}
+            >
+               <Award className="w-4 h-4" />
+               +{quizResult.pointsEarned || (quizResult.score * 10)} Points
+            </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 }}
-                whileHover={{ scale: 1.03 }}
-                className="h-full"
-              >
-                <Card className="overflow-hidden border-t-4 border-amber-500 h-full flex flex-col shadow-md hover:shadow-lg transition-all duration-300">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="flex items-center text-lg">
-                      <Clock className="mr-2 h-5 w-5 text-amber-500" />
-                      Time Taken
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-center flex-grow flex flex-col justify-center pb-6">
-                    <motion.div className="relative mb-1" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}>
-                      <motion.p
-                        className="text-4xl font-bold mb-1"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.8 }}
-                      >
-                        {formatTimeTaken(quizResult.timeTaken)}
-                      </motion.p>
-                      <motion.div
-                        className="absolute -right-1 -top-1 w-2 h-2 bg-amber-400 rounded-full"
-                        animate={{
-                          scale: [1, 1.5, 1],
-                          opacity: [0.7, 1, 0.7]
-                        }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          repeatType: "reverse"
-                        }}
-                      />
-                    </motion.div>
-                    <p className="text-muted-foreground text-sm">
-                      {quizResult.timeTaken < 60
-                        ? "That was quick!"
-                        : quizResult.timeTaken < 180
-                          ? "Good timing!"
-                          : "Take your time, accuracy matters!"
-                      }
-                    </p>
-                  </CardContent>
-                </Card>
-              </motion.div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-10">
+               {/* Score */}
+               <div className="bg-[#131316] rounded-2xl p-6 border border-white/5 flex flex-col items-center justify-center">
+                  <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-2">Total Score</span>
+                  <div className="text-4xl font-black text-white">{quizResult.score}%</div>
+               </div>
+               
+               {/* Accuracy */}
+               <div className="bg-[#131316] rounded-2xl p-6 border border-white/5 flex flex-col items-center justify-center">
+                  <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-2">Accuracy</span>
+                  <div className="text-3xl font-bold text-emerald-400"><span className="text-white">{quizResult.correctAnswers}</span> <span className="text-zinc-600 text-lg">/ {quizResult.totalQuestions}</span></div>
+               </div>
 
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-                whileHover={{ scale: 1.03 }}
-                className="h-full"
-              >
-                <Card
-                  className="overflow-hidden border-t-4 border-blue-500 cursor-pointer hover:shadow-lg transition-all duration-300 h-full flex flex-col shadow-md relative"
-                  onClick={openQuestionReview}
-                >
-                  <motion.div
-                    className="absolute right-3 top-3 w-2 h-2 bg-blue-500 rounded-full"
-                    animate={{
-                      scale: [1, 1.5, 1],
-                      opacity: [0.7, 1, 0.7]
-                    }}
-                    transition={{
-                      duration: 1.5,
-                      repeat: Infinity,
-                      repeatType: "reverse"
-                    }}
-                  />
-                  <CardHeader className="pb-2">
-                    <CardTitle className="flex items-center text-lg">
-                      <ClipboardCheck className="mr-2 h-5 w-5 text-blue-500" />
-                      Question Review
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-center flex-grow flex flex-col justify-center pb-6">
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: 0.9 }}
-                    >
-                      <div className="flex items-center justify-center gap-3 mb-2">
-                        <div className="bg-green-50 px-3 py-1 rounded-full flex items-center relative">
-                          <CheckCircle className="h-4 w-4 text-green-600 mr-1" />
-                          <span className="text-green-700 font-medium">{quizResult.correctAnswers}</span>
-                          <motion.div
-                            className="absolute -right-0.5 -top-0.5 w-1.5 h-1.5 bg-green-500 rounded-full"
-                            animate={{
-                              scale: [1, 1.5, 1],
-                              opacity: [0.7, 1, 0.7]
-                            }}
-                            transition={{
-                              duration: 1.8,
-                              repeat: Infinity,
-                              repeatType: "reverse",
-                              delay: 0.5
-                            }}
-                          />
-                        </div>
-                        <div className="bg-red-50 px-3 py-1 rounded-full flex items-center relative">
-                          <XCircle className="h-4 w-4 text-red-600 mr-1" />
-                          <span className="text-red-700 font-medium">{quizResult.wrongAnswers}</span>
-                          <motion.div
-                            className="absolute -right-0.5 -top-0.5 w-1.5 h-1.5 bg-red-500 rounded-full"
-                            animate={{
-                              scale: [1, 1.5, 1],
-                              opacity: [0.7, 1, 0.7]
-                            }}
-                            transition={{
-                              duration: 1.8,
-                              repeat: Infinity,
-                              repeatType: "reverse",
-                              delay: 1
-                            }}
-                          />
-                        </div>
-                      </div>
-                      <p className="text-muted-foreground text-sm mt-1">
-                        Click to {showReview ? "hide" : "review"} answers
-                      </p>
-                    </motion.div>
-                  </CardContent>
-                  <motion.div
-                    className="absolute inset-0 border-2 border-blue-400 rounded-lg pointer-events-none opacity-0"
-                    animate={{
-                      opacity: [0, 0.2, 0],
-                      scale: [0.95, 1, 0.95]
-                    }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      repeatType: "loop"
-                    }}
-                  />
-                </Card>
-              </motion.div>
+               {/* Time */}
+               <div className="bg-[#131316] rounded-2xl p-6 border border-white/5 flex flex-col items-center justify-center">
+                  <span className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold mb-2">Time Taken</span>
+                  <div className="text-2xl font-bold text-indigo-300">{formatTimeTaken(quizResult.timeTaken)}</div>
+               </div>
             </div>
 
-            {leaderboard && leaderboard.length > 0 && (
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7 }}
-                className="mb-8"
-              >
-                <Card className="bg-white dark:bg-slate-950 shadow-sm overflow-hidden">
-                  <CardHeader className="border-b bg-muted/30">
-                    <CardTitle className="text-xl flex items-center gap-2">
-                      <ListChecks className="h-5 w-5 text-primary" />
-                      Leaderboard
-                    </CardTitle>
-                    <CardDescription>
-                      See how you compare with other participants
-                    </CardDescription>
-                  </CardHeader>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b bg-muted/20">
-                          <th className="text-left px-4 py-3 font-medium">Rank</th>
-                          <th className="text-left px-4 py-3 font-medium">Student</th>
-                          <th className="text-center px-4 py-3 font-medium">Score</th>
-                          <th className="text-center px-4 py-3 font-medium">Time</th>
-                          <th className="text-center px-4 py-3 font-medium">Correct</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {leaderboard.map((entry, index) => {
-                          const isCurrentUser = entry.userId === typedUser?.id;
-
-                          return (
-                            <motion.tr
-                              key={entry.id}
-                              className={cn(
-                                "border-b border-muted/40",
-                                isCurrentUser ? "bg-primary/5 font-medium" : ""
-                              )}
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ delay: 0.8 + (index * 0.05) }}
-                            >
-                              <td className="px-4 py-3">
-                                {index === 0 ? (
-                                  <div className="inline-flex items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30 h-7 w-7">
-                                    <Trophy className="h-4 w-4 text-amber-600" />
-                                  </div>
-                                ) : index === 1 ? (
-                                  <div className="inline-flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 h-7 w-7">
-                                    <Medal className="h-4 w-4 text-gray-600 dark:text-gray-400" />
-                                  </div>
-                                ) : index === 2 ? (
-                                  <div className="inline-flex items-center justify-center rounded-full bg-amber-50 dark:bg-amber-950/50 h-7 w-7">
-                                    <Medal className="h-4 w-4 text-amber-800 dark:text-amber-600" />
-                                  </div>
-                                ) : (
-                                  <span className="text-muted-foreground">{index + 1}</span>
-                                )}
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="flex items-center gap-2">
-                                  <Avatar className="h-7 w-7">
-                                    <AvatarFallback className={isCurrentUser ? "bg-primary text-white" : ""}>{entry.username[0].toUpperCase()}</AvatarFallback>
-                                  </Avatar>
-                                  <span>{entry.username}</span>
-                                  {isCurrentUser && (
-                                    <span className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">You</span>
-                                  )}
-                                </div>
-                              </td>
-                              <td className="text-center px-4 py-3">{entry.score}%</td>
-                              <td className="text-center px-4 py-3">{formatTimeTaken(entry.timeTaken)}</td>
-                              <td className="text-center px-4 py-3">{entry.correctAnswers}/{entry.totalQuestions}</td>
-                            </motion.tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </Card>
-              </motion.div>
-            )}
-
-            {showReview && (
-              <QuizReview
-                questions={questions as QuestionType[]}
-                userAnswers={answers}
-                onClose={() => setShowReview(false)}
-              />
-            )}
-
-            <motion.div
-              className="flex justify-center"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1 }}
-            >
-              <Button asChild size="lg" variant="outline" className="gap-2">
-                <Link href={typedUser?.role === "teacher" ? "/teacher" : "/student"}>
-                  <Home className="h-4 w-4 mr-2" />
-                  Back to Dashboard
-                </Link>
-              </Button>
-            </motion.div>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+               <Button 
+                  onClick={() => setLocation(typedUser?.role === "teacher" ? "/teacher" : "/student")}
+                  className="w-full sm:w-auto bg-[#131316] hover:bg-[#27272a] text-white border border-white/10 h-14 px-8 rounded-xl font-bold text-sm"
+               >
+                  <Home className="w-4 h-4 mr-2" /> Back to Dashboard
+               </Button>
+               
+               <Button 
+                  onClick={openQuestionReview}
+                  className="w-full sm:w-auto bg-indigo-500 hover:bg-indigo-600 text-white shadow-[0_0_30px_rgba(99,102,241,0.3)] h-14 px-8 rounded-xl font-bold text-sm"
+               >
+                  <ClipboardCheck className="w-4 h-4 mr-2" /> Review Answers
+               </Button>
+            </div>
           </motion.div>
+
+          {/* Leaderboard Section matches dark theme */}
+          {leaderboard && leaderboard.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.8 }}
+              className="w-full max-w-4xl mt-12"
+            >
+              <div className="bg-[#1c1c21] rounded-[2rem] border border-white/5 shadow-xl overflow-hidden">
+                <div className="p-8 border-b border-white/5 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
+                     <ListChecks className="w-5 h-5 text-amber-400" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold">Leaderboard</h2>
+                    <p className="text-zinc-400 text-sm">See how you compare with other participants</p>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-white/5 bg-black/20 text-zinc-500 uppercase tracking-wider text-[10px] font-bold">
+                        <th className="text-left px-8 py-4">Rank</th>
+                        <th className="text-left px-4 py-4">Student</th>
+                        <th className="text-center px-4 py-4">Score</th>
+                        <th className="text-center px-4 py-4">Time</th>
+                        <th className="text-center px-8 py-4">Accuracy</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {leaderboard.map((entry, index) => {
+                        const isCurrentUser = entry.userId === typedUser?.id;
+                        return (
+                          <motion.tr
+                            key={entry.id}
+                            className={cn(
+                              "hover:bg-white/[0.02] transition-colors",
+                              isCurrentUser ? "bg-indigo-500/5" : ""
+                            )}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.9 + (index * 0.05) }}
+                          >
+                            <td className="px-8 py-4">
+                              {index === 0 ? (
+                                <div className="inline-flex items-center justify-center rounded-full bg-amber-500/20 h-8 w-8 border border-amber-500/30">
+                                  <Trophy className="h-4 w-4 text-amber-400" />
+                                </div>
+                              ) : index === 1 ? (
+                                <div className="inline-flex items-center justify-center rounded-full bg-zinc-300/20 h-8 w-8 border border-zinc-300/30">
+                                  <Medal className="h-4 w-4 text-zinc-300" />
+                                </div>
+                              ) : index === 2 ? (
+                                <div className="inline-flex items-center justify-center rounded-full bg-amber-700/20 h-8 w-8 border border-amber-700/30">
+                                  <Medal className="h-4 w-4 text-amber-600" />
+                                </div>
+                              ) : (
+                                <span className="text-zinc-500 font-mono font-medium">#{index + 1}</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-4">
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-8 w-8 border border-white/10">
+                                  <AvatarFallback className={cn("text-xs font-bold", isCurrentUser ? "bg-indigo-500 text-white" : "bg-zinc-800 text-zinc-300")}>
+                                    {entry.username[0].toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className={isCurrentUser ? "text-indigo-300 font-bold" : "text-zinc-300"}>{entry.username}</span>
+                                {isCurrentUser && (
+                                  <span className="bg-indigo-500/20 text-indigo-300 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-indigo-500/30">You</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="text-center px-4 py-4 font-mono font-bold text-white">{entry.score}%</td>
+                            <td className="text-center px-4 py-4 text-zinc-400 font-mono">{formatTimeTaken(entry.timeTaken)}</td>
+                            <td className="text-center px-8 py-4 text-emerald-400 font-mono font-medium">{entry.correctAnswers}/{entry.totalQuestions}</td>
+                          </motion.tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {showReview && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+               <QuizReview
+                 questions={questions as QuestionType[]}
+                 userAnswers={answers}
+                 onClose={() => setShowReview(false)}
+               />
+            </div>
+          )}
+
         </div>
       </div>
     );
@@ -1254,7 +1073,7 @@ export default function QuizTake() {
     }
 
     return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
+      <div className="min-h-screen bg-[#131316] text-white flex flex-col font-sans relative overflow-x-hidden">
         <ProctoringWarningOverlay
           enabled={enableWebcam && proctoringActive}
           onViolation={handleWebcamViolation}
@@ -1269,272 +1088,167 @@ export default function QuizTake() {
           warningCount={warnings}
         />
 
-        <div className="container max-w-5xl mx-auto px-4 py-8">
-          <div className="max-w-5xl mx-auto">
-            {/* Quiz Header */}
-            <motion.div
-              className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-            >
-              <div>
-                <h1 className="text-3xl font-bold mb-1">{typedQuiz?.title}</h1>
-                <p className="text-muted-foreground">{typedQuiz?.description}</p>
-              </div>
+        {/* Dynamic Glow Effects */}
+        <div className="fixed top-[-20%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none z-0" />
+        <div className="fixed bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[150px] pointer-events-none z-0" />
 
-              <div className="flex flex-wrap items-center gap-3">
-                {typedQuiz?.duration && typedQuiz.duration > 0 && (
-                  <div className="bg-white dark:bg-slate-950 shadow-sm rounded-lg p-2 px-3 flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-primary" />
-                    <CountdownTimer
-                      duration={typedQuiz.duration * 60}
-                      onTimeUp={() => {
-                        toast({
-                          title: "Time's up!",
-                          description: "Your quiz has been automatically submitted.",
-                        });
-                        submitQuiz();
-                      }}
-                    />
-                  </div>
-                )}
-
-                <div className="bg-white dark:bg-slate-950 shadow-sm rounded-lg p-2 px-3 flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                    <line x1="9" y1="8" x2="15" y2="8" />
-                    <line x1="12" y1="16" x2="12" y2="16.01" />
-                  </svg>
-                  <span className="text-sm font-medium">
-                    {typedQuestions?.length || 0} Questions
-                  </span>
-                </div>
-
-                <div className="bg-white dark:bg-slate-950 shadow-sm rounded-lg p-2 px-3 flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                    <polyline points="22 4 12 14.01 9 11.01" />
-                  </svg>
-                  <span className="text-sm font-medium">
-                    {percentComplete}% Complete
-                  </span>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Progress Indicator */}
-            <motion.div
-              className="bg-white dark:bg-slate-950 rounded-xl shadow-sm mb-6 p-5"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-            >
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3">
-                <div className="flex items-center gap-3">
-                  <motion.div
-                    className="flex items-center justify-center bg-primary/10 text-primary w-10 h-10 rounded-full"
-                    animate={{
-                      scale: [1, 1.05, 1],
-                      backgroundColor: percentComplete === 100 ? ["rgba(22, 163, 74, 0.1)", "rgba(22, 163, 74, 0.2)", "rgba(22, 163, 74, 0.1)"] : undefined
-                    }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      repeatType: "reverse"
-                    }}
-                  >
-                    <span className="font-medium">{currentQuestion + 1}</span>
-                  </motion.div>
-
-                  <div>
-                    <h2 className="font-medium text-sm">
-                      Question {currentQuestion + 1} of {typedQuestions?.length || 0}
-                    </h2>
-                    <div className="text-xs text-muted-foreground">
-                      {remainingQuestions === 0 ? (
-                        <span className="text-green-600 dark:text-green-400 font-medium">All questions answered</span>
-                      ) : (
-                        <span>{remainingQuestions} question{remainingQuestions !== 1 ? 's' : ''} remaining</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="w-full bg-muted rounded-full h-2.5 mb-6">
-                  <motion.div
-                    className="bg-primary h-2.5 rounded-full"
-                    initial={{ width: `${(currentQuestion / (typedQuestions?.length || 1)) * 100}%` }}
-                    animate={{ width: `${((currentQuestion + 1) / (typedQuestions?.length || 1)) * 100}%` }}
-                    transition={{ type: "spring", stiffness: 100, damping: 20 }}
-                  ></motion.div>
-                </div>
-
-                {/* Question Navigation Dots */}
-                <div className="flex flex-wrap gap-2">
-                  {typedQuestions?.map((_, index) => (
-                    <motion.button
-                      key={`nav-${index}`}
-                      onClick={() => {
-                        setDirection(index > currentQuestion ? "right" : "left");
-                        setCurrentQuestion(index);
-                      }}
-                      className={cn(
-                        "flex items-center justify-center w-8 h-8 rounded-full text-xs transition-all",
-                        currentQuestion === index
-                          ? "bg-primary text-white"
-                          : answers[index]
-                            ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800"
-                            : "bg-muted text-muted-foreground hover:bg-muted/70"
-                      )}
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
-                      animate={currentQuestion === index ? {
-                        scale: [1, 1.1, 1],
-                        transition: { duration: 0.5, repeat: 3, repeatType: "mirror" }
-                      } : {}}
-                    >
-                      {index + 1}
-                    </motion.button>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Main Question Content */}
-            <AnimatePresence mode="wait">
-              <QuestionTransition
-                key={currentQuestion}
-                id={currentQuestion}
-                direction={direction}
-              >
-                <motion.div
-                  className="bg-white dark:bg-slate-950 rounded-xl shadow-sm p-6 md:p-8 mb-6 relative"
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.1 }}
-                >
-                  {typedQuestions && typedQuestions[currentQuestion] ? (
-                    <Question
-                      question={typedQuestions[currentQuestion]}
-                      mode="take"
-                      onChange={handleAnswer}
-                      userAnswer={answers[currentQuestion] || ""}
-                    />
-                  ) : (
-                    <div className="py-12 text-center">
-                      <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-                      <p>Loading question...</p>
-                    </div>
-                  )}
-                </motion.div>
-              </QuestionTransition>
-            </AnimatePresence>
-
-            {/* Navigation Controls */}
-            <motion.div
-              className="flex items-center justify-between mt-6 mb-10"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                <Button
-                  onClick={previous}
-                  disabled={currentQuestion === 0}
-                  variant="outline"
-                  size="lg"
-                  className="gap-2"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Previous
-                </Button>
-              </motion.div>
-
-              <div className="text-sm text-muted-foreground hidden md:block">
-                {currentQuestion < (typedQuestions?.length || 0) - 1 ? (
-                  <span>Press <kbd className="px-2 py-1 bg-muted rounded border text-xs">→</kbd> for next question</span>
-                ) : (
-                  <span>Last question! Ready to submit?</span>
-                )}
-              </div>
-
-              <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                {currentQuestion < (typedQuestions?.length || 0) - 1 ? (
-                  <Button
-                    onClick={next}
-                    size="lg"
-                    className="gap-2"
-                  >
-                    Next
-                    <ArrowRight className="h-4 w-4" />
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handleQuizSubmission}
-                    disabled={submitting}
-                    size="lg"
-                    className="gap-2 bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Submitting...
-                      </>
-                    ) : (
-                      <>
-                        Submit Quiz
-                        <Send className="h-4 w-4" />
-                      </>
-                    )}
-                  </Button>
-                )}
-              </motion.div>
-            </motion.div>
-
-            {/* Keyboard Shortcuts Guide */}
-            <motion.div
-              className="bg-muted/40 border rounded-lg p-4 mt-4 text-xs text-muted-foreground"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-            >
-              <div className="flex items-center mb-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                  <rect width="20" height="16" x="2" y="4" rx="2" ry="2" />
-                  <path d="M6 8h.001" />
-                  <path d="M10 8h.001" />
-                  <path d="M14 8h.001" />
-                  <path d="M18 8h.001" />
-                  <path d="M8 12h.001" />
-                  <path d="M12 12h.001" />
-                  <path d="M16 12h.001" />
-                  <path d="M7 16h10" />
-                </svg>
-                <span className="font-medium">Keyboard Shortcuts:</span>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                <div className="flex items-center">
-                  <kbd className="px-1.5 py-0.5 bg-background rounded border shadow-sm text-[10px] mr-1.5">←</kbd>
-                  <span>Previous</span>
-                </div>
-                <div className="flex items-center">
-                  <kbd className="px-1.5 py-0.5 bg-background rounded border shadow-sm text-[10px] mr-1.5">→</kbd>
-                  <span>Next</span>
-                </div>
-                <div className="flex items-center">
-                  <kbd className="px-1.5 py-0.5 bg-background rounded border shadow-sm text-[10px] mr-1.5">1-4</kbd>
-                  <span>Select option</span>
-                </div>
-                <div className="flex items-center">
-                  <kbd className="px-1.5 py-0.5 bg-background rounded border shadow-sm text-[10px] mr-1.5">Enter</kbd>
-                  <span>Next/Submit</span>
-                </div>
-              </div>
-            </motion.div>
+        {/* Top Header */}
+        <header className="flex justify-between items-center p-5 md:p-6 lg:px-12 relative z-20">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 md:w-12 md:h-12 bg-indigo-500 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.4)] shrink-0">
+              <Sword className="w-5 h-5 md:w-6 md:h-6 text-white" />
+            </div>
+            <span className="font-extrabold text-lg md:text-2xl tracking-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              Quiz Knight <span className="text-zinc-500 font-medium hidden sm:inline">| The Challenge</span>
+            </span>
           </div>
-        </div>
+
+          <div className="flex items-center gap-4">
+            {typedQuiz?.duration && typedQuiz.duration > 0 && (
+              <div className="bg-[#1c1c21] border border-white/5 rounded-full px-4 py-2 md:px-5 md:py-2.5 flex items-center gap-2 md:gap-3 shadow-lg">
+                <Clock className="w-4 h-4 text-indigo-400 shrink-0" />
+                <span className="text-[10px] md:text-[11px] font-bold text-zinc-500 tracking-widest uppercase hidden lg:block">Time Remaining</span>
+                <span className="font-mono font-bold text-white text-sm md:text-base whitespace-nowrap">
+                  <CountdownTimer
+                    duration={typedQuiz.duration * 60}
+                    onTimeUp={() => {
+                      toast({ title: "Time's up!", description: "Your quiz has been automatically submitted." });
+                      submitQuiz();
+                    }}
+                  />
+                </span>
+              </div>
+            )}
+          </div>
+        </header>
+
+        {/* Main Content Area */}
+        <main className="flex-1 flex items-center justify-center p-4 md:p-6 relative z-10 w-full">
+          {/* Floating Webcam inside Proctoring Overlay logic */}
+          {enableWebcam && proctoringActive && (
+            <div className="hidden xl:block absolute left-8 top-1/4 w-72 bg-[#1c1c21] rounded-[2rem] p-3 border border-indigo-500/20 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.6)] z-30 transform transition-transform hover:scale-105">
+              <div className="relative rounded-2xl overflow-hidden aspect-video bg-black flex items-center justify-center border border-white/5">
+                <CameraIntegrityCheck onViolation={handleWebcamViolation} isProctoringActive={proctoringActive} />
+                <div className="absolute top-3 right-3 flex items-center gap-2 bg-black/50 backdrop-blur-md px-2.5 py-1.5 rounded-full">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse box-content border border-emerald-900" />
+                  <span className="text-[9px] font-bold text-white uppercase tracking-wider">Recording</span>
+                </div>
+              </div>
+              <p className="text-center text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-4 mb-2 flex items-center justify-center gap-1.5">
+                <CheckCircle className="w-3 h-3" /> Identity Verified
+              </p>
+            </div>
+          )}
+
+          {/* Central Question Card */}
+          <div className="w-full max-w-4xl mx-auto my-auto pb-12 z-20">
+            <div className="bg-[#1c1c21] rounded-[2rem] p-5 sm:p-8 md:p-12 border border-white/5 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] relative w-full pt-16">
+              
+              {/* Question pill header */}
+              <div className="absolute -top-5 w-full left-0 flex justify-center">
+                 <div className="bg-[#1c1c21] md:bg-indigo-500/10 backdrop-blur-xl border border-indigo-500/30 text-indigo-300 font-bold text-[10px] md:text-[11px] tracking-widest uppercase px-5 py-2 md:px-6 md:py-2.5 rounded-full shadow-[0_0_30px_rgba(99,102,241,0.2)] flex items-center gap-2">
+                   <FileQuestion className="w-3.5 h-3.5" /> 
+                   Question {currentQuestion + 1} / {typedQuestions?.length || 0}
+                 </div>
+              </div>
+
+              {/* The Question Component */}
+              <AnimatePresence mode="wait">
+                <QuestionTransition key={currentQuestion} id={currentQuestion} direction={direction}>
+                  <div className="w-full">
+                    {typedQuestions && typedQuestions[currentQuestion] ? (
+                      <Question
+                        question={typedQuestions[currentQuestion]}
+                        mode="take"
+                        onChange={handleAnswer}
+                        userAnswer={answers[currentQuestion] || ""}
+                      />
+                    ) : (
+                      <div className="py-20 text-center">
+                        <Loader2 className="w-10 h-10 animate-spin text-indigo-500 mx-auto mb-4" />
+                        <p className="text-zinc-400">Rendering digital challenge...</p>
+                      </div>
+                    )}
+                  </div>
+                </QuestionTransition>
+              </AnimatePresence>
+
+            </div>
+          </div>
+        </main>
+
+        {/* Bottom Action Bar */}
+        <footer className="bg-[#09090b]/90 backdrop-blur-2xl border-t border-white/5 py-4 px-4 lg:px-12 flex flex-col sm:flex-row justify-between items-center gap-4 relative z-30">
+          <div className="flex items-center gap-4 sm:gap-10 w-full sm:w-auto">
+            <div className="hidden sm:block shrink-0">
+              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-1">Attempt Progress</span>
+              <span className="font-mono font-bold text-emerald-400 text-xl">{answeredQuestions} <span className="text-zinc-600 text-sm">/ {typedQuestions?.length || 0}</span></span>
+            </div>
+            
+            {/* Unified Progress Bar matching layout */}
+            <div className="flex gap-1 overflow-x-auto max-w-full sm:max-w-xs md:max-w-md pb-1 scrollbar-hide flex-1 sm:flex-initial justify-center sm:justify-start">
+              {typedQuestions?.map((_, index) => (
+                <button
+                  key={`nav-${index}`}
+                  onClick={() => {
+                    setDirection(index > currentQuestion ? "right" : "left");
+                    setCurrentQuestion(index);
+                  }}
+                  className={cn(
+                    "flex-shrink-0 h-2 rounded-full transition-all duration-300",
+                    currentQuestion === index ? "bg-indigo-400 w-12"
+                    : answers[index] ? "bg-emerald-500 w-6 sm:w-8" 
+                    : "bg-zinc-800 hover:bg-zinc-700 w-6 sm:w-8"
+                  )}
+                  title={`Question ${index + 1}`}
+                />
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 sm:gap-5 w-full sm:w-auto justify-between sm:justify-end">
+            <Button 
+              type="button"
+              variant="ghost" 
+              className="text-zinc-400 hover:text-white hover:bg-white/5 text-xs sm:text-sm font-bold min-h-12"
+              onClick={handleQuizSubmission}
+              disabled={submitting}
+            >
+              Submit Early
+            </Button>
+            
+            <div className="flex gap-2 shrink-0">
+              <Button
+                type="button"
+                onClick={previous}
+                disabled={currentQuestion === 0}
+                variant="outline"
+                className="bg-[#1c1c21] border-white/5 text-zinc-300 hover:bg-white/10 hover:text-white rounded-xl h-12 w-12 p-0 flex items-center justify-center shrink-0"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              
+              {currentQuestion < (typedQuestions?.length || 0) - 1 ? (
+                <Button 
+                  type="button"
+                  className="bg-indigo-300 hover:bg-indigo-400 text-indigo-950 font-bold px-4 sm:px-8 h-12 rounded-xl text-xs sm:text-sm shadow-[0_0_20px_rgba(165,180,252,0.3)] whitespace-nowrap shrink-0"
+                  onClick={next}
+                >
+                  Next <span className="hidden sm:inline">Question</span> <ArrowRight className="w-4 h-4 ml-1 sm:ml-2 shrink-0" />
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  onClick={handleQuizSubmission}
+                  disabled={submitting}
+                  className="bg-emerald-400 hover:bg-emerald-500 text-emerald-950 font-bold px-4 sm:px-8 h-12 rounded-xl text-xs sm:text-sm shadow-[0_0_20px_rgba(52,211,153,0.3)] whitespace-nowrap shrink-0"
+                >
+                  {submitting ? <><Loader2 className="w-4 h-4 animate-spin mr-1 sm:mr-2 shrink-0" /> Processing</> : <><Send className="w-4 h-4 mr-1 sm:mr-2 shrink-0" /> Finish <span className="hidden sm:inline">Quiz</span></>}
+                </Button>
+              )}
+            </div>
+          </div>
+        </footer>
       </div>
     );
   }

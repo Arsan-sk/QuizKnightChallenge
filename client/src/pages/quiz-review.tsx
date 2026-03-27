@@ -54,8 +54,7 @@ export default function QuizReviewPage() {
   const isLoading = loadingQuiz || loadingQuestions || loadingResult || loadingStudent;
   
   if (isLoading) {
-    return (
-      <div>
+    return (<div className="min-h-screen bg-[#131316] font-sans text-white relative flex flex-col"><div className="fixed top-[-10%] right-[-10%] w-[600px] h-[600px] bg-indigo-600/10 blur-[150px] rounded-full pointer-events-none z-0" /><div className="fixed bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-amber-600/5 blur-[150px] rounded-full pointer-events-none z-0" />
         <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
           <Loader2 className="h-8 w-8 animate-spin mr-2" />
           <span>Loading quiz review...</span>
@@ -65,11 +64,10 @@ export default function QuizReviewPage() {
   }
   
   if (!quiz || !questions || !userResult || !student) {
-    return (
-      <div>
-        <div className="container mx-auto p-8 text-center">
+    return (<div className="min-h-screen bg-[#131316] font-sans text-white relative flex flex-col"><div className="fixed top-[-10%] right-[-10%] w-[600px] h-[600px] bg-indigo-600/10 blur-[150px] rounded-full pointer-events-none z-0" /><div className="fixed bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-amber-600/5 blur-[150px] rounded-full pointer-events-none z-0" />
+        <div className="max-w-[1400px] mx-auto relative z-10 font-sans p-6 md:p-12 text-white text-center">
           <h1 className="text-2xl font-bold text-red-500 mb-4">Error Loading Quiz Review</h1>
-          <p className="text-muted-foreground mb-6">
+          <p className="text-zinc-500 mb-6">
             The requested quiz review could not be loaded. The quiz or student attempt may not exist.
           </p>
           <Button asChild>
@@ -84,9 +82,8 @@ export default function QuizReviewPage() {
     ? Math.round((userResult.correctAnswers / userResult.totalQuestions) * 100) 
     : 0;
   
-  return (
-    <div>
-      <div className="container mx-auto p-8">
+  return (<div className="min-h-screen bg-[#131316] font-sans text-white relative flex flex-col"><div className="fixed top-[-10%] right-[-10%] w-[600px] h-[600px] bg-indigo-600/10 blur-[150px] rounded-full pointer-events-none z-0" /><div className="fixed bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-amber-600/5 blur-[150px] rounded-full pointer-events-none z-0" />
+      <div className="max-w-[1400px] mx-auto relative z-10 font-sans p-6 md:p-12 text-white">
         <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
             <Button variant="outline" asChild className="mb-4 md:mb-0">
@@ -97,14 +94,14 @@ export default function QuizReviewPage() {
           </div>
           <div className="text-right">
             <h1 className="text-3xl font-bold mb-1">{quiz.title}</h1>
-            <p className="text-muted-foreground">
+            <p className="text-zinc-500">
               Student Review: {student.username}
             </p>
           </div>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <Card>
+          <Card className="bg-[#1c1c21] rounded-[2rem] p-8 border border-white/5 shadow-xl">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center text-lg">
                 <CheckCircle className="mr-2 h-5 w-5 text-green-500" />
@@ -113,13 +110,13 @@ export default function QuizReviewPage() {
             </CardHeader>
             <CardContent className="text-center">
               <p className="text-4xl font-bold">{scorePercentage}%</p>
-              <p className="text-muted-foreground mt-1">
+              <p className="text-zinc-500 mt-1">
                 {userResult.correctAnswers} of {userResult.totalQuestions} correct
               </p>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="bg-[#1c1c21] rounded-[2rem] p-8 border border-white/5 shadow-xl">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center text-lg">
                 <Clock className="mr-2 h-5 w-5 text-blue-500" />
@@ -128,13 +125,13 @@ export default function QuizReviewPage() {
             </CardHeader>
             <CardContent className="text-center">
               <p className="text-4xl font-bold">{formatTimeTaken(userResult.timeTaken)}</p>
-              <p className="text-muted-foreground mt-1">
+              <p className="text-zinc-500 mt-1">
                 Completed on {userResult.completedAt ? new Date(userResult.completedAt).toLocaleDateString() : 'N/A'}
               </p>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="bg-[#1c1c21] rounded-[2rem] p-8 border border-white/5 shadow-xl">
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center text-lg">
                 <XCircle className="mr-2 h-5 w-5 text-red-500" />
@@ -143,7 +140,7 @@ export default function QuizReviewPage() {
             </CardHeader>
             <CardContent className="text-center">
               <p className="text-4xl font-bold">{userResult.wrongAnswers}</p>
-              <p className="text-muted-foreground mt-1">
+              <p className="text-zinc-500 mt-1">
                 Questions that need attention
               </p>
             </CardContent>
@@ -174,12 +171,12 @@ export default function QuizReviewPage() {
                 <CardContent className="p-6">
                   <div className="absolute top-4 right-4">
                       {isCorrect ? (
-                        <span className="bg-green-100 text-green-800 font-medium px-3 py-1 rounded-full text-sm flex items-center">
+                        <span className="bg-green-500/10 text-green-400 font-medium px-3 py-1 rounded-full text-sm flex items-center">
                           <CheckCircle className="h-4 w-4 mr-1" />
                           +{question.points ?? 1}
                         </span>
                       ) : (
-                        <span className="bg-red-100 text-red-800 font-medium px-3 py-1 rounded-full text-sm flex items-center">
+                        <span className="bg-red-500/10 text-red-400 font-medium px-3 py-1 rounded-full text-sm flex items-center">
                           <XCircle className="h-4 w-4 mr-1" />
                           0
                         </span>
@@ -196,14 +193,14 @@ export default function QuizReviewPage() {
                       const isCorrectOption = option === question.correctAnswer;
                       
                       // Determine the background and border color based on answer status
-                      let bgColor = "bg-background border border-border";
-                      if (isCorrectOption) bgColor = "bg-green-50 border border-green-200";
-                      if (isUserSelection && !isCorrect) bgColor = "bg-red-50 border border-red-200";
+                      let bgColor = "bg-[#1c1c21] border border-white/5 text-zinc-400";
+                      if (isCorrectOption) bgColor = "bg-green-500/10 border border-green-500/30 text-green-400";
+                      if (isUserSelection && !isCorrect) bgColor = "bg-red-500/10 border border-red-500/30 text-red-500" 
                       
                       // Add extra styling for correct user selection
                       let extraClasses = "";
                       if (isUserSelection && isCorrect) {
-                        extraClasses = "bg-green-100 border-green-500 border-2 shadow-sm";
+                        extraClasses = "bg-green-500/20 border-green-500/50 text-green-400 border-2 shadow-sm";
                       }
                       
                       return (
@@ -239,3 +236,6 @@ export default function QuizReviewPage() {
     </div>
   );
 } 
+
+
+

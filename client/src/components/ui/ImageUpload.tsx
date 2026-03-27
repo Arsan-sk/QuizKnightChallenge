@@ -205,18 +205,19 @@ export function ImageUpload({
         <Button
           type="button"
           variant="outline"
-          size="sm"
-          className={cn("flex items-center gap-1", value && !showPreview && "border-blue-500")}
+          size={value ? "icon" : "sm"}
+          className={cn(
+            "flex items-center gap-1 transition-all rounded-lg", 
+            value ? "bg-transparent border-white/10 hover:bg-white/5" : "bg-[#131316] border-white/5 text-zinc-300 hover:text-white"
+          )}
           disabled={isUploading}
           onClick={handleButtonClick}
+          title={value ? "Change Image" : label}
         >
           {isUploading ? (
-            <>Uploading...</>
+            <Upload className="h-4 w-4 animate-bounce text-zinc-400" />
           ) : value ? (
-            <>
-              <Image className="h-4 w-4" /> 
-              {showPreview ? "Change Image" : "View/Change Image"}
-            </>
+            <Image className="h-4 w-4 text-emerald-500" />
           ) : (
             <>
               <Upload className="h-4 w-4" /> {label}
