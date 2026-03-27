@@ -79,8 +79,8 @@ export function StudentReportTable({ data, questions = [], quizId }: StudentRepo
                   const barWidth = attempted > 0 ? (attempted / totalItems) * 100 : 0;
   
                   const totalViolations = (student.tabSwitchCount || 0) + (student.copyPasteAttempts || 0) + (student.proctoringFlags || 0);
-                  const initials = student.studentName.split(' ')
-                    .map(n => n[0])
+                    const nameToUse = student.username || student.studentName || 'Unknown Student';
+                    const initials = nameToUse.split(' ')
                     .join('')
                     .substring(0, 2)
                     .toUpperCase();
