@@ -360,10 +360,7 @@ export default function QuizTake() {
     } finally {
       setSubmitting(false);
     }
-  }, [questions, timeStarted, user, answers, id, safeRefetchLeaderboard, toast]);
-
-  const handleWebcamViolation = useCallback(() => {
-    // Ignore webcam violations once proctoring has been disabled
+    }, [questions, timeStarted, user, answers, id, safeRefetchLeaderboard, toast, tabSwitchCount, copyPasteAttempts, otherViolations]);
     if (!proctoringActive) return;
 
     setOtherViolations((prev) => {
@@ -1184,74 +1181,7 @@ export default function QuizTake() {
             </div>
           )}
 
-          {/* Submission Confirmation Modal */}
-          {showSubmitConfirmation && (
-            <motion.div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <motion.div
-                className="bg-[#1c1c21] border border-indigo-500/20 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
-                initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              >
-                {/* Header */}
-                <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border-b border-indigo-500/20 px-8 py-6">
-                  <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center">
-                      <AlertTriangle className="w-5 h-5 text-indigo-400" />
-                    </div>
-                    Confirm Submission
-                  </h2>
-                </div>
 
-                {/* Content */}
-                <div className="px-8 py-6 space-y-6">
-                  <p className="text-zinc-300 leading-relaxed whitespace-pre-wrap">
-                    {submitConfirmationMessage}
-                  </p>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-3 pt-4">
-                    <motion.button
-                      onClick={() => setShowSubmitConfirmation(false)}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      className="flex-1 px-6 py-3 rounded-lg font-bold text-zinc-300 border border-zinc-600 hover:border-zinc-500 hover:bg-zinc-600/10 transition-all"
-                    >
-                      Continue Quiz
-                    </motion.button>
-                    <motion.button
-                      onClick={() => {
-                        setShowSubmitConfirmation(false);
-                        submitQuiz();
-                      }}
-                      disabled={submitting}
-                      whileHover={{ scale: submitting ? 1 : 1.02 }}
-                      whileTap={{ scale: submitting ? 1 : 0.98 }}
-                      className="flex-1 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2"
-                    >
-                      {submitting ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Submitting...
-                        </>
-                      ) : (
-                        <>
-                          <Send className="w-4 h-4" />
-                          Submit Quiz
-                        </>
-                      )}
-                    </motion.button>
-                  </div>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
 
         </div>
       </div>
@@ -1724,15 +1654,16 @@ export default function QuizTake() {
 
         {/* Main Content Area */}
         <main className="flex-1 flex items-center justify-center p-4 md:p-6 relative z-10 w-full">
-          {/* Draggable Floating Webcam - DISABLED */}
-          {/* {enableWebcam && proctoringActive && (
-            <DraggableWebcam 
-              webcamRef={floatingWebcamRef}
-              floatingConfidence={floatingConfidence}
-              isEnabled={enableWebcam && proctoringActive}
-            />
-          )} */}
-
+            {/* Hidden video required for face tracking to process frames */}
+            {enableWebcam && proctoringActive && (
+              <video
+                ref={floatingWebcamRef}
+                autoPlay
+                playsInline
+                muted
+                style={{ opacity: 0, position: 'absolute', width: '320px', height: '240px', pointerEvents: 'none', zIndex: -1 }}
+              />
+            )}
           {/* Central Question Card */}
           <div className="w-full max-w-4xl mx-auto my-auto pb-12 z-20">
             <div className="bg-[#1c1c21] rounded-[2rem] p-5 sm:p-8 md:p-12 border border-white/5 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] relative w-full pt-16">
@@ -1768,6 +1699,75 @@ export default function QuizTake() {
 
             </div>
           </div>
+                  {/* Submission Confirmation Modal */}
+          {showSubmitConfirmation && (
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div
+                className="bg-[#1c1c21] border border-indigo-500/20 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              >
+                {/* Header */}
+                <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border-b border-indigo-500/20 px-8 py-6">
+                  <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center">
+                      <AlertTriangle className="w-5 h-5 text-indigo-400" />
+                    </div>
+                    Confirm Submission
+                  </h2>
+                </div>
+
+                {/* Content */}
+                <div className="px-8 py-6 space-y-6">
+                  <p className="text-zinc-300 leading-relaxed whitespace-pre-wrap">
+                    {submitConfirmationMessage}
+                  </p>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 pt-4">
+                    <motion.button
+                      onClick={() => setShowSubmitConfirmation(false)}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="flex-1 px-6 py-3 rounded-lg font-bold text-zinc-300 border border-zinc-600 hover:border-zinc-500 hover:bg-zinc-600/10 transition-all"
+                    >
+                      Continue Quiz
+                    </motion.button>
+                    <motion.button
+                      onClick={() => {
+                        setShowSubmitConfirmation(false);
+                        submitQuiz();
+                      }}
+                      disabled={submitting}
+                      whileHover={{ scale: submitting ? 1 : 1.02 }}
+                      whileTap={{ scale: submitting ? 1 : 0.98 }}
+                      className="flex-1 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2"
+                    >
+                      {submitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Submitting...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4" />
+                          Submit Quiz
+                        </>
+                      )}
+                    </motion.button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+
         </main>
 
         {/* Bottom Action Bar */}
