@@ -262,6 +262,13 @@ export function useFaceProctoring(
                             onAutoSubmit(); 
                         }
                         return 5; // Reset countdown for *next* potential strike if they persist?
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+
+            return () => clearInterval(timer);
+        }, [enabled, isViolating, warningCount, onAutoSubmit, onViolation]);
 
     // Initialize MediaPipe Face Mesh
     useEffect(() => {
