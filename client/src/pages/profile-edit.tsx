@@ -1,14 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useProfile } from "@/hooks/use-profile";
 import { useLocation } from "wouter";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter
-} from "@/components/ui/card";
+import { motion } from "framer-motion";
+import { Camera, ArrowLeft, Save, Loader2, Upload } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -22,8 +16,8 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Camera, Upload } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function ProfileEditPage() {
@@ -35,28 +29,26 @@ export default function ProfileEditPage() {
 
   // Form state
   const [formData, setFormData] = useState({
-    displayName: "",
+    name: "",
     username: "",
+    email: "",
     profilePicture: "",
     bio: "",
-    branch: "",
-    year: "",
-    department: "",
-    specialization: ""
+    branch: "none",
+    year: "none",
   });
 
   // Initialize form with profile data when available
   useEffect(() => {
     if (profile) {
       setFormData({
-        displayName: profile.displayName || "",
+        name: profile.name || "",
         username: profile.username || "",
-        profilePicture: profile.profilePicture || "",
+        email: profile.email || "",
+        profilePicture: profile.profilePicture || profile.profileImage || "",
         bio: profile.bio || "",
-        branch: profile.branch || "",
-        year: profile.year || "",
-        department: profile.department || "",
-        specialization: profile.specialization || ""
+        branch: profile.branch || "none",
+        year: profile.year || "none",
       });
     }
   }, [profile]);
@@ -117,7 +109,17 @@ export default function ProfileEditPage() {
     e.preventDefault();
     try {
       console.log("Submitting profile update with image:", formData.profilePicture ? formData.profilePicture.substring(0, 50) + "..." : "No image");
-      await updateProfileMutation.mutateAsync(formData);
+      
+      const payload = {
+        name: formData.name,
+        username: formData.username,
+        profilePicture: formData.profilePicture,
+        bio: formData.bio,
+        branch: formData.branch === "none" ? null : formData.branch,
+        year: formData.year === "none" ? null : formData.year
+      };
+
+      await updateProfileMutation.mutateAsync(payload);
       toast({
         title: "Profile updated",
         description: "Your profile has been successfully updated"
@@ -207,8 +209,8 @@ export default function ProfileEditPage() {
 
   // Get initials for avatar
   const getInitials = () => {
-    if (formData.displayName) {
-      return formData.displayName
+    if (formData.name) {
+      return formData.name
         .split(" ")
         .map(n => n[0])
         .join("")
@@ -223,106 +225,188 @@ export default function ProfileEditPage() {
   const isTeacher = user?.role === "teacher";
 
   return (
-    <div className="container py-6">
-      <Card>
-        <form onSubmit={handleSubmit}>
-          <CardHeader>
-            <CardTitle>Edit Profile</CardTitle>
-            <CardDescription>
-              Update your personal information
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex flex-col md:flex-row gap-6 items-start">
-              <div className="flex flex-col items-center space-y-3">
-                <div 
-                  className="relative cursor-pointer group"
-                  onClick={handleImageClick}
+    <div className="min-h-screen bg-[#09090b] text-white relative overflow-hidden">
+      {/* Gradient background elements */}
+      <div className="fixed top-[-20%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="fixed bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[150px] pointer-events-none" />
+      
+      <div className="container mx-auto px-4 py-8 relative z-10">
+        <div className="max-w-3xl mx-auto">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-12">
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+          >
+            <button
+              onClick={() => navigate("/profile")}
+              className="flex items-center gap-2 text-zinc-400 hover:text-white transition-colors mb-4"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="text-sm font-medium">Back</span>
+            </button>
+            <h1 className="text-4xl font-bold tracking-tight">Edit Profile</h1>
+            <p className="text-zinc-400 mt-2">Update your personal information and preferences</p>
+          </motion.div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="w-full">
+          {/* Profile Picture Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="bg-[#1c1c21]/50 backdrop-blur-xl border border-white/5 rounded-2xl p-8 mb-8 shadow-xl"
+          >
+            <h2 className="text-lg font-semibold mb-6 flex items-center gap-2">
+              <Camera className="w-5 h-5 text-indigo-400" />
+              Profile Picture
+            </h2>
+            
+            <div className="flex items-center gap-6">
+              {/* Avatar Preview */}
+              <div
+                onClick={handleImageClick}
+                className="relative group cursor-pointer flex-shrink-0"
+              >
+                <div className="w-32 h-32 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-2 border-indigo-500/30 flex items-center justify-center overflow-hidden group-hover:border-indigo-500/60 transition-all"
                 >
-                  <Avatar className="h-24 w-24 border-2 border-primary/20 group-hover:border-primary/50 transition-all">
-                    <AvatarImage src={formData.profilePicture} />
-                    <AvatarFallback>{getInitials()}</AvatarFallback>
-                  </Avatar>
-                  <div className="absolute inset-0 bg-black/30 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Camera className="h-6 w-6 text-white" />
-                  </div>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleImageChange}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground text-center">
-                  Click to upload profile picture
-                </p>
-                <div className="w-full max-w-[250px] space-y-2">
-                  <Label htmlFor="profilePicture">Or enter image URL</Label>
-                  <Input
-                    id="profilePicture"
-                    name="profilePicture"
-                    placeholder="https://example.com/avatar.jpg"
-                    value={formData.profilePicture}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </div>
-              
-              <div className="flex-1 space-y-4">
-                <div className="grid gap-3">
-                  <Label htmlFor="displayName">Display Name</Label>
-                  <Input
-                    id="displayName"
-                    name="displayName"
-                    placeholder="Your name"
-                    value={formData.displayName}
-                    onChange={handleInputChange}
-                  />
+                  {formData.profilePicture ? (
+                    <img
+                      src={formData.profilePicture}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Avatar className="w-full h-full border-0">
+                      <AvatarFallback className="bg-indigo-500/20 text-indigo-300 text-2xl font-bold">
+                        {getInitials()}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
                 </div>
                 
-                <div className="grid gap-3">
-                  <Label htmlFor="username">Username</Label>
-                  <Input
-                    id="username"
-                    name="username"
-                    placeholder="username"
-                    value={formData.username}
-                    onChange={handleInputChange}
-                    required
-                  />
+                <div className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex flex-col items-center gap-2">
+                    <Camera className="w-6 h-6 text-white" />
+                    <span className="text-xs text-white font-medium">Upload</span>
+                  </div>
+                </div>
+
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageChange}
+                />
+              </div>
+
+              {/* Upload Info */}
+              <div className="flex-1">
+                <p className="text-sm text-zinc-300 mb-4">
+                  Click the avatar to upload a new profile picture, or enter an image URL below.
+                </p>
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="profilePicture" className="text-xs uppercase tracking-wider text-zinc-400 mb-2 block">
+                      Image URL
+                    </Label>
+                    <Input
+                      id="profilePicture"
+                      name="profilePicture"
+                      placeholder="https://example.com/avatar.jpg"
+                      value={formData.profilePicture}
+                      onChange={handleInputChange}
+                      className="bg-[#131316] border-white/10 focus:border-indigo-500/50 rounded-lg"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
+          </motion.div>
+
+          {/* Basic Information */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="bg-[#1c1c21]/50 backdrop-blur-xl border border-white/5 rounded-2xl p-8 mb-8 shadow-xl"
+          >
+            <h2 className="text-lg font-semibold mb-6">Basic Information</h2>
             
-            <div className="grid gap-3">
-              <Label htmlFor="bio">Bio</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                  <Label htmlFor="name" className="text-xs uppercase tracking-wider text-zinc-400 mb-2 block">
+                    Display Name
+                  </Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    placeholder="Your full name"
+                    value={formData.name}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="username" className="text-xs uppercase tracking-wider text-zinc-400 mb-2 block">
+                  Username
+                </Label>
+                <Input
+                  id="username"
+                  name="username"
+                  placeholder="username"
+                  value={formData.username}
+                  onChange={handleInputChange}
+                  required
+                  className="bg-[#131316] border-white/10 focus:border-indigo-500/50 rounded-lg"
+                />
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <Label htmlFor="bio" className="text-xs uppercase tracking-wider text-zinc-400 mb-2 block">
+                Bio
+              </Label>
               <Textarea
                 id="bio"
                 name="bio"
-                placeholder="Tell us about yourself"
+                placeholder="Tell us about yourself..."
                 value={formData.bio}
                 onChange={handleInputChange}
                 rows={4}
                 maxLength={500}
+                className="bg-[#131316] border-white/10 focus:border-indigo-500/50 rounded-lg resize-none"
               />
-              <p className="text-xs text-muted-foreground text-right">
-                {formData.bio.length}/500
+              <p className="text-xs text-zinc-500 mt-2 text-right">
+                {formData.bio.length}/500 characters
               </p>
             </div>
-            
-            {isStudent && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="grid gap-3">
-                  <Label htmlFor="branch">Branch</Label>
+          </motion.div>
+
+          {/* Role-Specific Information */}
+          {isStudent && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="bg-[#1c1c21]/50 backdrop-blur-xl border border-white/5 rounded-2xl p-8 mb-8 shadow-xl"
+            >
+              <h2 className="text-lg font-semibold mb-6">Academic Information</h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="branch" className="text-xs uppercase tracking-wider text-zinc-400 mb-2 block">
+                    Branch
+                  </Label>
                   <Select
                     value={formData.branch}
                     onValueChange={(value) => handleSelectChange("branch", value)}
                   >
-                    <SelectTrigger id="branch">
+                    <SelectTrigger id="branch" className="bg-[#131316] border-white/10 focus:border-indigo-500/50">
                       <SelectValue placeholder="Select your branch" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-[#1c1c21] border-white/10">
                       <SelectItem value="none">Not specified</SelectItem>
                       <SelectItem value="CS">Computer Science</SelectItem>
                       <SelectItem value="AIML">AI & Machine Learning</SelectItem>
@@ -335,16 +419,18 @@ export default function ProfileEditPage() {
                   </Select>
                 </div>
                 
-                <div className="grid gap-3">
-                  <Label htmlFor="year">Year of Study</Label>
+                <div>
+                  <Label htmlFor="year" className="text-xs uppercase tracking-wider text-zinc-400 mb-2 block">
+                    Year of Study
+                  </Label>
                   <Select
                     value={formData.year}
                     onValueChange={(value) => handleSelectChange("year", value)}
                   >
-                    <SelectTrigger id="year">
+                    <SelectTrigger id="year" className="bg-[#131316] border-white/10 focus:border-indigo-500/50">
                       <SelectValue placeholder="Select your year" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-[#1c1c21] border-white/10">
                       <SelectItem value="none">Not specified</SelectItem>
                       <SelectItem value="1st">1st Year</SelectItem>
                       <SelectItem value="2nd">2nd Year</SelectItem>
@@ -354,20 +440,31 @@ export default function ProfileEditPage() {
                   </Select>
                 </div>
               </div>
-            )}
-            
-            {isTeacher && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="grid gap-3">
-                  <Label htmlFor="department">Department</Label>
+            </motion.div>
+          )}
+
+          {isTeacher && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="bg-[#1c1c21]/50 backdrop-blur-xl border border-white/5 rounded-2xl p-8 mb-8 shadow-xl"
+            >
+              <h2 className="text-lg font-semibold mb-6">Professional Information</h2>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="department" className="text-xs uppercase tracking-wider text-zinc-400 mb-2 block">
+                    Department
+                  </Label>
                   <Select
                     value={formData.department}
                     onValueChange={(value) => handleSelectChange("department", value)}
                   >
-                    <SelectTrigger id="department">
+                    <SelectTrigger id="department" className="bg-[#131316] border-white/10 focus:border-indigo-500/50">
                       <SelectValue placeholder="Select department" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="bg-[#1c1c21] border-white/10">
                       <SelectItem value="none">Not specified</SelectItem>
                       <SelectItem value="CS">Computer Science</SelectItem>
                       <SelectItem value="AIML">AI & Machine Learning</SelectItem>
@@ -380,37 +477,52 @@ export default function ProfileEditPage() {
                   </Select>
                 </div>
                 
-                <div className="grid gap-3">
-                  <Label htmlFor="specialization">Specialization</Label>
+                <div>
+                  <Label htmlFor="specialization" className="text-xs uppercase tracking-wider text-zinc-400 mb-2 block">
+                    Specialization
+                  </Label>
                   <Input
                     id="specialization"
                     name="specialization"
                     placeholder="Your area of expertise"
                     value={formData.specialization}
                     onChange={handleInputChange}
+                    className="bg-[#131316] border-white/10 focus:border-indigo-500/50 rounded-lg"
                   />
                 </div>
               </div>
-            )}
-          </CardContent>
-          <CardFooter className="flex justify-between">
-            <Button 
-              type="button" 
-              variant="outline" 
+            </motion.div>
+          )}
+
+          {/* Form Actions */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="flex gap-4"
+          >
+            <Button
+              type="button"
+              variant="outline"
               onClick={() => navigate("/profile")}
               disabled={updateProfileMutation.isLoading}
+              className="flex-1 bg-[#1c1c21]/50 border-white/10 hover:bg-[#1c1c21]/80 hover:border-white/20 rounded-lg"
             >
+              <ArrowLeft className="w-4 h-4 mr-2" />
               Cancel
             </Button>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={updateProfileMutation.isLoading}
+              className="flex-1 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-semibold shadow-[0_0_30px_rgba(99,102,241,0.3)]"
             >
+              <Save className="w-4 h-4 mr-2" />
               {updateProfileMutation.isLoading ? "Saving..." : "Save Changes"}
             </Button>
-          </CardFooter>
+          </motion.div>
         </form>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 } 

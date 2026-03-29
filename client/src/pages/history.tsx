@@ -179,7 +179,7 @@ export default function HistoryPage() {
                   variant="ghost"
                   size="sm"
                   className="h-8 px-3 text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-                  onClick={() => navigate(`/student/quiz-results/${attempt.quizId}/${attempt.id}`)}
+                  onClick={() => navigate(`/student/quiz/${attempt.quizId}?view=results`)}
                 >
                   <Eye className="w-3.5 h-3.5 mr-1" />
                   Review

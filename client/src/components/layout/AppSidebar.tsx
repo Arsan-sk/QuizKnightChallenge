@@ -4,6 +4,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { teacherMenu, studentMenu, MenuItem } from '../../config/menuConfig';
 import { useProfile } from '../../hooks/use-profile';
 import { useAuth } from '../../hooks/use-auth';
+import { useQuizSession } from '../../hooks/use-quiz-session';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import {
   Tooltip,
@@ -16,6 +18,7 @@ import {
   ChevronRight,
   LogOut,
   Shield,
+  AlertTriangle,
 } from 'lucide-react';
 
 type Props = {
@@ -27,6 +30,8 @@ const AppSidebar: React.FC<Props> = ({ expanded, onExpandedChange }) => {
   const [location, navigate] = useLocation();
   const { profile } = useProfile();
   const { logoutMutation } = useAuth();
+  const { isQuizActive } = useQuizSession();
+  const { toast } = useToast();
   const role = profile?.role === 'teacher' ? 'teacher' : 'student';
   const menu: MenuItem[] = role === 'teacher' ? teacherMenu : studentMenu;
 
@@ -40,6 +45,15 @@ const AppSidebar: React.FC<Props> = ({ expanded, onExpandedChange }) => {
   };
 
   const handleNav = (item: MenuItem) => {
+    if (isQuizActive) {
+      toast({
+        title: "Quiz in Progress",
+        description: "You cannot navigate away while taking a quiz. Please finish the quiz or wait for it to complete.",
+        variant: "destructive",
+        duration: 3000,
+      });
+      return;
+    }
     if (item.route) navigate(item.route);
   };
 

@@ -21,6 +21,15 @@ export default function StudentDashboard() {
     refetchInterval: 30000,
   });
 
+  // Fetch dynamic analytics data
+  const { data: analyticsQuizzes, isLoading: loadingQuizCount } = useQuery<{ total: number }>({
+    queryKey: ["/api/analytics/total-quizzes"],
+  });
+
+  const { data: analyticsUsers, isLoading: loadingUserCount } = useQuery<{ active: number }>({
+    queryKey: ["/api/analytics/active-users"],
+  });
+
   useEffect(() => {
     const hour = new Date().getHours();
     if (hour >= 5 && hour < 12) setTimeOfDay('morning');
@@ -35,6 +44,13 @@ export default function StudentDashboard() {
 
   const getCompletedQuizCount = () => results?.length || 0;
   const calculateTotalPoints = () => user?.points || 0;
+
+  // Format large numbers for display
+  const formatNumber = (num?: number) => {
+    if (!num) return "0";
+    if (num >= 1000) return (num / 1000).toFixed(1) + "k";
+    return num.toString();
+  };
 
   const getGreeting = () => {
     const emoji = timeOfDay === 'morning' ? '☀️' : timeOfDay === 'afternoon' ? '⚡' : '🌙';
@@ -162,40 +178,50 @@ export default function StudentDashboard() {
                    <div className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse" /> LIVE
                  </div>
                </div>
-               <Link href="/quizzes">
+               <Link href="/student/quizzes">
                  <div className="text-xs font-bold text-zinc-400 hover:text-white cursor-pointer transition-colors">View All</div>
                </Link>
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                {liveQuizzes && liveQuizzes.length > 0 ? (
-                 liveQuizzes.slice(0, 2).map((quiz, i) => (
-                    <div key={quiz.id} onClick={() => setLocation(`/quizzes/${quiz.id}`)} className="bg-[#1c1c21] rounded-[2rem] border border-white/5 overflow-hidden shadow-xl cursor-pointer group hover:border-white/10 transition-colors">
-                      <div className="h-40 w-full relative overflow-hidden">
-                        <img src={mockImages[i % 2]} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-60 mix-blend-screen mix-blend-overlay" />
-                        <div className="absolute top-4 left-4 bg-white text-black px-3 py-1.5 rounded text-[9px] font-black uppercase tracking-widest leading-none shadow-lg">
-                          {quiz.category || 'General'}
+                 liveQuizzes.slice(0, 2).map((quiz, i) => {
+                    const alreadyAttempted = results?.some(r => r.quizId === quiz.id);
+                    const actionPath = alreadyAttempted ? `/student/quiz/${quiz.id}?view=results` : `/student/quiz/${quiz.id}`;
+
+                    return (
+                      <div key={quiz.id} onClick={() => setLocation(actionPath)} className="bg-[#1c1c21] rounded-[2rem] border border-white/5 overflow-hidden shadow-xl cursor-pointer group hover:border-white/10 transition-colors">
+                        <div className="h-40 w-full relative overflow-hidden">
+                          <img src={mockImages[i % 2]} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-60 mix-blend-screen mix-blend-overlay" />
+                          <div className="absolute top-4 left-4 bg-white text-black px-3 py-1.5 rounded text-[9px] font-black uppercase tracking-widest leading-none shadow-lg">
+                            {quiz.category || 'General'}
+                          </div>
+                          {alreadyAttempted && (
+                            <div className="absolute top-4 right-4 bg-primary/90 text-primary-foreground px-3 py-1.5 rounded text-[9px] font-black uppercase tracking-widest leading-none shadow-lg">
+                              Completed
+                            </div>
+                          )}
                         </div>
-                      </div>
-                      <div className="p-6">
-                        <h3 className="text-xl font-bold text-white mb-2 truncate">{quiz.title}</h3>
-                        <p className="text-sm text-zinc-400 leading-relaxed line-clamp-2 mb-6">{quiz.description}</p>
-                        <div className="flex items-center justify-between">
-                           <div className="flex items-center">
-                             {/* Mock Avatars */}
-                             <div className="flex -space-x-2">
-                               <div className="w-8 h-8 rounded-full bg-indigo-500 border-2 border-[#1c1c21] text-[10px] flex items-center justify-center font-bold">AJ</div>
-                               <div className="w-8 h-8 rounded-full bg-emerald-500 border-2 border-[#1c1c21] text-[10px] flex items-center justify-center font-bold">MK</div>
-                               <div className="w-8 h-8 rounded-full bg-[#131316] border-2 border-[#1c1c21] text-[10px] flex items-center justify-center font-bold text-zinc-500">+12</div>
+                        <div className="p-6">
+                          <h3 className="text-xl font-bold text-white mb-2 truncate">{quiz.title}</h3>
+                          <p className="text-sm text-zinc-400 leading-relaxed line-clamp-2 mb-6">{quiz.description}</p>
+                          <div className="flex items-center justify-between">
+                             <div className="flex items-center">
+                               {/* Mock Avatars */}
+                               <div className="flex -space-x-2">
+                                 <div className="w-8 h-8 rounded-full bg-indigo-500 border-2 border-[#1c1c21] text-[10px] flex items-center justify-center font-bold">AJ</div>
+                                 <div className="w-8 h-8 rounded-full bg-emerald-500 border-2 border-[#1c1c21] text-[10px] flex items-center justify-center font-bold">MK</div>
+                                 <div className="w-8 h-8 rounded-full bg-[#131316] border-2 border-[#1c1c21] text-[10px] flex items-center justify-center font-bold text-zinc-500">+12</div>
+                               </div>
                              </div>
-                           </div>
-                           <button className="bg-indigo-300 hover:bg-indigo-400 text-indigo-950 px-6 py-2 rounded-full text-xs font-bold transition-colors">
-                             Join Now
-                           </button>
+                             <button className="bg-indigo-300 hover:bg-indigo-400 text-indigo-950 px-6 py-2 rounded-full text-xs font-bold transition-colors">
+                               {alreadyAttempted ? "Results" : "Join Now"}
+                             </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                 ))
+                    );
+                 })
                ) : (
                  <div className="col-span-1 lg:col-span-2 bg-[#1c1c21] rounded-[2rem] border border-white/5 p-12 text-center">
                    <CircleDashed className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
@@ -234,7 +260,7 @@ export default function StudentDashboard() {
           <p className="text-zinc-400 max-w-lg mb-10 text-lg">
             Explore over 5,000+ quizzes across various domains from science to pop culture.
           </p>
-          <Link href="/quizzes">
+          <Link href="/student/quizzes">
             <button className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-400 hover:to-purple-400 text-white shadow-[0_0_40px_rgba(99,102,241,0.4)] px-8 py-4 rounded-full text-sm font-bold flex items-center gap-2 mb-16 transition-all hover:scale-105 active:scale-95">
               Browse All Quizzes <ArrowRight className="w-4 h-4" />
             </button>
@@ -242,11 +268,11 @@ export default function StudentDashboard() {
 
           <div className="flex items-center justify-center gap-12 md:gap-24">
             <div>
-              <div className="text-2xl font-black text-white mb-1">1.2k+</div>
+              <div className="text-2xl font-black text-white mb-1">{loadingUserCount ? "..." : formatNumber(analyticsUsers?.active)}</div>
               <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Daily Active</div>
             </div>
             <div>
-              <div className="text-2xl font-black text-white mb-1">50k+</div>
+              <div className="text-2xl font-black text-white mb-1">{loadingQuizCount ? "..." : formatNumber(analyticsQuizzes?.total)}+</div>
               <div className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Total Quizzes</div>
             </div>
             <div>

@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Quiz } from "@shared/schema";
+import { Quiz, Result } from "@shared/schema";
 import { QuizCard } from "@/components/quiz/QuizCard";
 import { Loader2, Search } from "lucide-react";
 import { motion } from "framer-motion";
+import { useAuth } from "@/hooks/use-auth";
 // NavBar removed per request
 import { Input } from "@/components/ui/input";
 import {
@@ -22,9 +23,15 @@ export default function QuizBrowse() {
   const [search, setSearch] = useState("");
   const [difficulty, setDifficulty] = useState<string>("all");
   const [teacherFilter, setTeacherFilter] = useState<string>("");
+  const { user } = useAuth();
 
   const { data: quizzes, isLoading } = useQuery<QuizWithTeacher[]>({
     queryKey: ["/api/quizzes/public"],
+  });
+
+  const { data: results } = useQuery<Result[]>({
+    queryKey: ["/api/results/user"],
+    enabled: !!user,
   });
 
   if (isLoading) {
@@ -107,15 +114,20 @@ export default function QuizBrowse() {
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredQuizzes?.map((quiz) => (
-            <QuizCard
-              key={quiz.id}
-              quiz={quiz}
-              actionLabel="Take Quiz"
-              actionPath={`/student/quiz/${quiz.id}`}
-              teacherName={quiz.teacherName}
-            />
-          ))}
+          {filteredQuizzes?.map((quiz) => {
+            // Check if user has already attempted this quiz
+            const alreadyAttempted = results?.some(r => r.quizId === quiz.id) || false;
+
+            return (
+              <QuizCard
+                key={quiz.id}
+                quiz={quiz}
+                actionLabel={alreadyAttempted ? "See Results" : "Take Quiz"}
+                actionPath={alreadyAttempted ? `/student/quiz/${quiz.id}?view=results` : `/student/quiz/${quiz.id}`}
+                teacherName={quiz.teacherName}
+              />
+            );
+          })}
         </div>
 
         {(!filteredQuizzes || filteredQuizzes.length === 0) && (

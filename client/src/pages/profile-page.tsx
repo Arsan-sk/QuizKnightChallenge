@@ -1,17 +1,14 @@
-import { useState } from "react";
 import { useProfile } from "@/hooks/use-profile";
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EditProfileModal } from "@/components/profile/EditProfileModal";
 import { Share2, CheckCircle2, Star, BarChart2, Trophy, Flame, ChevronRight, Rocket, Award } from "lucide-react";
 import { Link } from "wouter";
 
 export default function ProfilePage() {
   const { profile, isLoading: profileLoading, error } = useProfile();
   const { user } = useAuth();
-  const [editModalOpen, setEditModalOpen] = useState(false);
 
   const isStudent = user?.role === "student";
 
@@ -100,12 +97,13 @@ export default function ProfilePage() {
             </p>
 
             <div className="flex items-center justify-center md:justify-start gap-4">
-              <Button 
-                onClick={() => setEditModalOpen(true)}
-                className="bg-indigo-500 hover:bg-indigo-600 text-white rounded-full px-8 py-6 text-sm font-bold shadow-[0_0_20px_rgba(99,102,241,0.2)] transition-all hover:shadow-[0_0_30px_rgba(99,102,241,0.4)]"
-              >
-                Edit Profile
-              </Button>
+              <Link href="/profile/edit">
+                <Button 
+                  className="bg-indigo-500 hover:bg-indigo-600 text-white rounded-full px-8 py-6 text-sm font-bold shadow-[0_0_20px_rgba(99,102,241,0.2)] transition-all hover:shadow-[0_0_30px_rgba(99,102,241,0.4)]"
+                >
+                  Edit Profile
+                </Button>
+              </Link>
               <Button size="icon" variant="outline" className="rounded-full w-12 h-12 border-zinc-700 bg-zinc-800/50 hover:bg-zinc-700 text-zinc-300">
                 <Share2 className="w-5 h-5" />
               </Button>
@@ -242,7 +240,6 @@ export default function ProfilePage() {
 
         </div>
       </div>
-      <EditProfileModal open={editModalOpen} onOpenChange={setEditModalOpen} />
     </div>
   );
 }

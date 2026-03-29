@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback, ReactNode } from "react";
+import { useState, useEffect, useCallback, ReactNode, useRef } from "react";
 import { useParams, useLocation, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Quiz, Question as QuestionType, User } from "@shared/schema";
 import { Question } from "@/components/quiz/Question";
+// import { DraggableWebcam } from "@/components/DraggableWebcam"; // DISABLED
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { QuizProgress } from "@/components/ui/quiz-progress";
@@ -14,8 +15,9 @@ import { motion, AnimatePresence } from "framer-motion";
 // NavBar removed per request
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from '@/hooks/use-theme';
-import { CameraIntegrityCheck } from '@/components/proctoring/CameraIntegrityCheck';
-import { QuizReview } from "@/components/quiz/QuizReview";
+import { useQuizSession } from "@/hooks/use-quiz-session";
+import { SharedQuizReview } from "@/components/shared/SharedQuizReview";
+import { useFaceProctoring } from "@/hooks/useFaceProctoring";
 // import { WebcamMonitor } from "@/components/quiz/WebcamMonitor"; // Deprecated
 import { ProctoringWarningOverlay } from "@/components/proctoring/ProctoringWarningOverlay";
 import {
@@ -43,20 +45,53 @@ type LeaderboardEntry = {
   wrongAnswers: number;
 };
 
+// Helper to safely parse Postgres/JSON array formats returned from the DB.
+const parseAnswersSafe = (val: any): string[] => {
+  if (val === null || val === undefined) return [];
+  if (Array.isArray(val)) return val.map(String);
+  if (typeof val === 'string') {
+    const s = val.trim();
+    if (s === '' || s === '[]') return [];
+    try {
+      const parsed = JSON.parse(s);
+      if (Array.isArray(parsed)) return parsed.map(String);
+    } catch (e) {
+      if (s.startsWith('{') && s.endsWith('}')) {
+        const inner = s.slice(1, -1);
+        if (inner.trim() === '') return [];
+        return inner.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/g).map(p => {
+          let clean = p.trim();
+          if ((clean.startsWith('"') && clean.endsWith('"')) || (clean.startsWith("'") && clean.endsWith("'"))) {
+            clean = clean.slice(1, -1).replace(/\\"/g, '"').replace(/\\'/g, "'");
+          }
+          return clean === 'NULL' ? "" : String(clean);
+        });
+      }
+    }
+  }
+  return [];
+};
+
 export default function QuizTake() {
   const { id } = useParams();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const { toast } = useToast();
+  
+  // Check if this is a results-only view (for already-attempted quizzes)
+  const isResultsOnly = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('view') === 'results';
+  
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<string[]>([]);
   const [timeStarted, setTimeStarted] = useState<Date | null>(null);
-  const [warnings, setWarnings] = useState(0);
+  const [warnings, setWarnings] = useState(0); // Total violations for threshold (keep for backwards compat)
+  const [tabSwitchCount, setTabSwitchCount] = useState(0); // Track tab switches separately
+  const [otherViolations, setOtherViolations] = useState(0); // Fullscreen, hotkeys, webcam violations
   const [quizCompleted, setQuizCompleted] = useState(false);
   const [showReview, setShowReview] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [copyPasteAttempts, setCopyPasteAttempts] = useState(0);
   const [enableWebcam, setEnableWebcam] = useState(true); // Enable by default for security
-  const [showRules, setShowRules] = useState(true);
+  const [showRules, setShowRules] = useState(!isResultsOnly);
   const [rulesTimer, setRulesTimer] = useState(5);
   const [readyToStart, setReadyToStart] = useState(false);
   const [quizResult, setQuizResult] = useState<{
@@ -68,6 +103,8 @@ export default function QuizTake() {
     pointsEarned: number;
   } | null>(null);
   const [hasAttempted, setHasAttempted] = useState(false);
+  const [previousResult, setPreviousResult] = useState<any>(null);
+  const [loadingPreviousResult, setLoadingPreviousResult] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [direction, setDirection] = useState<"left" | "right">("right");
   // Use `showReview` to present the question review overlay/modal.
@@ -76,6 +113,33 @@ export default function QuizTake() {
   const [quizStarted, setQuizStarted] = useState(false);
   // `proctoringActive` MUST follow `quizStarted` (activation rule)
   const [proctoringActive, setProctoringActive] = useState(false);
+  
+  // Quiz session context for preventing navigation during active quiz
+  const { setQuizActive, setCurrentQuizId } = useQuizSession();
+  
+  // Submission confirmation dialog state
+  const [showSubmitConfirmation, setShowSubmitConfirmation] = useState(false);
+  const [submitConfirmationMessage, setSubmitConfirmationMessage] = useState<string>('');
+  
+  // Camera verification state for rules section
+  const [cameraPermissionGranted, setCameraPermissionGranted] = useState<boolean | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [checkingCamera, setCheckingCamera] = useState(false);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const cameraVideoRef = useRef<HTMLVideoElement>(null);
+  const [confidenceScore, setConfidenceScore] = useState(0);
+  
+  // Floating webcam refs for active quiz proctoring
+  const floatingWebcamRef = useRef<HTMLVideoElement>(null);
+  const floatingWebcamStreamRef = useRef<MediaStream | null>(null);
+  
+  // Use face proctoring hook for camera test
+  const { isInitialized: cameraIsInitialized, currentConfidence } = useFaceProctoring(cameraVideoRef, {
+    enabled: checkingCamera,
+    onViolation: () => { }, // No violations during check phase
+    onAutoSubmit: () => { },
+    confidenceThreshold: 70
+  });
 
   const {
     data: quiz,
@@ -104,6 +168,34 @@ export default function QuizTake() {
     queryKey: ['/api/user'],
   });
 
+  const { data: userResults } = useQuery<any[]>({
+    queryKey: ["/api/results/user"],
+  });
+
+  useEffect(() => {
+    if (userResults && !quizCompleted) {
+      const pastResult = userResults.find((r) => r.quizId === Number(id));
+      if (pastResult) {
+        setQuizResult({
+          score: pastResult.score,
+          timeTaken: pastResult.timeTaken,
+          totalQuestions: pastResult.totalQuestions,
+          correctAnswers: pastResult.correctAnswers || 0,
+          wrongAnswers: pastResult.wrongAnswers || 0,
+        });
+
+        let parsedAnswers = parseAnswersSafe(pastResult.answers);
+        setAnswers(parsedAnswers);
+        setTabSwitchCount(pastResult.tabSwitchCount || 0);
+        setCopyPasteAttempts(pastResult.copyPasteAttempts || 0);
+        setOtherViolations(pastResult.proctoringFlags || 0);
+
+        setQuizCompleted(true);
+        setShowRules(false);
+      }
+    }
+  }, [userResults, id, quizCompleted]);
+
   const typedUser = user as User;
   const typedQuiz = quiz as Quiz;
   const typedQuestions = questions as QuestionType[];
@@ -115,9 +207,22 @@ export default function QuizTake() {
       setHasAttempted(attempted);
 
       if (attempted) {
+        // Fetch previous result to display
+        setLoadingPreviousResult(true);
+        apiRequest('GET', `/api/quizzes/${id}/results/${userId}`)
+          .then(res => res.json())
+          .then(data => {
+            setPreviousResult(data);
+            setLoadingPreviousResult(false);
+          })
+          .catch(err => {
+            console.error('Failed to fetch previous result:', err);
+            setLoadingPreviousResult(false);
+          });
+
         toast({
           title: "Quiz already attempted",
-          description: "You have already completed this quiz. Multiple attempts are not allowed.",
+          description: "Viewing your previous attempt. Click 'View Details' to see the full results.",
           variant: "destructive",
         });
       } else {
@@ -134,6 +239,17 @@ export default function QuizTake() {
       setQuizStarted(true);
     }
   }, [timeStarted, questions, showRules]);
+
+  // Sync proctoring active state to context to prevent navigation during quiz
+  useEffect(() => {
+    setQuizActive(proctoringActive);
+    if (proctoringActive && id) {
+      setCurrentQuizId(id);
+    }
+    return () => {
+      setQuizActive(false);
+    };
+  }, [proctoringActive, id, setQuizActive, setCurrentQuizId]);
 
   useEffect(() => {
     let timerId: NodeJS.Timeout;
@@ -207,6 +323,9 @@ export default function QuizTake() {
             quizId: parseInt(id as string),
             userAnswers: answers,
             timeTaken: timeTaken,
+            tabSwitchCount: tabSwitchCount,
+            copyPasteAttempts: copyPasteAttempts,
+            proctoringFlags: otherViolations
           }
         );
 
@@ -247,10 +366,11 @@ export default function QuizTake() {
     // Ignore webcam violations once proctoring has been disabled
     if (!proctoringActive) return;
 
-    setWarnings(prev => {
-      const newWarnings = prev + 1;
-
-      if (newWarnings >= 3) {
+    setOtherViolations((prev) => {
+      const newViolations = prev + 1;
+      setWarnings((w) => w + 1); // Also increment total warnings for threshold
+      
+      if ((warnings + 1) >= 3) {
         toast({
           title: "Quiz terminated",
           description: "Multiple people detected. Your quiz has been automatically submitted.",
@@ -259,24 +379,42 @@ export default function QuizTake() {
         submitQuiz();
       }
 
-      return newWarnings;
+      return newViolations;
     });
-  }, [toast, submitQuiz]);
+  }, [proctoringActive, toast, submitQuiz, warnings]);
+
+  // Use face proctoring hook for floating webcam during active quiz (defined after handleWebcamViolation)
+  const { 
+    currentConfidence: floatingConfidence, 
+    isViolating, 
+    countdown, 
+    warningCount 
+  } = useFaceProctoring(floatingWebcamRef, {
+    enabled: enableWebcam && proctoringActive,
+    onViolation: handleWebcamViolation,
+    onAutoSubmit: () => {
+      // Auto-submit silently without toast confirmation
+      submitQuiz();
+    },
+    confidenceThreshold: 70
+  });
 
   // Memoize the handleVisibilityChange function to prevent re-renders
   const handleVisibilityChange = useCallback(() => {
     if (!proctoringActive) return;
 
     if (document.hidden) {
-      setWarnings((w) => {
-        const newWarnings = w + 1;
+      setTabSwitchCount((prev) => {
+        const newTabSwitches = prev + 1;
+        setWarnings((w) => w + 1); // Also increment total warnings for threshold
+        
         toast({
-          title: `Warning ${newWarnings}/3`,
-          description: `Tab switching detected. ${3 - newWarnings} warnings left before automatic submission.`,
+          title: `Warning ${warnings + 1}/3`,
+          description: `Tab switching detected. ${3 - (warnings + 1)} warnings left before automatic submission.`,
           variant: "destructive",
         });
 
-        if (newWarnings >= 3) {
+        if ((warnings + 1) >= 3) {
           toast({
             title: "Quiz terminated",
             description: "Too many tab switches detected. Your quiz has been automatically submitted.",
@@ -284,25 +422,27 @@ export default function QuizTake() {
           });
           submitQuiz();
         }
-        return newWarnings;
+        return newTabSwitches;
       });
     }
-  }, [proctoringActive, toast, submitQuiz]);
+  }, [proctoringActive, toast, submitQuiz, warnings]);
 
   // Memoize the preventCopyPaste function
   const preventCopyPaste = useCallback((e: ClipboardEvent) => {
     if (!proctoringActive) return;
     if (!quizCompleted) {
       e.preventDefault();
-      setWarnings(prev => {
-        const newWarnings = prev + 1;
+      setCopyPasteAttempts((prev) => {
+        const newAttempts = prev + 1;
+        setWarnings((w) => w + 1); // Also increment total warnings for threshold
+        
         toast({
-          title: `Warning ${newWarnings}/3`,
-          description: `Copy/Paste detected. ${3 - newWarnings} warnings left before automatic submission.`,
+          title: `Warning ${warnings + 1}/3`,
+          description: `Copy/Paste detected. ${3 - (warnings + 1)} warnings left before automatic submission.`,
           variant: "destructive",
         });
 
-        if (newWarnings >= 3) {
+        if ((warnings + 1) >= 3) {
           toast({
             title: "Quiz terminated",
             description: "Persistent copy/paste attempts detected. Your quiz has been automatically submitted.",
@@ -310,10 +450,10 @@ export default function QuizTake() {
           });
           submitQuiz();
         }
-        return newWarnings;
+        return newAttempts;
       });
     }
-  }, [proctoringActive, quizCompleted, toast, submitQuiz]);
+  }, [proctoringActive, quizCompleted, toast, submitQuiz, warnings]);
 
   // Memoize the preventHotkeys function
   const preventHotkeys = useCallback((e: KeyboardEvent) => {
@@ -324,15 +464,17 @@ export default function QuizTake() {
       if (!allowedCombinations.includes(e.key)) {
         e.preventDefault();
 
-        setWarnings(prev => {
-          const newWarnings = prev + 1;
+        setOtherViolations((prev) => {
+          const newViolations = prev + 1;
+          setWarnings((w) => w + 1); // Also increment total warnings for threshold
+          
           toast({
-            title: `Warning ${newWarnings}/3`,
-            description: `Restricted hotkey detected. ${3 - newWarnings} warnings left before automatic submission.`,
+            title: `Warning ${warnings + 1}/3`,
+            description: `Restricted hotkey detected. ${3 - (warnings + 1)} warnings left before automatic submission.`,
             variant: "destructive",
           });
 
-          if (newWarnings >= 3) {
+          if ((warnings + 1) >= 3) {
             toast({
               title: "Quiz terminated",
               description: "Persistent violation of restrictions. Your quiz has been automatically submitted.",
@@ -340,11 +482,11 @@ export default function QuizTake() {
             });
             submitQuiz();
           }
-          return newWarnings;
+          return newViolations;
         });
       }
     }
-  }, [proctoringActive, quizCompleted, toast]);
+  }, [proctoringActive, quizCompleted, toast, submitQuiz, warnings]);
 
   // Memoize the enterFullScreen function
   const enterFullScreen = useCallback(() => {
@@ -375,15 +517,17 @@ export default function QuizTake() {
 
     if (!document.fullscreenElement && !quizCompleted) {
       setIsFullScreen(false);
-      setWarnings(prev => {
-        const newWarnings = prev + 1;
+      setOtherViolations((prev) => {
+        const newViolations = prev + 1;
+        setWarnings((w) => w + 1); // Also increment total warnings for threshold
+        
         toast({
-          title: `Warning ${newWarnings}/3`,
-          description: `Full-screen mode exited. ${3 - newWarnings} warnings left before automatic submission.`,
+          title: `Warning ${warnings + 1}/3`,
+          description: `Full-screen mode exited. ${3 - (warnings + 1)} warnings left before automatic submission.`,
           variant: "destructive",
         });
 
-        if (newWarnings >= 3) {
+        if ((warnings + 1) >= 3) {
           toast({
             title: "Quiz terminated",
             description: "Too many full-screen exits detected. Your quiz has been automatically submitted.",
@@ -391,15 +535,15 @@ export default function QuizTake() {
           });
           submitQuiz();
         }
-        return newWarnings;
+        return newViolations;
       });
     }
-  }, [proctoringActive, quizCompleted, toast, submitQuiz]);
+  }, [proctoringActive, quizCompleted, toast, submitQuiz, warnings]);
 
-  // Ensure proctoringActive strictly follows quizStarted (activation rule)
+  // Ensure proctoringActive strictly follows quizStarted AND isn't completed
   useEffect(() => {
-    setProctoringActive(quizStarted === true);
-  }, [quizStarted]);
+    setProctoringActive(quizStarted === true && quizCompleted === false);
+  }, [quizStarted, quizCompleted]);
 
   // Update the useEffect to use memoized functions
   useEffect(() => {
@@ -426,6 +570,162 @@ export default function QuizTake() {
   }, [proctoringActive, isFullScreen, handleVisibilityChange, preventCopyPaste, preventHotkeys, enterFullScreen, exitHandler]);
 
   // Memoize all key functions that are used in useEffect dependencies
+  const requestCameraPermission = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user' }
+      });
+      
+      cameraStreamRef.current = stream;
+      
+      if (cameraVideoRef.current) {
+        cameraVideoRef.current.srcObject = stream;
+      }
+      
+      setCameraPermissionGranted(true);
+      setCameraError(null);
+      setCameraCheckComplete(true);
+    } catch (err: any) {
+      setCameraPermissionGranted(false);
+      
+      if (err.name === 'NotAllowedError') {
+        setCameraError('Camera permission denied. Please allow camera access to continue.');
+      } else if (err.name === 'NotFoundError') {
+        setCameraError('No camera found. Please connect a camera to continue.');
+      } else {
+        setCameraError(`Camera error: ${err.message || 'Unable to access camera'}`);
+      }
+    }
+  }, []);
+
+  const testCamera = useCallback(async () => {
+    setCheckingCamera(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'user' }
+      });
+      
+      cameraStreamRef.current = stream;
+      
+      if (cameraVideoRef.current) {
+        cameraVideoRef.current.srcObject = stream;
+        await cameraVideoRef.current.play();
+      }
+      
+      setCameraPermissionGranted(true);
+      setCameraError(null);
+    } catch (err: any) {
+      setCameraPermissionGranted(false);
+      setCheckingCamera(false);
+      
+      if (err.name === 'NotAllowedError') {
+        setCameraError('Camera permission denied. Please allow camera access.');
+      } else if (err.name === 'NotFoundError') {
+        setCameraError('No camera found. Please connect a camera.');
+      } else {
+        setCameraError(`Camera error: ${err.message}`);
+      }
+    }
+  }, []);
+
+  // Stop camera when test is complete
+  const stopCamera = useCallback(() => {
+    if (cameraStreamRef.current) {
+      cameraStreamRef.current.getTracks().forEach(track => track.stop());
+      cameraStreamRef.current = null;
+    }
+    if (cameraVideoRef.current) {
+      cameraVideoRef.current.srcObject = null;
+    }
+    setCheckingCamera(false);
+  }, []);
+
+  // Request camera permission on mount for rules section
+  useEffect(() => {
+    if (showRules) {
+      requestCameraPermission();
+    }
+    
+    return () => {
+      stopCamera();
+    };
+  }, [showRules, requestCameraPermission, stopCamera]);
+
+  // Update camera check completion status based on confidence
+  useEffect(() => {
+    if (checkingCamera && currentConfidence >= 70) {
+      setCameraCheckComplete(true);
+    } else if (!checkingCamera) {
+      // Keep the verification status when not testing
+    }
+  }, [checkingCamera, currentConfidence]);
+
+  // Set up floating webcam stream for active quiz proctoring
+  useEffect(() => {
+    if (!proctoringActive || !enableWebcam) {
+      if (floatingWebcamStreamRef.current) {
+        floatingWebcamStreamRef.current.getTracks().forEach(track => track.stop());
+        floatingWebcamStreamRef.current = null;
+      }
+      if (floatingWebcamRef.current) {
+        floatingWebcamRef.current.srcObject = null;
+      }
+      return;
+    }
+
+    const setupFloatingWebcam = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user' }
+        });
+        
+        floatingWebcamStreamRef.current = stream;
+        
+        if (floatingWebcamRef.current) {
+          floatingWebcamRef.current.srcObject = stream;
+          await floatingWebcamRef.current.play();
+        }
+      } catch (err) {
+        console.error('Failed to access webcam for proctoring:', err);
+      }
+    };
+
+    setupFloatingWebcam();
+
+    return () => {
+      if (floatingWebcamStreamRef.current) {
+        floatingWebcamStreamRef.current.getTracks().forEach(track => track.stop());
+        floatingWebcamStreamRef.current = null;
+      }
+    };
+  }, [proctoringActive, enableWebcam]);
+
+  // Track low accuracy warnings during active quiz
+  const lowAccuracyWarningRef = useRef<number | null>(null);
+  
+  useEffect(() => {
+    if (!proctoringActive || !enableWebcam || floatingConfidence >= 50) {
+      lowAccuracyWarningRef.current = null;
+      return;
+    }
+
+    // Only warn if accuracy drops below 50% AND it hasn't been warned recently
+    if (floatingConfidence > 0 && floatingConfidence < 50 && !lowAccuracyWarningRef.current) {
+      lowAccuracyWarningRef.current = Date.now();
+      
+      toast({
+        title: "Low Accuracy",
+        description: `Face accuracy is ${Math.round(floatingConfidence)}%. Look directly at the screen to maintain verification.`,
+        variant: "default",
+      });
+
+      // Reset warning timeout after 10 seconds so it can warn again if accuracy stays low
+      setTimeout(() => {
+        lowAccuracyWarningRef.current = null;
+      }, 10000);
+    }
+  }, [proctoringActive, enableWebcam, floatingConfidence, toast]);
+
   const handleAnswer = useCallback((answer: string) => {
     setAnswers(prev => {
       const newAnswers = [...prev];
@@ -463,19 +763,15 @@ export default function QuizTake() {
         .filter(Boolean as any)
         .join(', ');
 
-      if (confirm(
-        `You have ${unansweredCount} unanswered question${unansweredCount > 1 ? 's' : ''}:\n\n` +
-        `Question${unansweredCount > 1 ? 's' : ''} ${unansweredQuestions}\n\n` +
-        `Would you like to submit anyway? You won't be able to change your answers later.`
-      )) {
-        submitQuiz();
-      }
+      setSubmitConfirmationMessage(
+        `You have ${unansweredCount} unanswered question${unansweredCount > 1 ? 's' : ''}:\n\nQuestion${unansweredCount > 1 ? 's' : ''} ${unansweredQuestions}\n\nWould you like to submit anyway?`
+      );
+      setShowSubmitConfirmation(true);
     } else {
-      if (confirm('Are you ready to submit your quiz? You won\'t be able to change your answers after submission.')) {
-        submitQuiz();
-      }
+      setSubmitConfirmationMessage('Are you ready to submit your quiz? You won\'t be able to change your answers after submission.');
+      setShowSubmitConfirmation(true);
     }
-  }, [answers, typedQuestions, submitQuiz]);
+  }, [answers, typedQuestions]);
 
   // Memoize the keydown handler to prevent unnecessary re-renders
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -626,6 +922,65 @@ export default function QuizTake() {
   }
 
   if (hasAttempted) {
+    if (loadingPreviousResult) {
+      return (
+        <div className="min-h-screen bg-[#09090b] text-white flex flex-col items-center justify-center font-sans relative overflow-x-hidden">
+          <div className="fixed top-[-20%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none z-0" />
+          <div className="fixed bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[150px] pointer-events-none z-0" />
+          <div className="relative z-10 flex flex-col items-center gap-4">
+            <Loader2 className="w-12 h-12 animate-spin text-indigo-400" />
+            <p className="text-lg font-semibold">Loading your previous attempt...</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (previousResult && questions) {
+      return (
+        <div className="min-h-screen bg-[#09090b] text-white flex flex-col font-sans relative overflow-x-hidden">
+          <div className="fixed top-[-20%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none z-0" />
+          <div className="fixed bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[150px] pointer-events-none z-0" />
+
+          <div className="container mx-auto px-4 py-8 relative z-10 flex flex-col items-center">
+            {/* Already Attempted Banner */}
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="w-full max-w-4xl mb-8 bg-amber-500/10 border border-amber-500/20 rounded-2xl p-6 backdrop-blur-sm"
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <AlertTriangle className="w-6 h-6 text-amber-400" />
+                <h2 className="text-xl font-bold text-amber-400">Already Attempted</h2>
+              </div>
+              <p className="text-amber-200/80">You have already completed this quiz. Below is your previous attempt result. Multiple attempts are not allowed.</p>
+              <button
+                onClick={() => setLocation(typedUser?.role === "teacher" ? "/teacher" : "/student")}
+                className="mt-4 px-6 py-2 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 rounded-lg text-amber-300 font-semibold transition-colors"
+              >
+                ← Back to Dashboard
+              </button>
+            </motion.div>
+
+            {/* Previous Result View */}
+            <SharedQuizReview
+              report={{
+                username: previousResult.username || typedUser?.username || 'Student',
+                score: previousResult.score,
+                correctAnswers: previousResult.correctAnswers,
+                timeTaken: previousResult.timeTaken,
+                answers: parseAnswersSafe(previousResult.answers),
+                tabSwitchCount: previousResult.tabSwitchCount || 0,
+                copyPasteAttempts: previousResult.copyPasteAttempts || 0,
+                proctoringFlags: previousResult.proctoringFlags || 0
+              }}
+              questions={typedQuestions}
+              onClose={() => setLocation(typedUser?.role === "teacher" ? "/teacher" : "/student")}
+            />
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div>
         <div className="container mx-auto p-8 text-center">
@@ -812,12 +1167,90 @@ export default function QuizTake() {
 
           {showReview && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-               <QuizReview
+               <SharedQuizReview
+                 report={{
+                   username: user ? (user.username || 'You') : 'You',
+                   score: quizResult.score,
+                   correctAnswers: quizResult.correctAnswers,
+                   timeTaken: quizResult.timeTaken,
+                   answers: answers,
+                   tabSwitchCount: tabSwitchCount,
+                   copyPasteAttempts: copyPasteAttempts,
+                   proctoringFlags: otherViolations
+                 }}
                  questions={questions as QuestionType[]}
-                 userAnswers={answers}
                  onClose={() => setShowReview(false)}
                />
             </div>
+          )}
+
+          {/* Submission Confirmation Modal */}
+          {showSubmitConfirmation && (
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div
+                className="bg-[#1c1c21] border border-indigo-500/20 rounded-2xl shadow-2xl max-w-md w-full overflow-hidden"
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              >
+                {/* Header */}
+                <div className="bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border-b border-indigo-500/20 px-8 py-6">
+                  <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center">
+                      <AlertTriangle className="w-5 h-5 text-indigo-400" />
+                    </div>
+                    Confirm Submission
+                  </h2>
+                </div>
+
+                {/* Content */}
+                <div className="px-8 py-6 space-y-6">
+                  <p className="text-zinc-300 leading-relaxed whitespace-pre-wrap">
+                    {submitConfirmationMessage}
+                  </p>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3 pt-4">
+                    <motion.button
+                      onClick={() => setShowSubmitConfirmation(false)}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="flex-1 px-6 py-3 rounded-lg font-bold text-zinc-300 border border-zinc-600 hover:border-zinc-500 hover:bg-zinc-600/10 transition-all"
+                    >
+                      Continue Quiz
+                    </motion.button>
+                    <motion.button
+                      onClick={() => {
+                        setShowSubmitConfirmation(false);
+                        submitQuiz();
+                      }}
+                      disabled={submitting}
+                      whileHover={{ scale: submitting ? 1 : 1.02 }}
+                      whileTap={{ scale: submitting ? 1 : 0.98 }}
+                      className="flex-1 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2"
+                    >
+                      {submitting ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Submitting...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4" />
+                          Submit Quiz
+                        </>
+                      )}
+                    </motion.button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
           )}
 
         </div>
@@ -864,211 +1297,375 @@ export default function QuizTake() {
   if (!quizCompleted) {
     if (showRules) {
       return (
-        <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
-          <div className="container mx-auto px-4 py-12">
+        <div className="min-h-screen bg-[#131316] text-white overflow-x-hidden relative">
+          {/* Background ambient glow */}
+          <div className="fixed top-[-20%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/20 rounded-full blur-[150px] pointer-events-none" />
+          <div className="fixed bottom-0 right-0 w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[120px] pointer-events-none" />
+
+          <div className="container mx-auto px-4 py-12 relative z-10">
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5 }}
-              className="max-w-3xl mx-auto"
+              className="max-w-4xl mx-auto"
             >
-              <Card className="mb-6 border-2 border-primary/20 overflow-hidden">
-                <CardHeader className="border-b bg-muted/50 relative">
-                  <motion.div
-                    className="absolute top-0 left-0 h-1 bg-primary"
-                    initial={{ width: 0 }}
-                    animate={{ width: readyToStart ? "100%" : `${(5 - rulesTimer) * 20}%` }}
-                    transition={{ duration: 0.5 }}
-                  />
-                  <CardTitle className="text-2xl text-center">
-                    Quiz Rules & Instructions
-                  </CardTitle>
-                  <CardDescription className="text-center">
-                    Please read carefully before starting the quiz
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="space-y-4">
-                    <motion.div
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.1 }}
-                    >
-                      <h3 className="text-lg font-semibold">{typedQuiz.title}</h3>
-                      <p className="text-muted-foreground">{typedQuiz.description}</p>
-                    </motion.div>
+              {/* Header */}
+              <motion.div
+                className="mb-12"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+              >
+                <h1 className="text-4xl font-black mb-2 tracking-tight bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                  Quiz Rules & Instructions
+                </h1>
+                <p className="text-zinc-400 text-lg">Please read carefully before starting the quiz</p>
+              </motion.div>
 
-                    <motion.div
-                      className="my-6"
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.2 }}
-                    >
-                      <h4 className="font-medium mb-3 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
-                          <circle cx="12" cy="12" r="10"></circle>
-                          <line x1="12" x2="12" y1="8" y2="12"></line>
-                          <line x1="12" x2="12.01" y1="16" y2="16"></line>
-                        </svg>
-                        Important Rules:
-                      </h4>
-                      <ul className="space-y-3 pl-5">
-                        {[
-                          `You will have ${typedQuiz.duration ? `${typedQuiz.duration} minutes` : "unlimited time"} to complete this quiz.`,
-                          `There are ${typedQuestions.length} questions in total.`,
-                          "You must remain in full-screen mode throughout the quiz.",
-                          "Switching tabs or windows will result in warnings.",
-                          "After 3 violations, your quiz will be automatically submitted.",
-                          "You may navigate between questions using the Next and Previous buttons.",
-                          "Click anywhere on an answer to select it - not just the radio button.",
-                          "Your answers are saved as you navigate between questions.",
-                          "Use keyboard shortcuts: Left/Right arrows to navigate, number keys (1-4) to select options, Enter to continue"
-                        ].map((rule, index) => (
-                          <motion.li
-                            key={index}
-                            className="flex items-center gap-2"
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.3 + (index * 0.05) }}
+              {/* Main Container */}
+              <div className="space-y-6">
+                {/* Quiz Details */}
+                <motion.div
+                  className="bg-[#1c1c21] border border-indigo-500/10 rounded-2xl p-8"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                >
+                  <h2 className="text-2xl font-bold text-white mb-2">{typedQuiz.title}</h2>
+                  <p className="text-zinc-400">{typedQuiz.description}</p>
+                </motion.div>
+
+                {/* Important Rules */}
+                <motion.div
+                  className="bg-[#1c1c21] border border-indigo-500/10 rounded-2xl p-8"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <h3 className="text-xl font-bold text-indigo-300 mb-6 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center">
+                      <CheckCircle className="w-5 h-5 text-indigo-400" />
+                    </div>
+                    Important Rules
+                  </h3>
+                  <ul className="space-y-4 pl-0">
+                    {[
+                      `You will have ${typedQuiz.duration ? `${typedQuiz.duration} minutes` : "unlimited time"} to complete this quiz.`,
+                      `There are ${typedQuestions.length} questions in total.`,
+                      "You must remain in full-screen mode throughout the quiz.",
+                      "Switching tabs or windows will result in warnings.",
+                      "After 3 violations, your quiz will be automatically submitted.",
+                      "You may navigate between questions using the Next and Previous buttons.",
+                      "Click anywhere on an answer to select it - not just the radio button.",
+                      "Your answers are saved as you navigate between questions.",
+                      "Use keyboard shortcuts: Left/Right arrows to navigate, number keys (1-4) to select options, Enter to continue"
+                    ].map((rule, index) => (
+                      <motion.li
+                        key={index}
+                        className="flex items-start gap-4 text-zinc-300"
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: 0.25 + (index * 0.03) }}
+                      >
+                        <div className="w-6 h-6 rounded-full bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="text-indigo-400 text-xs font-bold">{index + 1}</span>
+                        </div>
+                        <span>{rule}</span>
+                      </motion.li>
+                    ))}
+                  </ul>
+                </motion.div>
+
+                {/* Camera Test */}
+                <motion.div
+                  className="bg-[#1c1c21] border border-emerald-500/10 rounded-2xl p-8"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 }}
+                >
+                  <h3 className="text-xl font-bold text-emerald-300 mb-6 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
+                      <CheckCircle className="w-5 h-5 text-emerald-400" />
+                    </div>
+                    Camera Test & Verification
+                  </h3>
+
+                  {/* Camera Preview Area */}
+                  <div className="mb-6">
+                    <div className="relative aspect-video bg-black rounded-xl overflow-hidden border border-emerald-500/20 flex items-center justify-center group">
+                      {!checkingCamera && !cameraPermissionGranted && (
+                        <div className="text-center space-y-3">
+                          <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto">
+                            <CheckCircle className="w-6 h-6 text-emerald-400" />
+                          </div>
+                          <p className="text-sm text-zinc-400">Camera ready to test</p>
+                        </div>
+                      )}
+
+                      {checkingCamera && (
+                        <>
+                          <video
+                            ref={cameraVideoRef}
+                            autoPlay
+                            playsInline
+                            muted
+                            className="w-full h-full object-cover"
+                            style={{ transform: 'scaleX(-1)' }}
+                          />
+                          
+                          {/* Camera Status Indicator */}
+                          <div className="absolute top-4 right-4 flex items-center gap-2 bg-black/70 backdrop-blur-md px-3 py-2 rounded-full border border-emerald-500/30">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-xs text-emerald-300 font-bold uppercase">LIVE</span>
+                          </div>
+
+                          {/* Confidence Display */}
+                          <motion.div
+                            className="absolute bottom-4 left-1/2 -translate-x-1/2"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
-                              <polyline points="9 11 12 14 22 4"></polyline>
-                              <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
-                            </svg>
-                            {rule}
-                          </motion.li>
-                        ))}
-                      </ul>
-                    </motion.div>
+                            {currentConfidence >= 70 ? (
+                              <div className="bg-emerald-500/90 backdrop-blur-md px-4 py-2 rounded-full border border-emerald-400/50">
+                                <div className="flex items-center gap-2 text-white">
+                                  <CheckCircle className="h-4 w-4" />
+                                  <span className="text-sm font-bold">Verified - {Math.round(currentConfidence)}%</span>
+                                </div>
+                              </div>
+                            ) : currentConfidence > 0 ? (
+                              <div className="bg-yellow-500/90 backdrop-blur-md px-4 py-2 rounded-full border border-yellow-400/50">
+                                <div className="flex items-center gap-2 text-white">
+                                  <AlertTriangle className="h-4 w-4" />
+                                  <span className="text-sm font-bold">Look at screen - {Math.round(currentConfidence)}%</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="bg-red-500/90 backdrop-blur-md px-4 py-2 rounded-full border border-red-400/50">
+                                <div className="flex items-center gap-2 text-white">
+                                  <AlertTriangle className="h-4 w-4" />
+                                  <span className="text-sm font-bold">Detecting face...</span>
+                                </div>
+                              </div>
+                            )}
+                          </motion.div>
+                        </>
+                      )}
 
+                      {cameraPermissionGranted === false && (
+                        <div className="text-center space-y-3 px-6">
+                          <XCircle className="w-12 h-12 mx-auto text-red-500" />
+                          <p className="text-sm text-red-400">Camera access required</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Camera Error Alert */}
+                  {cameraError && (
                     <motion.div
-                      className="my-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
-                      initial={{ opacity: 0, y: 10 }}
+                      className="mb-6 p-4 rounded-lg bg-red-500/10 border border-red-500/30 flex items-start gap-3"
+                      initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.6 }}
                     >
-                      <h4 className="font-medium flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-600 mr-2">
-                          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
-                          <path d="M12 9v4"></path>
-                          <path d="M12 17h.01"></path>
-                        </svg>
-                        Academic Integrity Notice
-                      </h4>
-                      <p className="mt-2 text-sm">
-                        This quiz uses advanced proctoring technology. Attempts to cheat, copy content, or seek outside help may result in disciplinary action.
-                      </p>
+                      <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-sm text-red-300">{cameraError}</p>
                     </motion.div>
+                  )}
 
-                    {/* Camera test - isolated from other proctoring listeners */}
+                  {/* Confidence Progress Bar (shown while testing) */}
+                  {checkingCamera && (
                     <motion.div
-                      className="my-6 p-4 bg-muted rounded-lg border border-border"
-                      initial={{ opacity: 0, y: 6 }}
+                      className="mb-6 space-y-2"
+                      initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.7 }}
                     >
-                      <h4 className="font-medium mb-3">Camera Test</h4>
-                      <p className="text-sm text-muted-foreground mb-3">Run a quick camera check before you begin. This test is isolated and will not enable proctoring listeners.</p>
-
-                      <CameraIntegrityCheck onVerified={() => setCameraCheckComplete(true)} />
-
-                      <div className="mt-3 text-sm">
-                        <span className={`inline-flex items-center gap-2 px-2 py-1 rounded-full ${cameraCheckComplete ? 'bg-green-100 text-green-800' : 'bg-muted/20 text-muted-foreground'}`}>
-                          {cameraCheckComplete ? (
-                            <>
-                              <CheckCircle className="h-4 w-4 text-green-600" /> Camera verified
-                            </>
-                          ) : (
-                            <>
-                              <AlertTriangle className="h-4 w-4 text-yellow-600" /> Camera not verified
-                            </>
-                          )}
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-zinc-400">Accuracy</span>
+                        <span className={`font-bold ${currentConfidence >= 70 ? 'text-emerald-400' : currentConfidence >= 40 ? 'text-yellow-400' : 'text-red-400'}`}>
+                          {Math.round(currentConfidence)}%
                         </span>
-                        {!cameraCheckComplete && (
-                          <span className="ml-2 text-xs text-red-500 animate-pulse">Required to start</span>
-                        )}
+                      </div>
+                      <div className="w-full h-2 bg-zinc-700 rounded-full overflow-hidden">
+                        <motion.div
+                          className={`h-full rounded-full ${currentConfidence >= 70 ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' : currentConfidence >= 40 ? 'bg-gradient-to-r from-yellow-500 to-yellow-400' : 'bg-gradient-to-r from-red-500 to-red-400'}`}
+                          initial={{ width: 0 }}
+                          animate={{ width: `${currentConfidence}%` }}
+                          transition={{ duration: 0.3 }}
+                        />
                       </div>
                     </motion.div>
-                  </div>
-                </CardContent>
-                <CardFooter className="border-t py-4 bg-muted/30 flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <polyline points="12 6 12 12 16 14"></polyline>
-                    </svg>
-                    <motion.span
-                      className="text-sm font-medium"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      {readyToStart ? "Ready to begin" : `Please wait: ${rulesTimer} seconds remaining`}
-                    </motion.span>
-                  </div>
-                  <motion.div
-                    whileHover={readyToStart ? { scale: 1.05 } : {}}
-                    whileTap={readyToStart ? { scale: 0.95 } : {}}
-                  >
-                    <Button
-                      onClick={() => {
-                        // Request fullscreen on user gesture, then hide rules to start quiz
-                        if (readyToStart) {
-                          enterFullScreen();
-                        }
-                        setShowRules(false);
-                      }}
+                  )}
 
-                      disabled={!readyToStart || !cameraCheckComplete}
-                      className="w-32 relative overflow-hidden group"
-                    >
-                      {readyToStart && cameraCheckComplete && (
-                        <motion.div
-                          className="absolute inset-0 bg-primary/20"
-                          initial={{ x: '-100%' }}
-                          animate={{ x: '100%' }}
-                          transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
-                        />
+                  {/* Camera Test Buttons */}
+                  <div className="flex gap-3 mb-6">
+                    {!checkingCamera ? (
+                      <motion.button
+                        onClick={testCamera}
+                        disabled={!cameraPermissionGranted || cameraPermissionGranted === false}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold py-3 px-6 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      >
+                        <span className="flex items-center justify-center gap-2">
+                          <CheckCircle className="w-4 h-4" />
+                          Test Camera
+                        </span>
+                      </motion.button>
+                    ) : (
+                      <motion.button
+                        onClick={stopCamera}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="flex-1 bg-gradient-to-r from-zinc-600 to-zinc-700 hover:from-zinc-700 hover:to-zinc-800 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2"
+                      >
+                        <XCircle className="w-4 h-4" />
+                        Stop Test
+                      </motion.button>
+                    )}
+                  </div>
+
+                  {/* Before You Begin Instructions */}
+                  <div className="mb-6 p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-lg">
+                    <h4 className="text-sm font-bold text-emerald-300 mb-3 flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4" />
+                      Before you begin:
+                    </h4>
+                    <ul className="space-y-2 text-xs text-zinc-300">
+                      <li className="flex items-start gap-2">
+                        <div className="w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="text-emerald-400 text-[10px] font-bold">✓</span>
+                        </div>
+                        <span>Position yourself in a well-lit area</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <div className="w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="text-emerald-400 text-[10px] font-bold">✓</span>
+                        </div>
+                        <span>Ensure your entire face is visible in the camera</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <div className="w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="text-emerald-400 text-[10px] font-bold">✓</span>
+                        </div>
+                        <span>Look directly at the screen and stay focused</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <div className="w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="text-emerald-400 text-[10px] font-bold">✓</span>
+                        </div>
+                        <span>Ensure good lighting on your face</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <div className="w-4 h-4 rounded-full bg-yellow-500/20 border border-yellow-500/40 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <AlertTriangle className="w-3 h-3 text-yellow-400" />
+                        </div>
+                        <span>No other person should be visible in the frame</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  {/* Verification Status */}
+                  <div className="flex items-center justify-between p-4 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+                    <span className={`inline-flex items-center gap-2 font-medium text-sm ${currentConfidence >= 70 ? 'text-emerald-300' : 'text-yellow-300'}`}>
+                      {currentConfidence >= 70 ? (
+                        <>
+                          <CheckCircle className="w-4 h-4" />
+                          Camera Verified
+                        </>
+                      ) : (
+                        <>
+                          <AlertTriangle className="w-4 h-4" />
+                          Camera Not Verified
+                        </>
                       )}
-                      {!readyToStart ? "Please Wait..." : !cameraCheckComplete ? "Verify Camera" : "Start Quiz"}
-                    </Button>
-                  </motion.div>
-                </CardFooter>
-              </Card>
+                    </span>
+                    {currentConfidence < 70 && (
+                      <p className="text-xs text-yellow-400/80 font-medium">Required: {Math.round(currentConfidence)}% / 70%</p>
+                    )}
+                  </div>
+                </motion.div>
 
+                {/* Proctoring Notice */}
+                <motion.div
+                  className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-8"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.7 }}
+                >
+                  <h3 className="text-xl font-bold text-indigo-300 mb-3 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-500/30 border border-indigo-500/50 flex items-center justify-center">
+                      <Sword className="w-5 h-5 text-indigo-300" />
+                    </div>
+                    Proctoring Notice
+                  </h3>
+                  <p className="text-indigo-200">
+                    This quiz uses advanced proctoring technology to maintain academic integrity. Attempts to cheat, copy content, or seek outside help during the quiz may result in disciplinary action.
+                  </p>
+                </motion.div>
+              </div>
+
+              {/* Footer */}
               <motion.div
-                className="mt-8 text-center text-sm text-muted-foreground"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.7 }}
+                className="mt-12"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.8 }}
               >
-                <p>By starting this quiz, you agree to the academic integrity guidelines of your institution.</p>
-                <p className="mt-2">Need help? Contact your instructor for assistance.</p>
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6 bg-[#1c1c21] border border-indigo-500/10 rounded-2xl p-8">
+                  <div className="flex items-center gap-3">
+                    <Clock className="w-5 h-5 text-indigo-400" />
+                    <span className="text-zinc-300 font-medium">
+                      {readyToStart ? (
+                        <span className="text-emerald-400">✓ Ready to begin</span>
+                      ) : (
+                        <span>Please wait: <span className="text-indigo-300 font-bold">{rulesTimer}</span> seconds remaining</span>
+                      )}
+                    </span>
+                  </div>
 
-                <div className="mt-6 flex justify-center gap-4">
-                  <div className="p-3 rounded-full bg-muted/30 text-muted-foreground">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 3c.53 0 1.04.21 1.41.59L21 11a2 2 0 0 1 0 2.82L13.4 21.41a2 2 0 0 1-2.82 0L3 13.82a2 2 0 0 1 0-2.82L10.6 3.59a1.99 1.99 0 0 1 1.4-.59Z"></path>
-                      <path d="m8 12 2 2 6-6"></path>
-                    </svg>
-                  </div>
-                  <div className="p-3 rounded-full bg-muted/30 text-muted-foreground">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <path d="m8 12 2 2 6-6"></path>
-                    </svg>
-                  </div>
-                  <div className="p-3 rounded-full bg-muted/30 text-muted-foreground">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"></path>
-                      <path d="m9 12 2 2 4-4"></path>
-                    </svg>
-                  </div>
+                  <motion.button
+                    onClick={() => {
+                      if (readyToStart && currentConfidence >= 70) {
+                        enterFullScreen();
+                      }
+                      setShowRules(false);
+                    }}
+                    disabled={!readyToStart || currentConfidence < 70}
+                    whileHover={readyToStart && currentConfidence >= 70 ? { scale: 1.05 } : {}}
+                    whileTap={readyToStart && currentConfidence >= 70 ? { scale: 0.95 } : {}}
+                    className={`px-8 py-3 rounded-xl font-bold uppercase tracking-wider text-sm transition-all relative overflow-hidden group ${
+                      readyToStart && currentConfidence >= 70
+                        ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg shadow-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/60'
+                        : 'bg-zinc-700 text-zinc-400 cursor-not-allowed opacity-70'
+                    }`}
+                  >
+                    {readyToStart && currentConfidence >= 70 && (
+                      <motion.div
+                        className="absolute inset-0 bg-white/10"
+                        initial={{ x: '-100%' }}
+                        animate={{ x: '100%' }}
+                        transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                      />
+                    )}
+                    <span className="relative">
+                      {!readyToStart ? "Please Wait..." : currentConfidence < 70 ? `Verify Camera (${Math.round(currentConfidence)}% / 70%)` : "Start Quiz"}
+                    </span>
+                  </motion.button>
                 </div>
+
+                <motion.div
+                  className="mt-6 text-center text-sm text-zinc-500 space-y-2"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.85 }}
+                >
+                  <p>By starting this quiz, you agree to the academic integrity guidelines of your institution.</p>
+                  <p>Need help? Contact your instructor for assistance.</p>
+                </motion.div>
               </motion.div>
             </motion.div>
           </div>
-        </div >
+        </div>
       );
     }
 
@@ -1085,7 +1682,10 @@ export default function QuizTake() {
             });
             submitQuiz();
           }}
-          warningCount={warnings}
+          warningCount={warningCount}
+          isViolating={isViolating}
+          countdown={countdown}
+          currentConfidence={floatingConfidence}
         />
 
         {/* Dynamic Glow Effects */}
@@ -1124,21 +1724,14 @@ export default function QuizTake() {
 
         {/* Main Content Area */}
         <main className="flex-1 flex items-center justify-center p-4 md:p-6 relative z-10 w-full">
-          {/* Floating Webcam inside Proctoring Overlay logic */}
-          {enableWebcam && proctoringActive && (
-            <div className="hidden xl:block absolute left-8 top-1/4 w-72 bg-[#1c1c21] rounded-[2rem] p-3 border border-indigo-500/20 shadow-[0_20px_40px_-15px_rgba(0,0,0,0.6)] z-30 transform transition-transform hover:scale-105">
-              <div className="relative rounded-2xl overflow-hidden aspect-video bg-black flex items-center justify-center border border-white/5">
-                <CameraIntegrityCheck onViolation={handleWebcamViolation} isProctoringActive={proctoringActive} />
-                <div className="absolute top-3 right-3 flex items-center gap-2 bg-black/50 backdrop-blur-md px-2.5 py-1.5 rounded-full">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse box-content border border-emerald-900" />
-                  <span className="text-[9px] font-bold text-white uppercase tracking-wider">Recording</span>
-                </div>
-              </div>
-              <p className="text-center text-[10px] font-bold text-emerald-500 uppercase tracking-widest mt-4 mb-2 flex items-center justify-center gap-1.5">
-                <CheckCircle className="w-3 h-3" /> Identity Verified
-              </p>
-            </div>
-          )}
+          {/* Draggable Floating Webcam - DISABLED */}
+          {/* {enableWebcam && proctoringActive && (
+            <DraggableWebcam 
+              webcamRef={floatingWebcamRef}
+              floatingConfidence={floatingConfidence}
+              isEnabled={enableWebcam && proctoringActive}
+            />
+          )} */}
 
           {/* Central Question Card */}
           <div className="w-full max-w-4xl mx-auto my-auto pb-12 z-20">

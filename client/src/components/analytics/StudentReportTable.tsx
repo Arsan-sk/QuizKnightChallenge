@@ -1,3 +1,4 @@
+import { SharedQuizReview } from "@/components/shared/SharedQuizReview";
 import { StudentReport } from "@/types/analytics";
 import { formatTime } from "@/utils/analytics";
 import { useState } from "react";
@@ -13,6 +14,7 @@ interface StudentReportTableProps {
 export function StudentReportTable({ data, questions = [], quizId }: StudentReportTableProps) {
   const [sortDirection, setSortDirection] = useState<"desc" | "asc">("desc");
   const [selectedStudent, setSelectedStudent] = useState<StudentReport | null>(null);
+  const [activeTab, setActiveTab] = useState<'answers' | 'violations'>('answers');
 
   // Sort the data
   const sortedData = [...data].sort((a, b) => {
@@ -143,7 +145,7 @@ export function StudentReportTable({ data, questions = [], quizId }: StudentRepo
                         className="bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 border border-indigo-500/20 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest transition-colors opacity-0 group-hover:opacity-100"
                       >
                         Review</button>
-<button onClick={() => window.open(`/quiz/${quizId}/review/${student.userId}`, '_blank')} className="ml-2 bg-zinc-500/10 hover:bg-zinc-500/20 text-zinc-400 border border-zinc-500/20 px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-widest transition-colors opacity-0 group-hover:opacity-100">Full Review</button>
+
                     </td>
                   </tr>
                 );
@@ -180,119 +182,17 @@ export function StudentReportTable({ data, questions = [], quizId }: StudentRepo
               className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             />
             
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="bg-[#1c1c21] rounded-[2rem] border border-white/10 shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col relative z-10 overflow-hidden"
-            >
-              {/* Modal Header */}
-              <div className="p-6 md:p-8 flex items-center justify-between border-b border-white/5 bg-[#131316]">
-                 <div>
-                    <h3 className="text-2xl font-bold text-white mb-2">{selectedStudent.username}'s Submission</h3>
-                    <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-                       <span>Score: <span className={getScoreColor(selectedStudent.score)}>{selectedStudent.score}%</span></span>
-                       <span>•</span>
-                       <span>Correct: {selectedStudent.correctAnswers}</span>
-                       <span>•</span>
-                       <span>Time: {formatTime(selectedStudent.timeTaken)}</span>
-                    </div>
-                 </div>
-                 <button 
-                    onClick={() => setSelectedStudent(null)}
-                    className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors"
-                 >
-                    <X className="w-5 h-5 text-white" />
-                 </button>
-              </div>
-              {/* Modal Content - Tabs / Violations Section */}
-              <div className="bg-[#1c1c21] p-4 md:px-8 border-b border-white/5 flex gap-4 text-xs font-bold uppercase tracking-widest overflow-x-auto">
-                 <div className="text-indigo-400 border-b-2 border-indigo-400 pb-2 cursor-pointer break-keep whitespace-nowrap">Answers Selected</div>
-                 {/* Adding violations overview here */}
-                 <div className="text-zinc-500 pb-2 flex gap-2 items-center break-keep whitespace-nowrap">
-                    <span>Violations:</span>
-                    <div className="flex gap-2 text-[10px]">
-                       <span className="bg-rose-500/10 text-rose-400 px-2 py-0.5 rounded border border-rose-500/20">Tab Switches: {selectedStudent.tabSwitchCount || 0}</span>
-                       <span className="bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded border border-amber-500/20">Copy/Paste: {selectedStudent.copyPasteAttempts || 0}</span>
-                       <span className="bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded border border-indigo-500/20">Proctoring Flags: {selectedStudent.proctoringFlags || 0}</span>
-                    </div>
-                 </div>
-              </div>
-              {/* Modal Content - Questions Array */}
-              <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-6">
-                 {questions && questions.length > 0 ? (
-                    questions.map((q, idx) => {
-                       const studentAnswer = selectedStudent.answers?.[idx];
-                       const isRight = studentAnswer === q.correctAnswer;
-                       const hasAttempted = studentAnswer !== undefined && studentAnswer !== null && studentAnswer !== "";
-
-                       return (
-                         <div key={q.id || idx} className="bg-[#131316] rounded-2xl p-6 border border-white/5">
-                            <div className="flex items-start justify-between mb-4 gap-4">
-                               <h4 className="text-lg font-bold text-white"><span className="text-zinc-600 mr-2">{idx + 1}.</span>{q.questionText}</h4>
-                               {hasAttempted ? (
-                                  isRight ? (
-                                     <div className="w-8 h-8 shrink-0 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center mt-1">
-                                        <Check className="w-4 h-4 text-emerald-400" />
-                                     </div>
-                                  ) : (
-                                     <div className="w-8 h-8 shrink-0 rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center mt-1">
-                                        <XCircle className="w-4 h-4 text-rose-400" />
-                                     </div>
-                                  )
-                               ) : (
-                                  <div className="px-3 py-1 shrink-0 rounded-full bg-zinc-800 text-[10px] font-bold uppercase tracking-widest text-zinc-500 mt-1">
-                                     Skipped
-                                  </div>
-                               )}
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-                               {Array.isArray(q.options) ? q.options.map((opt: string, oIdx: number) => {
-                                  const isCheckedByStudent = opt === studentAnswer;
-                                  const isActuallyCorrect = opt === q.correctAnswer;
-
-                                  let optionClass = "bg-[#1c1c21] border border-white/5 text-zinc-400";
-                                  if (isCheckedByStudent && isActuallyCorrect) {
-                                     optionClass = "bg-emerald-500/10 border-emerald-500/50 text-emerald-300";
-                                  } else if (isCheckedByStudent && !isActuallyCorrect) {
-                                     optionClass = "bg-rose-500/10 border-rose-500/50 text-rose-300";
-                                  } else if (!isCheckedByStudent && isActuallyCorrect) {
-                                     optionClass = "bg-emerald-500/5 border-emerald-500/30 text-emerald-500/70 border-dashed border-2";
-                                  }
-
-                                  return (
-                                     <div key={oIdx} className={`p-4 rounded-xl flex items-center justify-between text-sm font-medium ${optionClass}`}>
-                                        <span>{opt}</span>
-                                        {isCheckedByStudent && <div className="w-2 h-2 rounded-full bg-current" />}
-                                     </div>
-                                  );
-                               }) : (
-                                 <div className="text-sm text-zinc-500 italic">No options available for this format. User answered: <span className="text-white font-mono">{studentAnswer}</span></div>
-                               )}
-                            </div>
-                            
-                            {!isRight && hasAttempted && q.explanation && (
-                               <div className="mt-4 p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-200 text-sm">
-                                  <span className="font-bold mr-2 uppercase text-[10px] tracking-widest text-indigo-400">Explanation:</span>
-                                  {q.explanation}
-                               </div>
-                            )}
-                         </div>
-                       );
-                    })
-                 ) : (
-                    <div className="text-center text-zinc-500 py-12">
-                       No detailed question data was loaded for this submission.
-                    </div>
-                 )}
-              </div>
-            </motion.div>
+              <SharedQuizReview 
+                report={selectedStudent} 
+                questions={questions} 
+                onClose={() => setSelectedStudent(null)} 
+              />
           </div>
         )}
       </AnimatePresence>
     </>
   );
 }
+
 
 

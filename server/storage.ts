@@ -115,8 +115,20 @@ export class DatabaseStorage implements IStorage {
         ? Math.round(results.reduce((sum, r) => sum + r.score, 0) / quizzesTaken)
         : 0;
         
+      // Calculate winning streak (consecutive quizzes with 80%+ accuracy, most recent first)
+      let winStreak = 0;
+      const sortedResults = results.sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
+      
+      for (const r of sortedResults) {
+        if (r.score >= 80) {
+          winStreak++;
+        } else {
+          break; // Streak broken
+        }
+      }
+      
       // Get global rank
-      const leaderboard = await this.getGlobalLeaderboard(0); let winStreak = 0; for (const r of results) { if (r.score >= 70) { winStreak++; } else { break; } }
+      const leaderboard = await this.getGlobalLeaderboard(0);
       const rank = leaderboard.findIndex(entry => entry.id === userId) + 1;
       
       return {
@@ -125,7 +137,8 @@ export class DatabaseStorage implements IStorage {
           quizzesTaken,
           totalScore,
           averageScore,
-          globalRank: rank > 0 ? rank : null, winStreak: winStreak
+          globalRank: rank > 0 ? rank : undefined,
+          winStreak: winStreak
         },
         achievements: userAchievementsList
       };
@@ -157,6 +170,54 @@ export class DatabaseStorage implements IStorage {
       return updatedUser;
     } catch (error) {
       console.error("Error in updateUserProfile:", error);
+      throw error;
+    }
+  }
+
+  async updateLoginStreak(userId: number): Promise<User> {
+    try {
+      const user = await this.getUser(userId);
+      if (!user) throw new Error("User not found");
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const lastLogin = user.lastLoginDate ? new Date(user.lastLoginDate) : null;
+      if (lastLogin) lastLogin.setHours(0, 0, 0, 0);
+      
+      let newStreak = user.loginStreak || 0;
+      
+      if (!lastLogin || lastLogin.getTime() < today.getTime()) {
+        // Not logged in today
+        if (lastLogin && lastLogin.getTime() === new Date(today.getTime() - 24 * 60 * 60 * 1000).getTime()) {
+          // Logged in yesterday, increment streak
+          newStreak = (newStreak || 0) + 1;
+        } else if (!lastLogin) {
+          // First login ever
+          newStreak = 1;
+        } else {
+          // Break in streak, reset to 1
+          newStreak = 1;
+        }
+        
+        // Update user's last login and streak
+        const [updatedUser] = await db
+          .update(users)
+          .set({
+            lastLoginDate: new Date(),
+            loginStreak: newStreak,
+            updatedAt: new Date()
+          })
+          .where(eq(users.id, userId))
+          .returning();
+        
+        return updatedUser;
+      }
+      
+      // Already logged in today, return user as is
+      return user;
+    } catch (error) {
+      console.error("Error in updateLoginStreak:", error);
       throw error;
     }
   }

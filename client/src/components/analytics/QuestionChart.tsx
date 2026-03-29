@@ -1,19 +1,23 @@
 import { QuestionStat } from "@/types/analytics";
 import { motion } from "framer-motion";
+import { useState } from "react";
 
 interface QuestionChartProps {
   data: QuestionStat[];
 }
 
 export function QuestionChart({ data }: QuestionChartProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
   // Sort by lowest success rate to find the "Toughest" questions
-  const toughestQuestions = [...data]
-    .map(q => {
+  const processedData = [...data]
+    .map((q, i) => {
       const successRate = q.totalAttempts > 0 ? (q.correctCount / q.totalAttempts) * 100 : 0;
-      return { ...q, successRate };
+      return { ...q, successRate, originalIndex: i + 1 };
     })
-    .sort((a, b) => a.successRate - b.successRate)
-    .slice(0, 4); // Take top 4 toughest
+    .sort((a, b) => a.successRate - b.successRate);
+
+  const displayQuestions = isExpanded ? processedData : processedData.slice(0, 4);
 
   const getProgressColor = (rate: number) => {
     if (rate <= 30) return "bg-rose-400";
@@ -33,19 +37,20 @@ export function QuestionChart({ data }: QuestionChartProps) {
     <div className="bg-[#1c1c21] rounded-[2rem] p-8 border border-white/5 shadow-xl h-full flex flex-col">
       <h3 className="text-xl font-bold text-white tracking-tight mb-8">Toughest Questions</h3>
       
-      <div className="space-y-6 flex-1">
-        {toughestQuestions.length === 0 ? (
+      <div className={`flex-1 overflow-hidden flex flex-col ${isExpanded ? 'h-full max-h-[300px]' : ''}`}>
+        {displayQuestions.length === 0 ? (
           <div className="flex items-center justify-center h-full text-zinc-500 font-medium text-sm">
             No question data available yet.
           </div>
         ) : (
-          toughestQuestions.map((q, i) => {
-            return (
-              <div key={q.questionId} className="w-full relative group">
-                <div className="flex justify-between items-center mb-3">
-                  <span className="text-xs font-bold text-zinc-300 truncate pr-4 max-w-[200px]">
-                    Q{i + 1}. {q.questionText}
-                  </span>
+          <div className={`space-y-6 ${isExpanded ? 'overflow-y-auto pr-2 custom-scrollbar flex-1' : ''}`}>
+            {displayQuestions.map((q, i) => {
+              return (
+                <div key={q.questionId} className="w-full relative group">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="text-xs font-bold text-zinc-300 truncate pr-4 max-w-[200px]">
+                      Q{q.originalIndex}. {q.questionText}
+                    </span>
                   <span className={`text-[11px] font-bold ${getTextColor(q.successRate)} shrink-0`}>
                     {Math.round(q.successRate)}% Success
                   </span>
@@ -64,13 +69,19 @@ export function QuestionChart({ data }: QuestionChartProps) {
                 </div>
               </div>
             );
-          })
+          })}
+          </div>
         )}
       </div>
 
-      <button className="w-full mt-8 bg-white/5 hover:bg-white/10 text-white text-xs font-bold uppercase tracking-widest py-4 rounded-xl transition-colors border border-white/5 shadow-sm">
-        Review All {data.length} Questions
-      </button>
+      {data.length > 4 && (
+        <button 
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="w-full mt-8 bg-white/5 hover:bg-white/10 text-white text-xs font-bold uppercase tracking-widest py-4 rounded-xl transition-colors border border-white/5 shadow-sm"
+        >
+          {isExpanded ? "Collapse View" : `Review All ${data.length} Questions`}
+        </button>
+      )}
     </div>
   );
 }

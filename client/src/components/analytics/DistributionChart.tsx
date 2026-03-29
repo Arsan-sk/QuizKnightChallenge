@@ -8,11 +8,10 @@ interface DistributionChartProps {
 export function DistributionChart({ data }: DistributionChartProps) {
   // Map standard ranges to our UI labels
   const mappedData = [
-    { label: "FAIL", count: data.find(d => d.scoreRange.includes("0-59"))?.count || 0 },
-    { label: "BELOW AVG", count: data.find(d => d.scoreRange.includes("60-69"))?.count || 0 },
-    { label: "AVERAGE", count: data.find(d => d.scoreRange.includes("70-79"))?.count || 0 },
-    { label: "ABOVE AVG", count: data.find(d => d.scoreRange.includes("80-89"))?.count || 0 },
-    { label: "DISTINCTION", count: data.find(d => d.scoreRange.includes("90-100"))?.count || 0 },
+    { label: "FAIL", count: data.find(d => d.scoreRange.includes("0-39"))?.count || 0 },
+    { label: "BELOW AVG", count: data.find(d => d.scoreRange.includes("40-59"))?.count || 0 },
+    { label: "AVERAGE", count: data.find(d => d.scoreRange.includes("60-79"))?.count || 0 },
+    { label: "DISTINCTION", count: data.find(d => d.scoreRange.includes("80-100"))?.count || 0 },
   ];
 
   const maxCount = Math.max(...mappedData.map(d => d.count), 1); // Avoid division by zero

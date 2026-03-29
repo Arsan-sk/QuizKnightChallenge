@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { Link } from "wouter";
 import { useProfile } from "@/hooks/use-profile";
 import { useAuth } from "@/hooks/use-auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EditProfileModal } from "@/components/profile/EditProfileModal";
 import { StudentProfile } from "@/components/profile/StudentProfile";
 import { TeacherProfile } from "@/components/profile/TeacherProfile";
 import {
@@ -22,7 +22,6 @@ const fadeUp = {
 export default function ProfilePage() {
   const { profile, isLoading, error } = useProfile();
   const { user } = useAuth();
-  const [editModalOpen, setEditModalOpen] = useState(false);
 
   const isTeacher = profile?.role === "teacher" || user?.role === "teacher";
 
@@ -104,16 +103,16 @@ export default function ProfilePage() {
               style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(255,255,255,0.4) 0%, transparent 60%)" }}
             />
             {/* Edit button */}
-            <Button
-              onClick={() => setEditModalOpen(true)}
-              size="sm"
-              variant="outline"
-              className="absolute top-4 right-4 gap-1.5 font-medium text-xs bg-black/30 border-white/30 text-white hover:bg-black/50 hover:text-white backdrop-blur-sm"
-            >
-              <Edit className="w-3.5 h-3.5" />
-              Edit Profile
-            </Button>
-          </div>
+              <Link href="/profile/edit">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="absolute top-4 right-4 gap-1.5 font-medium text-xs bg-black/30 border-white/30 text-white hover:bg-black/50 hover:text-white backdrop-blur-sm"
+                >
+                  <Edit className="w-3.5 h-3.5" />
+                  Edit Profile
+                </Button>
+              </Link>
 
           {/* Avatar + basic info */}
           <div className="relative px-6 pb-6">
@@ -168,15 +167,16 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Mobile edit button */}
-                <Button
-                  onClick={() => setEditModalOpen(true)}
-                  size="sm"
-                  variant="outline"
-                  className="md:hidden gap-1.5 text-xs border-[hsl(var(--border))]"
-                >
-                  <Edit className="w-3.5 h-3.5" />
-                  Edit
-                </Button>
+                <Link href="/profile/edit">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="md:hidden gap-1.5 text-xs border-[hsl(var(--border))]"
+                  >
+                    <Edit className="w-3.5 h-3.5" />
+                    Edit
+                  </Button>
+                </Link>
               </div>
 
               {/* Bio / meta info */}
@@ -211,11 +211,6 @@ export default function ProfilePage() {
           <StudentProfile profile={profile} />
         )}
       </motion.div>
-
-      <EditProfileModal
-        open={editModalOpen}
-        onClose={() => setEditModalOpen(false)}
-      />
     </div>
   );
 }

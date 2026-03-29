@@ -174,7 +174,7 @@ export default function AchievementsPage() {
                 Global Rank
               </div>
             </div>
-            <h2 className="text-4xl font-extrabold text-white">#{userStats?.globalRank || '-'} </h2>
+            <h2 className="text-4xl font-extrabold text-white">{userStats?.globalRank ? `#${userStats.globalRank}` : 'Unranked'}</h2>
           </div>
         </div>
 

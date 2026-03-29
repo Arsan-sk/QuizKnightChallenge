@@ -2,6 +2,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Switch, Route, Redirect } from "wouter";
 import { AuthProvider } from "./hooks/use-auth";
 import { ProfileProvider } from "./hooks/use-profile";
+import { QuizSessionProvider } from "./hooks/use-quiz-session";
 import { Toaster } from "@/components/ui/toaster";
 import { queryClient } from "./lib/queryClient";
 import { ProtectedRoute } from "./lib/protected-route";
@@ -108,10 +109,12 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <ProfileProvider>
-            <AppContent />
-            <Toaster />
-          </ProfileProvider>
+          <QuizSessionProvider>
+            <ProfileProvider>
+              <AppContent />
+              <Toaster />
+            </ProfileProvider>
+          </QuizSessionProvider>
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
