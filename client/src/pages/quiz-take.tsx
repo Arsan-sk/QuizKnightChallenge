@@ -101,6 +101,9 @@ export default function QuizTake() {
     correctAnswers: number;
     wrongAnswers: number;
     pointsEarned: number;
+    tabSwitchCount?: number;
+    copyPasteAttempts?: number;
+    proctoringFlags?: number;
   } | null>(null);
   const [hasAttempted, setHasAttempted] = useState(false);
   const [previousResult, setPreviousResult] = useState<any>(null);
@@ -182,6 +185,10 @@ export default function QuizTake() {
           totalQuestions: pastResult.totalQuestions,
           correctAnswers: pastResult.correctAnswers || 0,
           wrongAnswers: pastResult.wrongAnswers || 0,
+          pointsEarned: pastResult.pointsEarned || 0,
+          tabSwitchCount: pastResult.tabSwitchCount || 0,
+          copyPasteAttempts: pastResult.copyPasteAttempts || 0,
+          proctoringFlags: pastResult.proctoringFlags || 0
         });
 
         let parsedAnswers = parseAnswersSafe(pastResult.answers);
@@ -337,7 +344,10 @@ export default function QuizTake() {
           correctAnswers: created.correctAnswers,
           wrongAnswers: created.wrongAnswers,
           totalQuestions: created.totalQuestions,
-          pointsEarned: created.pointsEarned
+          pointsEarned: created.pointsEarned,
+          tabSwitchCount: created.tabSwitchCount || 0,
+          copyPasteAttempts: created.copyPasteAttempts || 0,
+          proctoringFlags: created.proctoringFlags || 0
         });
 
         if (id) {
@@ -464,8 +474,8 @@ export default function QuizTake() {
       if (!allowedCombinations.includes(e.key)) {
         e.preventDefault();
 
-        setOtherViolations((prev) => {
-          const newViolations = prev + 1;
+        setCopyPasteAttempts((prev) => {
+          const newAttempts = prev + 1;
           setWarnings((w) => w + 1); // Also increment total warnings for threshold
           
           toast({
@@ -482,7 +492,7 @@ export default function QuizTake() {
             });
             submitQuiz();
           }
-          return newViolations;
+          return newAttempts;
         });
       }
     }
@@ -1174,9 +1184,9 @@ export default function QuizTake() {
                    correctAnswers: quizResult.correctAnswers,
                    timeTaken: quizResult.timeTaken,
                    answers: answers,
-                   tabSwitchCount: tabSwitchCount,
-                   copyPasteAttempts: copyPasteAttempts,
-                   proctoringFlags: otherViolations
+                     tabSwitchCount: quizResult.tabSwitchCount ?? tabSwitchCount,
+                     copyPasteAttempts: quizResult.copyPasteAttempts ?? copyPasteAttempts,
+                     proctoringFlags: quizResult.proctoringFlags ?? otherViolations
                  }}
                  questions={questions as QuestionType[]}
                  onClose={() => setShowReview(false)}

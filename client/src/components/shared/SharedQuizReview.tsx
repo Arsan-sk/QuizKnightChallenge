@@ -70,9 +70,7 @@ export function SharedQuizReview({ report, questions, onClose }: SharedQuizRevie
          <button 
             onClick={(e) => { e.stopPropagation(); setActiveTab('violations'); }}
             className={`pb-4 px-2 border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap ${activeTab === 'violations' ? 'border-primary text-primary' : 'border-transparent text-zinc-400 hover:text-white'}`}
-         >
-           Violations
-           {((report.tabSwitchCount || 0) + (report.copyPasteAttempts || 0) + (report.proctoringFlags || 0)) > 0 && (
+         > Total Violations {((report.tabSwitchCount || 0) + (report.copyPasteAttempts || 0) + (report.proctoringFlags || 0)) > 0 && (
               <span className="bg-rose-500/20 text-rose-400 text-[10px] px-2 py-0.5 rounded-full border border-rose-500/20">
                    {(report.tabSwitchCount || 0) + (report.copyPasteAttempts || 0) + (report.proctoringFlags || 0)}
               </span>
@@ -153,7 +151,7 @@ export function SharedQuizReview({ report, questions, onClose }: SharedQuizRevie
             </div>
          ) : (
             <div className="space-y-6">
-               <h3 className="text-xl font-bold text-white mb-6">Violations Review</h3>
+               <h3 className="text-xl font-bold text-white mb-6">Total Violations Review</h3>
                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Violation Widgets */}
                   <div className="bg-[#1c1c21] border border-white/5 rounded-2xl p-6 flex flex-col justify-between hover:bg-white/5 transition-colors">
@@ -171,7 +169,7 @@ export function SharedQuizReview({ report, questions, onClose }: SharedQuizRevie
                           <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
                               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
                           </div>
-                          <span className="font-bold text-sm tracking-wide">Copy / Paste</span>
+                          <span className="font-bold text-sm tracking-wide">Copy / Paste & Control</span>
                       </div>
                       <div className="text-4xl font-black text-white">{report.copyPasteAttempts || 0}</div>
                   </div>
@@ -181,7 +179,7 @@ export function SharedQuizReview({ report, questions, onClose }: SharedQuizRevie
                           <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
                               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                           </div>
-                          <span className="font-bold text-sm tracking-wide">Proctoring Flags</span>
+                          <span className="font-bold text-sm tracking-wide">Face Detection</span>
                       </div>
                       <div className="text-4xl font-black text-white">{report.proctoringFlags || 0}</div>
                   </div>

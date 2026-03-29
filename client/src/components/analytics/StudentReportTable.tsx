@@ -16,9 +16,19 @@ export function StudentReportTable({ data, questions = [], quizId }: StudentRepo
   const [selectedStudent, setSelectedStudent] = useState<StudentReport | null>(null);
   const [activeTab, setActiveTab] = useState<'answers' | 'violations'>('answers');
 
-  // Sort the data
+// Sort the data (by score, and then by timeTaken for tie-breaking)
   const sortedData = [...data].sort((a, b) => {
-    return sortDirection === "asc" ? a.score - b.score : b.score - a.score;
+    if (sortDirection === "asc") {
+        if (a.score === b.score) {
+            return b.timeTaken - a.timeTaken; // Higher time first when ascending score
+        }
+        return a.score - b.score;     
+    } else {
+        if (a.score === b.score) {
+            return a.timeTaken - b.timeTaken; // Lower time first when descending score
+        }
+        return b.score - a.score;
+    }
   });
 
   const getScoreColor = (score: number) => {
