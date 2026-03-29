@@ -360,7 +360,10 @@ export default function QuizTake() {
     } finally {
       setSubmitting(false);
     }
-    }, [questions, timeStarted, user, answers, id, safeRefetchLeaderboard, toast, tabSwitchCount, copyPasteAttempts, otherViolations]);
+  }, [questions, timeStarted, user, answers, id, safeRefetchLeaderboard, toast, tabSwitchCount, copyPasteAttempts, otherViolations]);
+
+  const handleWebcamViolation = useCallback(() => {
+    // Ignore webcam violations once proctoring has been disabled
     if (!proctoringActive) return;
 
     setOtherViolations((prev) => {
