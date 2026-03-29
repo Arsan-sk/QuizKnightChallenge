@@ -246,32 +246,22 @@ export function useFaceProctoring(
             return;
         }
 
-        // If checking and we have 2 strikes already -> immediate submit?
-        // User said: "at the 3rd time... directly submitted" -> implies the *event* of the 3rd violation triggers it.
-        // If warningCount is 2, and we start violating:
-        // Do we give 5s? Or immediate? "not shows count down".
+            if (warningCount >= 3) {
+                onAutoSubmit();
+                return;
+            }
 
-        if (warningCount >= 2) {
-            onAutoSubmit();
-            return;
-        }
-
-        const timer = setInterval(() => {
-            setCountdown(prev => {
-                if (prev <= 1) {
-                    // Timeout hit -> Strike!
-                    setWarningCount(c => c + 1);
-                    onViolation(); // Notify parent
-                    return 5; // Reset countdown for *next* potential strike if they persist? 
-                    // Or should we wait?
-                    // Ideally we pause strikes for a moment.
-                }
-                return prev - 1;
-            });
-        }, 1000);
-
-        return () => clearInterval(timer);
-    }, [enabled, isViolating, warningCount, onAutoSubmit, onViolation]);
+            const timer = setInterval(() => {
+                setCountdown(prev => {
+                    if (prev <= 1) {
+                        // Timeout hit -> Strike!
+                        setWarningCount(c => c + 1);
+                        onViolation(); // Notify parent
+                        
+                        if (warningCount >= 2) {
+                            onAutoSubmit(); 
+                        }
+                        return 5; // Reset countdown for *next* potential strike if they persist?
 
     // Initialize MediaPipe Face Mesh
     useEffect(() => {

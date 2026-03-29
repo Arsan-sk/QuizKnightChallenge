@@ -220,7 +220,28 @@ export default function QuizTake() {
           .then(res => res.json())
           .then(data => {
             setPreviousResult(data);
-            setLoadingPreviousResult(false);
+              setQuizResult({
+                score: data.score,
+                timeTaken: data.timeTaken,
+                totalQuestions: data.totalQuestions || (data.answers ? data.answers.length : 0),
+                correctAnswers: data.correctAnswers || 0,
+                wrongAnswers: data.wrongAnswers || 0,
+                pointsEarned: data.pointsEarned || 0,
+                tabSwitchCount: data.tabSwitchCount || 0,
+                copyPasteAttempts: data.copyPasteAttempts || 0,
+                proctoringFlags: data.proctoringFlags || 0
+              });
+              let parsedAnswers = [];
+              try {
+                parsedAnswers = Array.isArray(data.answers) ? data.answers : (typeof data.answers === "string" ? JSON.parse(data.answers) : []);
+              } catch(e) {}
+              setAnswers(parsedAnswers);
+              setTabSwitchCount(data.tabSwitchCount || 0);
+              setCopyPasteAttempts(data.copyPasteAttempts || 0);
+              setOtherViolations(data.proctoringFlags || 0);
+              setQuizCompleted(true);
+              setShowRules(false);
+              setLoadingPreviousResult(false);
           })
           .catch(err => {
             console.error('Failed to fetch previous result:', err);
@@ -931,7 +952,7 @@ export default function QuizTake() {
     );
   }
 
-  if (hasAttempted) {
+  if (hasAttempted && !quizCompleted) {
     if (loadingPreviousResult) {
       return (
         <div className="min-h-screen bg-[#09090b] text-white flex flex-col items-center justify-center font-sans relative overflow-x-hidden">
@@ -940,52 +961,6 @@ export default function QuizTake() {
           <div className="relative z-10 flex flex-col items-center gap-4">
             <Loader2 className="w-12 h-12 animate-spin text-indigo-400" />
             <p className="text-lg font-semibold">Loading your previous attempt...</p>
-          </div>
-        </div>
-      );
-    }
-
-    if (previousResult && questions) {
-      return (
-        <div className="min-h-screen bg-[#09090b] text-white flex flex-col font-sans relative overflow-x-hidden">
-          <div className="fixed top-[-20%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none z-0" />
-          <div className="fixed bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[150px] pointer-events-none z-0" />
-
-          <div className="container mx-auto px-4 py-8 relative z-10 flex flex-col items-center">
-            {/* Already Attempted Banner */}
-            <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="w-full max-w-4xl mb-8 bg-amber-500/10 border border-amber-500/20 rounded-2xl p-6 backdrop-blur-sm"
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <AlertTriangle className="w-6 h-6 text-amber-400" />
-                <h2 className="text-xl font-bold text-amber-400">Already Attempted</h2>
-              </div>
-              <p className="text-amber-200/80">You have already completed this quiz. Below is your previous attempt result. Multiple attempts are not allowed.</p>
-              <button
-                onClick={() => setLocation(typedUser?.role === "teacher" ? "/teacher" : "/student")}
-                className="mt-4 px-6 py-2 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 rounded-lg text-amber-300 font-semibold transition-colors"
-              >
-                ← Back to Dashboard
-              </button>
-            </motion.div>
-
-            {/* Previous Result View */}
-            <SharedQuizReview
-              report={{
-                username: previousResult.username || typedUser?.username || 'Student',
-                score: previousResult.score,
-                correctAnswers: previousResult.correctAnswers,
-                timeTaken: previousResult.timeTaken,
-                answers: parseAnswersSafe(previousResult.answers),
-                tabSwitchCount: previousResult.tabSwitchCount || 0,
-                copyPasteAttempts: previousResult.copyPasteAttempts || 0,
-                proctoringFlags: previousResult.proctoringFlags || 0
-              }}
-              questions={typedQuestions}
-              onClose={() => setLocation(typedUser?.role === "teacher" ? "/teacher" : "/student")}
-            />
           </div>
         </div>
       );
