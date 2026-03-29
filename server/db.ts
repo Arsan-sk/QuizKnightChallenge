@@ -27,7 +27,13 @@ export const pool = new Pool({
   max: 10,
   connectionTimeoutMillis: 15000,
   idleTimeoutMillis: 30000,
+  keepAlive: true,
   ...(isSupabase ? { ssl: { rejectUnauthorized: false } } : {})
+});
+
+// Add error handler to prevent idle client errors from crashing the process
+pool.on('error', (err, client) => {
+  console.error('Unexpected error on idle database client', err);
 });
 
 // Test the database connection
