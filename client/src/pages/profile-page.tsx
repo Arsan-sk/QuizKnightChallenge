@@ -37,20 +37,21 @@ export default function ProfilePage() {
   }
 
   // Common stats resolution based on role
-  const totalPoints = stats?.totalPoints ?? profile.points ?? 0;
+  const totalPoints = (stats as any)?.totalPoints ?? profile.points ?? 0;
   
   // Student stats
-  const quizzesCompleted = stats?.quizzesCompleted ?? 0;
-  const averageScore = stats?.averageScore ?? 0;
-  const currentStreak = stats?.currentStreak ?? 0;
+  const quizzesCompleted = (stats as any)?.quizzesCompleted ?? 0;
+  const averageScore = (stats as any)?.averageScore ?? 0;
+  const currentStreak = (stats as any)?.currentStreak ?? 0;
   
   // Teacher stats
-  const totalQuizzes = stats?.totalQuizzes ?? 0;
-  const totalAttempts = stats?.totalAttempts ?? 0;
+  const totalQuizzes = (stats as any)?.totalQuizzes ?? 0;
+  const totalAttempts = (stats as any)?.totalAttempts ?? 0;
 
   const getInitials = () => {
-    if (profile.name) {
-      return profile.name.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2);
+    const pName = (profile as any).name;
+    if (pName) {
+      return pName.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2);
     }
     return profile.username.substring(0, 2).toUpperCase();
   };
@@ -66,8 +67,8 @@ export default function ProfilePage() {
           
           <div className="relative mb-6 md:mb-0 md:mr-10 flex-shrink-0 mt-4">
             <div className="w-56 h-56 rounded-full border-[10px] border-[#27272a] shadow-2xl overflow-hidden bg-[#27272a] flex items-center justify-center">
-              {profile.profilePicture || profile.profileImage ? (
-                <img src={profile.profilePicture || profile.profileImage} alt={profile.name} className="w-full h-full object-cover" />
+              {profile.profilePicture || (profile as any).profileImage ? (
+                <img src={profile.profilePicture || (profile as any).profileImage} alt={(profile as any).name || profile.username} className="w-full h-full object-cover" />
               ) : (
                 <span className="text-5xl font-bold text-white/50">{getInitials()}</span>
               )}
@@ -88,7 +89,7 @@ export default function ProfilePage() {
               )}
             </div>
             <h1 className="text-5xl font-extrabold text-white mb-4 tracking-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-              {profile.name || profile.username}
+              {(profile as any).name || profile.username}
             </h1>
             <p className="text-zinc-400 text-lg leading-relaxed max-w-2xl mb-8">
               {profile.bio || (isStudent 

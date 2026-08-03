@@ -91,7 +91,7 @@ export function StudentReportTable({ data, questions = [], quizId }: StudentRepo
                   const barWidth = attempted > 0 ? (attempted / totalItems) * 100 : 0;
   
                   const totalViolations = (student.tabSwitchCount || 0) + (student.copyPasteAttempts || 0) + (student.proctoringFlags || 0);
-                    const nameToUse = student.username || student.studentName || 'Unknown Student';
+                    const nameToUse = student.username || (student as any).studentName || 'Unknown Student';
                     const initials = nameToUse.split(' ')
                     .join('')
                     .substring(0, 2)
@@ -193,7 +193,13 @@ export function StudentReportTable({ data, questions = [], quizId }: StudentRepo
             />
             
               <SharedQuizReview 
-                report={selectedStudent} 
+                report={{ 
+                  ...selectedStudent, 
+                  answers: selectedStudent.answers || [],
+                  tabSwitchCount: selectedStudent.tabSwitchCount || 0,
+                  copyPasteAttempts: selectedStudent.copyPasteAttempts || 0,
+                  proctoringFlags: selectedStudent.proctoringFlags || 0
+                }} 
                 questions={questions} 
                 onClose={() => setSelectedStudent(null)} 
               />

@@ -98,6 +98,12 @@ async function applySchemaChanges() {
     // Add new columns to quizzes table
     await addColumnIfNotExists('quizzes', 'target_branch', 'text');
     await addColumnIfNotExists('quizzes', 'target_year', 'text');
+    await addColumnIfNotExists('quizzes', 'is_started', 'boolean', 'DEFAULT false');
+    await addColumnIfNotExists('quizzes', 'is_draft', 'boolean', 'DEFAULT true');
+
+    // Migrate existing quizzes: set isDraft to false for all existing quizzes
+    // so they remain visible to students after the new column is added
+    await client.query(`UPDATE quizzes SET is_draft = false WHERE is_draft = true AND created_at < NOW() - INTERVAL '1 minute'`);
 
     // Add new columns to questions table
     await addColumnIfNotExists('questions', 'image_url', 'text');

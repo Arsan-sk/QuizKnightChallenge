@@ -32,7 +32,7 @@ export default function AuthPage() {
   });
 
   const registerForm = useForm({
-    resolver: zodResolver(insertUserSchema),
+    resolver: zodResolver(insertUserSchema as any),
     defaultValues: { username: "", password: "", role: "student" as const },
   });
 
@@ -187,7 +187,7 @@ export default function AuthPage() {
                       type="button"
                       onClick={() => {
                         setRole(r.value);
-                        registerForm.setValue("role", r.value);
+                        registerForm.setValue("role", r.value as any);
                       }}
                       className={cn(
                         "flex items-center gap-2 px-4 py-3 rounded-xl border text-sm font-semibold transition-all",

@@ -43,6 +43,8 @@ export const quizzes = pgTable("quizzes", {
   isPublic: boolean("is_public").default(false),
   quizType: quizTypeEnum("quiz_type").default("standard"),
   isActive: boolean("is_active").default(false),
+  isStarted: boolean("is_started").default(false),
+  isDraft: boolean("is_draft").default(true),
   duration: integer("duration"),  // Duration in minutes for live quizzes
   // Add new fields for targeting specific branches and years
   targetBranch: text("target_branch", { enum: ["CS", "AIML", "DS", "ECS", "ECE", "CE", "ME"] }),
@@ -153,6 +155,8 @@ export const updateQuizSchema = createInsertSchema(quizzes).pick({
   quizType: true,
   duration: true,
   isActive: true,
+  isStarted: true,
+  isDraft: true,
   targetBranch: true,
   targetYear: true,
   startTime: true,

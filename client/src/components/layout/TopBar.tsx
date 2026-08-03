@@ -1,6 +1,6 @@
 import React from 'react';
 import { useProfile } from '../../hooks/use-profile';
-import { Avatar } from '../ui/avatar';
+import { Avatar, AvatarFallback } from '../ui/avatar';
 
 const TopBar: React.FC = () => {
   const { profile } = useProfile();
@@ -14,7 +14,9 @@ const TopBar: React.FC = () => {
       <div className="flex items-center gap-3">
         <div className="text-sm text-gray-600 hidden sm:block">{profile?.displayName || profile?.username || ''}</div>
         <div>
-          <Avatar name={profile?.displayName || profile?.username || 'User'} />
+          <Avatar className="h-8 w-8">
+            <AvatarFallback>{(profile?.displayName || profile?.username || 'U').substring(0, 2).toUpperCase()}</AvatarFallback>
+          </Avatar>
         </div>
       </div>
     </header>

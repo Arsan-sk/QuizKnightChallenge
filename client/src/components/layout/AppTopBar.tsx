@@ -127,7 +127,7 @@ const AppTopBar: React.FC<Props> = ({ onMenuClick }) => {
             className="cursor-pointer"
           >
             <Avatar className="w-8 h-8 ring-2 ring-[hsl(var(--primary)/0.4)] ring-offset-1 ring-offset-[hsl(var(--background))]">
-              <AvatarImage src={profile?.profilePicture || profile?.profileImage} />
+              <AvatarImage src={profile?.profilePicture || (profile as any)?.profileImage} />
               <AvatarFallback
                 className="text-xs font-bold text-white"
                 style={{ background: 'linear-gradient(135deg, hsl(var(--primary)), hsl(270 90% 65%))' }}

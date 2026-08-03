@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Quiz } from "@shared/schema";
 import { Link } from "wouter";
-import { User, Play, Square, Clock, Eye, BarChart } from "lucide-react";
+import { User, Play, Square, Clock, Eye, BarChart, Globe, Lock, Send } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useState } from "react";
@@ -17,6 +17,7 @@ interface QuizCardProps {
   actionPath: string;
   teacherName?: string;
   isTeacher?: boolean;
+  onPublish?: () => void;
 }
 
 export function QuizCard({
@@ -24,7 +25,8 @@ export function QuizCard({
   actionLabel,
   actionPath,
   teacherName,
-  isTeacher = false
+  isTeacher = false,
+  onPublish,
 }: QuizCardProps) {
   const [isStarting, setIsStarting] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
@@ -111,22 +113,30 @@ export function QuizCard({
           boxShadow: "0 4px 16px -4px hsl(0 0% 0% / 0.4), inset 0 1px 0 rgba(255,255,255,0.04)",
         }}
       >
-        {quiz.isActive && (
-          <div className="absolute top-3 right-3 flex items-center gap-1.5">
-            <span className="live-dot" />
-            <span className="text-[10px] font-bold text-red-400">LIVE</span>
-          </div>
-        )}
+        {/* Status indicators */}
+        <div className="absolute top-3 right-3 flex items-center gap-1.5 flex-wrap justify-end">
+          {quiz.isActive && (
+            <div className="flex items-center gap-1">
+              <span className="live-dot" />
+              <span className="text-[10px] font-bold text-red-400">LIVE</span>
+            </div>
+          )}
+          {isTeacher && quiz.isDraft && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">
+              DRAFT
+            </span>
+          )}
+        </div>
 
-        <div className="p-5">
+        <div className="p-4 sm:p-5">
           <div className="mb-3">
             <h3
-              className="font-bold text-[hsl(var(--foreground))] text-base leading-tight mb-2 pr-12"
+              className="font-bold text-[hsl(var(--foreground))] text-sm sm:text-base leading-tight mb-2 pr-16"
               style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
             >
               {quiz.title}
             </h3>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span
                 className={cn(
                   "text-xs px-2.5 py-0.5 rounded-full font-semibold border capitalize",
@@ -141,6 +151,18 @@ export function QuizCard({
                   Live Quiz
                 </span>
               )}
+              {/* Visibility badge for teachers */}
+              {isTeacher && !quiz.isDraft && (
+                <span className={cn(
+                  "text-[10px] px-2 py-0.5 rounded-full font-semibold border flex items-center gap-1",
+                  quiz.isPublic
+                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                    : "bg-zinc-500/10 text-zinc-400 border-zinc-500/30"
+                )}>
+                  {quiz.isPublic ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+                  {quiz.isPublic ? "Public" : "Private"}
+                </span>
+              )}
             </div>
           </div>
 
@@ -148,21 +170,21 @@ export function QuizCard({
             {quiz.description}
           </p>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs text-[hsl(var(--muted-foreground))]">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-xs text-[hsl(var(--muted-foreground))] min-w-0">
               {teacherName && (
                 <div className="flex items-center gap-1">
-                  <User className="h-3 w-3" />
-                  <span>{teacherName}</span>
+                  <User className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{teacherName}</span>
                 </div>
               )}
-              <span>·</span>
-              <span>
+              <span className="shrink-0">·</span>
+              <span className="shrink-0">
                 {quiz.createdAt ? new Date(quiz.createdAt).toLocaleDateString() : 'Recently'}
               </span>
             </div>
 
-            <div className="flex gap-1.5">
+            <div className="flex gap-1.5 shrink-0 flex-wrap justify-end">
               {isTeacher && (
                 <Link href={`/quiz-analytics/${quiz.id}`}>
                   <Button
@@ -215,6 +237,26 @@ export function QuizCard({
                     </Button>
                   )}
                 </>
+              )}
+
+              {/* Publish button for draft quizzes */}
+              {isTeacher && quiz.isDraft && onPublish && (
+                <Button
+                  size="sm"
+                  className="h-7 px-3 text-xs font-medium"
+                  style={{
+                    background: "hsl(145 63% 42%)",
+                    color: "white",
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onPublish();
+                  }}
+                >
+                  <Send className="h-3 w-3 mr-1" />
+                  Publish
+                </Button>
               )}
 
               <Link href={actionPath}>

@@ -101,8 +101,8 @@ export function ConfettiOverlay({
         },
         detectRetina: true,
       }}
-      width={width}
-      height={height}
+      width={width as any}
+      height={height as any}
     />
   );
 } 

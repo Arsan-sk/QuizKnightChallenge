@@ -27,7 +27,7 @@ export function LiveQuizController({ questions, duration, onAnswer, onComplete, 
       <div className="bg-[#1c1c21] rounded-2xl p-6 border border-white/5">
         <Question
           question={currentQuestion}
-          onChange={(q) => onAnswer(currentQuestion.id, q.correctAnswer)}
+          onChange={(q: any) => onAnswer(currentQuestion.id, typeof q === 'string' ? q : (q?.correctAnswer || ''))}
           mode="take"
           userAnswer={userAnswers[currentQuestion.id]}
         />

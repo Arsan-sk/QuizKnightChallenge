@@ -12,11 +12,18 @@ import {
     Award,
     Flame,
     BookOpen,
+    Calendar,
 } from "lucide-react";
 import { User } from "@shared/schema";
 
 interface StudentProfileProps {
-    profile: User;
+    profile: {
+        id: number;
+        username: string;
+        points?: number | null;
+        branch?: string;
+        year?: string;
+    };
 }
 
 export function StudentProfile({ profile }: StudentProfileProps) {
@@ -27,15 +34,15 @@ export function StudentProfile({ profile }: StudentProfileProps) {
     });
 
     // Fallback values while loading
-    const quizzesCompleted = stats?.quizzesCompleted ?? 0;
-    const totalPoints = stats?.totalPoints ?? profile.points ?? 0;
-    const averageScore = stats?.averageScore ?? 0;
-    const currentStreak = stats?.currentStreak ?? 0;
-    const rank = stats?.rank ?? 0;
-    const level = stats?.level ?? Math.floor(totalPoints / 100) + 1;
-    const levelProgress = stats?.levelProgress ?? (totalPoints % 100);
+    const quizzesCompleted = (stats as any)?.quizzesCompleted ?? 0;
+    const totalPoints = (stats as any)?.totalPoints ?? profile.points ?? 0;
+    const averageScore = (stats as any)?.averageScore ?? 0;
+    const currentStreak = (stats as any)?.currentStreak ?? 0;
+    const rank = (stats as any)?.rank ?? 0;
+    const level = (stats as any)?.level ?? Math.floor(totalPoints / 100) + 1;
+    const levelProgress = (stats as any)?.levelProgress ?? (totalPoints % 100);
 
-    const recentResults = stats?.recentResults ?? [];
+    const recentResults = (stats as any)?.recentResults ?? [];
 
     // Compute achievements heuristically from stats/recent results
     const achievements = [

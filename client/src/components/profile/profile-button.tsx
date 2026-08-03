@@ -30,7 +30,7 @@ export function ProfileButton({ onClick }: ProfileButtonProps) {
         onClick={onClick}
       >
         <Avatar className="h-8 w-8 border border-primary/10">
-          <AvatarImage src={user.profilePicture} alt={user.username || "User"} />
+          <AvatarImage src={user.profilePicture || undefined} alt={user.username || "User"} />
           <AvatarFallback className="text-xs bg-primary-foreground">
             {getInitials()}
           </AvatarFallback>

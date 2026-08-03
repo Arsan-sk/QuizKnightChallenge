@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 
@@ -36,19 +36,23 @@ export default function ProfileEditPage() {
     bio: "",
     branch: "none",
     year: "none",
+    department: "none",
+    specialization: "",
   });
 
   // Initialize form with profile data when available
   useEffect(() => {
     if (profile) {
       setFormData({
-        name: profile.name || "",
+        name: (profile as any).name || "",
         username: profile.username || "",
-        email: profile.email || "",
-        profilePicture: profile.profilePicture || profile.profileImage || "",
+        email: (profile as any).email || "",
+        profilePicture: profile.profilePicture || (profile as any).profileImage || "",
         bio: profile.bio || "",
         branch: profile.branch || "none",
         year: profile.year || "none",
+        department: (profile as any).department || "none",
+        specialization: (profile as any).specialization || "",
       });
     }
   }, [profile]);
@@ -115,11 +119,11 @@ export default function ProfileEditPage() {
         username: formData.username,
         profilePicture: formData.profilePicture,
         bio: formData.bio,
-        branch: formData.branch === "none" ? null : formData.branch,
-        year: formData.year === "none" ? null : formData.year
+        branch: formData.branch === "none" ? undefined : formData.branch,
+        year: formData.year === "none" ? undefined : formData.year
       };
 
-      await updateProfileMutation.mutateAsync(payload);
+      await updateProfileMutation.mutateAsync(payload as any);
       toast({
         title: "Profile updated",
         description: "Your profile has been successfully updated"
@@ -505,7 +509,7 @@ export default function ProfileEditPage() {
               type="button"
               variant="outline"
               onClick={() => navigate("/profile")}
-              disabled={updateProfileMutation.isLoading}
+              disabled={updateProfileMutation.isPending}
               className="flex-1 bg-[#1c1c21]/50 border-white/10 hover:bg-[#1c1c21]/80 hover:border-white/20 rounded-lg"
             >
               <ArrowLeft className="w-4 h-4 mr-2" />
@@ -513,11 +517,11 @@ export default function ProfileEditPage() {
             </Button>
             <Button
               type="submit"
-              disabled={updateProfileMutation.isLoading}
+              disabled={updateProfileMutation.isPending}
               className="flex-1 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-semibold shadow-[0_0_30px_rgba(99,102,241,0.3)]"
             >
               <Save className="w-4 h-4 mr-2" />
-              {updateProfileMutation.isLoading ? "Saving..." : "Save Changes"}
+              {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </motion.div>
         </form>

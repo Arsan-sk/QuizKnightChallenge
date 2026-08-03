@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import Webcam from 'react-webcam';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -20,6 +19,7 @@ export function CameraIntegrityCheck({ onVerified }: CameraIntegrityCheckProps) 
     const { isInitialized, currentConfidence } = useFaceProctoring(videoRef, {
         enabled: checkingFace,
         onViolation: () => { }, // No violations during check, just monitoring
+        onAutoSubmit: () => { },
         confidenceThreshold: 70
     });
 

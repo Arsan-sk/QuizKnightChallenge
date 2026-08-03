@@ -138,7 +138,7 @@ export function ParticleBackground({
       id="tsparticles"
       className={`fixed inset-0 -z-10 h-full w-full ${className || ''}`}
       init={particlesInit}
-      options={getOptions()}
+      options={getOptions() as any}
     />
   );
 } 

@@ -24,12 +24,12 @@ export function TeacherProfile({ profile }: TeacherProfileProps) {
         enabled: !!profile.id,
     });
 
-    const totalQuizzes = stats?.totalQuizzes ?? 0;
-    const studentsReached = stats?.studentsReached ?? 0;
-    const totalAttempts = stats?.totalAttempts ?? 0;
-    const averageScore = stats?.averageScore ?? 0;
-    const completionRate = stats?.completionRate ?? 0;
-    const recentQuizzes = stats?.recentQuizzes ?? [];
+    const totalQuizzes = (stats as any)?.totalQuizzes ?? 0;
+    const studentsReached = (stats as any)?.studentsReached ?? 0;
+    const totalAttempts = (stats as any)?.totalAttempts ?? 0;
+    const averageScore = (stats as any)?.averageScore ?? 0;
+    const completionRate = (stats as any)?.completionRate ?? 0;
+    const recentQuizzes = (stats as any)?.recentQuizzes ?? [];
 
     return (
         <div className="space-y-6">

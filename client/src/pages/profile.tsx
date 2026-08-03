@@ -113,6 +113,7 @@ export default function ProfilePage() {
                   Edit Profile
                 </Button>
               </Link>
+          </div>
 
           {/* Avatar + basic info */}
           <div className="relative px-6 pb-6">
@@ -121,7 +122,7 @@ export default function ProfilePage() {
               <Avatar
                 className="w-28 h-28 border-4 border-[hsl(var(--background))] shadow-xl"
               >
-                <AvatarImage src={profile?.profilePicture || profile?.profileImage} />
+                <AvatarImage src={profile?.profilePicture || (profile as any)?.profileImage} />
                 <AvatarFallback
                   className="text-3xl font-bold text-white"
                   style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(270 90% 65%))" }}
@@ -204,12 +205,11 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Role-specific profile content */}
-        {isTeacher ? (
-          <TeacherProfile profile={profile} />
-        ) : (
-          <StudentProfile profile={profile} />
-        )}
+        {isTeacher && profile ? (
+          <TeacherProfile profile={profile as any} />
+        ) : profile ? (
+          <StudentProfile profile={profile as any} />
+        ) : null}
       </motion.div>
     </div>
   );

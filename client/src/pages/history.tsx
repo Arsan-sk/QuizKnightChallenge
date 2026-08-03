@@ -201,8 +201,8 @@ export default function HistoryPage() {
       );
     }
 
-    const publishedQuizzes = createdQuizzes?.filter(q => q.published) || [];
-    const draftQuizzes = createdQuizzes?.filter(q => !q.published) || [];
+    const publishedQuizzes = createdQuizzes?.filter(q => !(q as any).isDraft) || [];
+    const draftQuizzes = createdQuizzes?.filter(q => (q as any).isDraft) || [];
 
     return (
       <div className="max-w-4xl mx-auto px-6 py-8">
@@ -254,33 +254,35 @@ export default function HistoryPage() {
                     <motion.div
                       key={quiz.id}
                       variants={fadeUp}
-                      className="clay-card px-5 py-4 flex items-center gap-4"
+                      className="clay-card px-4 sm:px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4"
                     >
-                      <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                        style={{ background: "hsl(var(--primary) / 0.12)" }}
-                      >
-                        <BookOpen className="w-5 h-5" style={{ color: "hsl(var(--primary))" }} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-sm text-[hsl(var(--foreground))] truncate"
-                          style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                          {quiz.title}
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div
+                          className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                          style={{ background: "hsl(var(--primary) / 0.12)" }}
+                        >
+                          <BookOpen className="w-5 h-5" style={{ color: "hsl(var(--primary))" }} />
                         </div>
-                        <div className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5 flex gap-3">
-                          <span>Created {format(new Date(quiz.createdAt), "PP")}</span>
-                          <span className="flex items-center gap-1">
-                            <BarChart3 className="w-3 h-3" />
-                            {quiz.attempts} attempts
-                          </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm text-[hsl(var(--foreground))] truncate"
+                            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                            {quiz.title}
+                          </div>
+                          <div className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5 flex flex-wrap gap-2 sm:gap-3">
+                            <span>Created {quiz.createdAt ? format(new Date(quiz.createdAt), "PP") : "Recently"}</span>
+                            <span className="flex items-center gap-1">
+                              <BarChart3 className="w-3 h-3" />
+                              {quiz.attempts || 0} attempts
+                            </span>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 self-end sm:self-center shrink-0">
                         <Button
                           variant="ghost"
                           size="sm"
                           className="h-8 px-3 text-xs"
-                          onClick={() => navigate(`/teacher/quiz/edit/${quiz.id}`)}
+                          onClick={() => navigate(`/teacher/quiz/create?id=${quiz.id}`)}
                         >
                           <FileEdit className="w-3.5 h-3.5 mr-1" />
                           Edit
@@ -306,5 +308,5 @@ export default function HistoryPage() {
     );
   }
 
-  return null;
+  return <></>;
 }

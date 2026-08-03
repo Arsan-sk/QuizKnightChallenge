@@ -1,6 +1,6 @@
 import { users, quizzes, questions, results, achievements, userAchievements, friendships, type User, type Quiz, type Question, type Result, type UpdateQuiz, type UpdateQuestion, type UpdateUserProfile, type Achievement, type UserAchievement, type Friendship } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, gt, lt, or, asc } from "drizzle-orm";
+import { eq, and, desc, sql, gt, lt, or, asc, getTableColumns } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -123,7 +123,7 @@ export class DatabaseStorage implements IStorage {
         
       // Calculate winning streak (consecutive quizzes with 80%+ accuracy, most recent first)
       let winStreak = 0;
-      const sortedResults = results.sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime());
+      const sortedResults = results.sort((a, b) => (b.completedAt ? new Date(b.completedAt).getTime() : 0) - (a.completedAt ? new Date(a.completedAt).getTime() : 0));
       
       for (const r of sortedResults) {
         if (r.score >= 80) {
@@ -188,10 +188,10 @@ export class DatabaseStorage implements IStorage {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
-      const lastLogin = user.lastLoginDate ? new Date(user.lastLoginDate) : null;
+      const lastLogin = (user as any).lastLoginDate ? new Date((user as any).lastLoginDate) : null;
       if (lastLogin) lastLogin.setHours(0, 0, 0, 0);
       
-      let newStreak = user.loginStreak || 0;
+      let newStreak = (user as any).loginStreak || 0;
       
       if (!lastLogin || lastLogin.getTime() < today.getTime()) {
         // Not logged in today
@@ -213,7 +213,7 @@ export class DatabaseStorage implements IStorage {
             lastLoginDate: new Date(),
             loginStreak: newStreak,
             updatedAt: new Date()
-          })
+          } as any)
           .where(eq(users.id, userId))
           .returning();
         
@@ -297,14 +297,19 @@ export class DatabaseStorage implements IStorage {
     try {
       const quizzesWithTeachers = await db
         .select({
-          ...quizzes,
+          ...getTableColumns(quizzes),
           teacherName: users.username,
         })
         .from(quizzes)
         .leftJoin(users, eq(quizzes.createdBy, users.id))
-        .where(eq(quizzes.isPublic, true))
+        .where(
+          and(
+            eq(quizzes.isPublic, true),
+            eq(quizzes.isDraft, false)
+          )
+        )
         .orderBy(desc(quizzes.createdAt));
-      return quizzesWithTeachers;
+      return quizzesWithTeachers as (Quiz & { teacherName: string })[];
     } catch (error) {
       console.error("Error in getPublicQuizzesWithTeachers:", error);
       return [];
@@ -321,12 +326,14 @@ export class DatabaseStorage implements IStorage {
       // Get quizzes that are either:
       // 1. Public with no target branch/year, OR
       // 2. Public with matching target branch/year
+      // AND not drafts
       return await db
         .select()
         .from(quizzes)
         .where(
           and(
             eq(quizzes.isPublic, true),
+            eq(quizzes.isDraft, false),
             or(
               // No targeting
               and(
@@ -335,18 +342,18 @@ export class DatabaseStorage implements IStorage {
               ),
               // Branch targeting matches
               and(
-                eq(quizzes.targetBranch, user.branch),
+                eq(quizzes.targetBranch, user.branch as any),
                 sql`${quizzes.targetYear} IS NULL`
               ),
               // Year targeting matches
               and(
-                eq(quizzes.targetYear, user.year),
+                eq(quizzes.targetYear, user.year as any),
                 sql`${quizzes.targetBranch} IS NULL`
               ),
               // Both branch and year targeting match
               and(
-                eq(quizzes.targetBranch, user.branch),
-                eq(quizzes.targetYear, user.year)
+                eq(quizzes.targetBranch, user.branch as any),
+                eq(quizzes.targetYear, user.year as any)
               )
             )
           )
@@ -360,10 +367,9 @@ export class DatabaseStorage implements IStorage {
 
   async getLiveQuizzes(): Promise<(Quiz & { teacherName: string })[]> {
     try {
-      const now = new Date();
       const liveQuizzes = await db
         .select({
-          ...quizzes,
+          ...getTableColumns(quizzes),
           teacherName: users.username,
         })
         .from(quizzes)
@@ -371,13 +377,13 @@ export class DatabaseStorage implements IStorage {
         .where(
           and(
             eq(quizzes.quizType, "live"),
-            eq(quizzes.isActive, true),
             eq(quizzes.isPublic, true),
-            gt(quizzes.endTime, now)
+            eq(quizzes.isDraft, false),
+            eq(quizzes.isActive, true)
           )
         )
         .orderBy(desc(quizzes.startTime));
-      return liveQuizzes;
+      return liveQuizzes as (Quiz & { teacherName: string })[];
     } catch (error) {
       console.error("Error in getLiveQuizzes:", error);
       return [];
@@ -496,7 +502,7 @@ export class DatabaseStorage implements IStorage {
     try {
       const leaderboard = await db
         .select({
-          ...results,
+          ...getTableColumns(results),
           username: users.username,
         })
         .from(results)
@@ -504,14 +510,14 @@ export class DatabaseStorage implements IStorage {
         .where(eq(results.quizId, quizId))
         .orderBy(desc(results.score), sql`${results.timeTaken} ASC`, desc(results.completedAt))
         .limit(10);
-      return leaderboard;
+      return leaderboard as (Result & { username: string })[];
     } catch (error) {
       console.error("Error in getQuizLeaderboard:", error);
       return [];
     }
   }
 
-  async getGlobalLeaderboard(limit: number = 10): Promise<(User & { totalScore: number })[]> {
+  async getGlobalLeaderboard(limit: number = 10): Promise<any[]> {
     try {
       // Group by user and sum scores
       const leaderboard = await db
@@ -632,7 +638,7 @@ export class DatabaseStorage implements IStorage {
   async getFriends(userId: number): Promise<User[]> {
     try {
       // Get all accepted friendships where the user is either the sender or receiver
-      const friendships = await db
+      const userFriendships = await db
         .select()
         .from(friendships)
         .where(
@@ -646,7 +652,7 @@ export class DatabaseStorage implements IStorage {
         );
         
       // Extract the IDs of all friends
-      const friendIds = friendships.map(f => 
+      const friendIds = userFriendships.map(f => 
         f.userId === userId ? f.friendId : f.userId
       );
       
@@ -670,8 +676,8 @@ export class DatabaseStorage implements IStorage {
       // Get all pending friend requests where this user is the receiver
       const friendRequests = await db
         .select({
-          ...friendships,
-          sender: users,
+          ...getTableColumns(friendships),
+          sender: getTableColumns(users),
         })
         .from(friendships)
         .innerJoin(users, eq(friendships.userId, users.id))
@@ -682,7 +688,7 @@ export class DatabaseStorage implements IStorage {
           )
         );
         
-      return friendRequests;
+      return friendRequests as (Friendship & { sender: User })[];
     } catch (error) {
       console.error("Error in getFriendRequests:", error);
       return [];

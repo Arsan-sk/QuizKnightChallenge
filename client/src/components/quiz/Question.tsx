@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, CheckCircle, Image, PlusCircle, FileQuestion, Edit3, CheckIcon } from "lucide-react";
+import { X, CheckCircle, Image, PlusCircle, FileQuestion, Edit3, CheckIcon, XCircle } from "lucide-react";
 import {
   Select,
   SelectContent,

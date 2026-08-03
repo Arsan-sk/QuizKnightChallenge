@@ -110,6 +110,7 @@ export default function QuizTake() {
   const [loadingPreviousResult, setLoadingPreviousResult] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [direction, setDirection] = useState<"left" | "right">("right");
+  const [waitingForStart, setWaitingForStart] = useState(false);
   // Use `showReview` to present the question review overlay/modal.
   // Proctoring lifecycle flags (explicit control)
   const [cameraCheckComplete, setCameraCheckComplete] = useState(false);
@@ -310,7 +311,7 @@ export default function QuizTake() {
       if (!questions || !Array.isArray(questions) || questions.length === 0 || !timeStarted || !user || !('id' in user)) {
         console.error("Missing required data for quiz submission", {
           hasQuestions: !!questions && Array.isArray(questions),
-          questionsLength: questions?.length || 0,
+          questionsLength: (questions as any[])?.length || 0,
           hasTimeStarted: !!timeStarted,
           timeStarted: timeStarted?.toISOString(),
           hasUser: !!user
@@ -890,6 +891,40 @@ export default function QuizTake() {
     ? Math.round((answeredQuestions / (typedQuestions?.length || 1)) * 100)
     : 0;
 
+  // Waiting room: poll quiz status for live quizzes that haven't started
+  useEffect(() => {
+    if (!typedQuiz || typedQuiz.quizType !== 'live') return;
+    if (quizCompleted || hasAttempted) return;
+    
+    // If quiz is live and not started, show waiting room
+    if (!typedQuiz.isStarted && !typedQuiz.isActive) {
+      setWaitingForStart(true);
+    } else {
+      setWaitingForStart(false);
+    }
+  }, [typedQuiz, quizCompleted, hasAttempted]);
+
+  // Poll for quiz status when in waiting room
+  useEffect(() => {
+    if (!waitingForStart || !id) return;
+    
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await apiRequest('GET', `/api/quizzes/${id}/status`);
+        const status = await res.json();
+        if (status.isStarted && status.isActive) {
+          setWaitingForStart(false);
+          // Force refetch quiz and questions data
+          window.location.reload();
+        }
+      } catch (err) {
+        // Silently ignore polling errors
+      }
+    }, 5000);
+    
+    return () => clearInterval(pollInterval);
+  }, [waitingForStart, id]);
+
   if (isLoading) {
     return (
       <div>
@@ -924,6 +959,75 @@ export default function QuizTake() {
             </p>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Waiting room for live quizzes that haven't started
+  if (waitingForStart && typedQuiz) {
+    return (
+      <div className="min-h-screen bg-[#09090b] text-white flex flex-col items-center justify-center font-sans relative overflow-x-hidden">
+        <div className="fixed top-[-20%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none z-0" />
+        <div className="fixed bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[150px] pointer-events-none z-0" />
+        
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative z-10 max-w-lg mx-auto text-center px-6"
+        >
+          {/* Animated waiting indicator */}
+          <div className="relative w-24 h-24 mx-auto mb-8">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
+              className="absolute inset-0 rounded-full border-2 border-indigo-500/20 border-t-indigo-400"
+            />
+            <motion.div
+              animate={{ rotate: -360 }}
+              transition={{ repeat: Infinity, duration: 5, ease: "linear" }}
+              className="absolute inset-2 rounded-full border-2 border-purple-500/20 border-b-purple-400"
+            />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <Clock className="w-8 h-8 text-indigo-300" />
+            </div>
+          </div>
+
+          <h1
+            className="text-2xl sm:text-3xl font-extrabold text-white mb-3"
+            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+          >
+            Waiting Room
+          </h1>
+          
+          <div className="bg-[#1c1c21] rounded-2xl p-6 border border-white/5 mb-6">
+            <h2 className="text-lg font-bold text-white mb-2">{typedQuiz.title}</h2>
+            <p className="text-sm text-zinc-400 mb-4">{typedQuiz.description}</p>
+            <div className="flex items-center justify-center gap-4 text-xs text-zinc-500">
+              <span className="flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5" />
+                {typedQuiz.duration || 30} min
+              </span>
+              <span className="capitalize">{typedQuiz.difficulty}</span>
+            </div>
+          </div>
+
+          <motion.p
+            animate={{ opacity: [0.5, 1, 0.5] }}
+            transition={{ repeat: Infinity, duration: 2 }}
+            className="text-indigo-300 text-sm font-medium mb-2"
+          >
+            Waiting for teacher to start the quiz...
+          </motion.p>
+          <p className="text-zinc-500 text-xs">This page will automatically update when the quiz begins.</p>
+
+          <Button
+            variant="ghost"
+            className="mt-8 text-zinc-400 hover:text-white"
+            onClick={() => setLocation(typedUser?.role === 'teacher' ? '/teacher' : '/student')}
+          >
+            ← Back to Dashboard
+          </Button>
+        </motion.div>
       </div>
     );
   }
@@ -1177,14 +1281,15 @@ export default function QuizTake() {
   }
 
   if (typedQuiz.quizType === "live" && typedQuiz.isActive) {
+    const userAnswersRecord: Record<number, string> = {};
+    if (typedQuestions) {
+      typedQuestions.forEach((q, idx) => {
+        if (answers[idx]) userAnswersRecord[q.id] = answers[idx];
+      });
+    }
+
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
-
-        <WebcamMonitor
-          enabled={enableWebcam && proctoringActive}
-          onViolationDetected={handleWebcamViolation}
-        />
-
         <div className="container max-w-5xl mx-auto px-4 py-6">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -1201,9 +1306,9 @@ export default function QuizTake() {
               <LiveQuizController
                 questions={typedQuestions}
                 duration={typedQuiz.duration || 30}
-                onAnswer={handleAnswer}
+                onAnswer={(_qId, ans) => handleAnswer(ans)}
                 onComplete={submitQuiz}
-                userAnswers={answers}
+                userAnswers={userAnswersRecord}
               />
             </div>
           </motion.div>
@@ -1419,7 +1524,7 @@ export default function QuizTake() {
                     {!checkingCamera ? (
                       <motion.button
                         onClick={testCamera}
-                        disabled={!cameraPermissionGranted || cameraPermissionGranted === false}
+                        disabled={!cameraPermissionGranted}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                         className="flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold py-3 px-6 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"

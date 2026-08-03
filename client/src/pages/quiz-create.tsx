@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback, memo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useLocation, useSearch } from "wouter";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -33,9 +33,12 @@ import {
   Brain,
   Zap,
   CheckCircle2,
-  Circle
+  Circle,
+  Lock,
+  Save,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Quiz, Question as QuestionType } from "@shared/schema";
 
 const quizFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -58,9 +61,15 @@ const MemoizedQuestion = memo(Question, (prevProps, nextProps) => {
 
 export default function QuizCreate() {
   const [, setLocation] = useLocation();
+  const search = useSearch();
+  const searchParams = new URLSearchParams(search);
+  const editId = searchParams.get("id");
+  const isEditMode = !!editId;
+
   const [questions, setQuestions] = useState<any[]>([]);
   const [currentStep, setCurrentStep] = useState(1);
   const [formValid, setFormValid] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(!isEditMode);
   const { toast } = useToast();
 
   const form = useForm({
@@ -76,11 +85,54 @@ export default function QuizCreate() {
     mode: "onChange"
   });
 
-  const { watch, setValue } = form;
+  const { watch, setValue, reset } = form;
   const watchTitle = watch("title");
   const watchDescription = watch("description");
   const watchDifficulty = watch("difficulty");
   const watchType = watch("quizType");
+  const watchIsPublic = watch("isPublic");
+
+  // Fetch existing quiz data in edit mode
+  const { data: existingQuiz } = useQuery<Quiz>({
+    queryKey: [`/api/quizzes/${editId}`],
+    enabled: isEditMode,
+  });
+
+  const { data: existingQuestions } = useQuery<QuestionType[]>({
+    queryKey: [`/api/quizzes/${editId}/questions`],
+    enabled: isEditMode,
+  });
+
+  // Pre-populate form when edit data loads
+  useEffect(() => {
+    if (isEditMode && existingQuiz && !dataLoaded) {
+      reset({
+        title: existingQuiz.title || "",
+        description: existingQuiz.description || "",
+        difficulty: (existingQuiz.difficulty as "easy" | "medium" | "hard") || "easy",
+        isPublic: existingQuiz.isPublic ?? true,
+        quizType: (existingQuiz.quizType as "standard" | "live") || "standard",
+        duration: existingQuiz.duration || 30,
+      });
+      setDataLoaded(true);
+    }
+  }, [isEditMode, existingQuiz, dataLoaded, reset]);
+
+  // Pre-populate questions when they load
+  useEffect(() => {
+    if (isEditMode && existingQuestions && existingQuestions.length > 0 && questions.length === 0 && dataLoaded) {
+      setQuestions(existingQuestions.map(q => ({
+        id: q.id,
+        questionText: q.questionText,
+        questionType: q.questionType,
+        options: q.options || ["", "", "", ""],
+        correctAnswer: q.correctAnswer,
+        points: q.points || 2,
+        imageUrl: q.imageUrl,
+        optionImages: q.optionImages,
+      })));
+    }
+  }, [isEditMode, existingQuestions, dataLoaded, questions.length]);
 
   useEffect(() => {
     setFormValid(watchTitle.trim().length > 0);
@@ -101,6 +153,43 @@ export default function QuizCreate() {
     },
     onError: () => {
       toast({ title: "Error", description: "Failed to create quiz", variant: "destructive" });
+    }
+  });
+
+  const updateQuizMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const res = await apiRequest("PUT", `/api/quizzes/${editId}`, data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Quiz Updated", description: "Your changes have been saved." });
+      setLocation("/teacher");
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to update quiz", variant: "destructive" });
+    }
+  });
+
+  const saveDraftMutation = useMutation({
+    mutationFn: async (data: any) => {
+      if (isEditMode) {
+        const res = await apiRequest("PUT", `/api/quizzes/${editId}`, { ...data, isDraft: true });
+        return await res.json();
+      } else {
+        const res = await apiRequest("POST", "/api/quizzes", { ...data, isDraft: true });
+        const quiz = await res.json();
+        for (const question of questions) {
+          await apiRequest("POST", `/api/quizzes/${quiz.id}/questions`, question);
+        }
+        return quiz;
+      }
+    },
+    onSuccess: () => {
+      toast({ title: "Draft Saved", description: "Your quiz has been saved as a draft." });
+      setLocation("/teacher");
+    },
+    onError: () => {
+      toast({ title: "Error", description: "Failed to save draft", variant: "destructive" });
     }
   });
 
@@ -131,7 +220,7 @@ export default function QuizCreate() {
   }, []);
 
   const handleSubmit = async (data: any) => {
-    if (questions.length === 0) {
+    if (!isEditMode && questions.length === 0) {
       toast({
         title: "No questions added",
         description: "Please add at least one question to your quiz",
@@ -141,19 +230,30 @@ export default function QuizCreate() {
       return;
     }
 
-    for (let i = 0; i < questions.length; i++) {
-      if (!questions[i].correctAnswer) {
-        toast({
-          title: "Missing correct answer",
-          description: `Question ${i + 1} does not have a correct answer selected.`,
-          variant: "destructive"
-        });
-        setCurrentStep(2);
-        return;
+    if (!isEditMode) {
+      for (let i = 0; i < questions.length; i++) {
+        if (!questions[i].correctAnswer) {
+          toast({
+            title: "Missing correct answer",
+            description: `Question ${i + 1} does not have a correct answer selected.`,
+            variant: "destructive"
+          });
+          setCurrentStep(2);
+          return;
+        }
       }
     }
 
-    createQuizMutation.mutate(data);
+    if (isEditMode) {
+      updateQuizMutation.mutate({ ...data, isDraft: false });
+    } else {
+      createQuizMutation.mutate({ ...data, isDraft: false });
+    }
+  };
+
+  const handleSaveDraft = () => {
+    const data = form.getValues();
+    saveDraftMutation.mutate(data);
   };
 
   const nextStep = () => {
@@ -163,8 +263,12 @@ export default function QuizCreate() {
 
   const getStepText = (step: number) => {
     switch (step) {
-      case 1: return "Define the core identity of your challenge. Set the tone and difficulty for your students.";
-      case 2: return "Develop engaging questions. Add media and set the correct answers.";
+      case 1: return isEditMode
+        ? "Update the core identity of your quiz. Quiz type cannot be changed."
+        : "Define the core identity of your challenge. Set the tone and difficulty for your students.";
+      case 2: return isEditMode
+        ? "Review your questions. Questions cannot be modified after creation."
+        : "Develop engaging questions. Add media and set the correct answers.";
       case 3: return "Configure time limits, public access, and live participation rules.";
       default: return "";
     }
@@ -176,11 +280,13 @@ export default function QuizCreate() {
     { id: 3, label: "3. Settings", icon: Settings2 }
   ];
 
+  const isPending = createQuizMutation.isPending || updateQuizMutation.isPending || saveDraftMutation.isPending;
+
   const renderInfoStep = () => (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-16">
       {/* Left Column: Form Fields */}
       <div className="lg:col-span-2 space-y-6">
-        <div className="bg-[#1c1c21] rounded-[2rem] p-8 border border-white/5 shadow-xl">
+        <div className="bg-[#1c1c21] rounded-[2rem] p-6 sm:p-8 border border-white/5 shadow-xl">
           <div className="flex items-center gap-3 mb-8">
             <div className="w-1.5 h-6 bg-indigo-300 rounded-full shadow-[0_0_10px_rgba(165,180,252,0.5)]" />
             <h2 className="text-xl font-bold text-white">Basic Information</h2>
@@ -205,7 +311,7 @@ export default function QuizCreate() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest pl-1">SUBJECT</label>
                 <Select defaultValue="physics">
@@ -235,19 +341,19 @@ export default function QuizCreate() {
           </div>
         </div>
 
-        <div className="bg-[#1c1c21] rounded-[2rem] p-8 border border-white/5 shadow-xl">
+        <div className="bg-[#1c1c21] rounded-[2rem] p-6 sm:p-8 border border-white/5 shadow-xl">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-1.5 h-6 bg-[#f59e0b] rounded-full shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
             <h2 className="text-xl font-bold text-white">Difficulty Level</h2>
           </div>
           <p className="text-sm text-zinc-400 mb-8">This determines the adaptive logic applied to questions.</p>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
             {/* Easy */}
             <button 
               type="button"
               onClick={() => setValue("difficulty", "easy")}
-              className={`relative h-40 rounded-2xl border flex flex-col items-center justify-center gap-4 transition-all ${
+              className={`relative h-28 sm:h-40 rounded-2xl border flex flex-col items-center justify-center gap-2 sm:gap-4 transition-all ${
                 watchDifficulty === 'easy' 
                   ? 'bg-[#1e293b]/50 border-emerald-500/50 shadow-[0_0_20px_rgba(16,185,129,0.1)]' 
                   : 'bg-[#131316] border-white/5 hover:border-white/10'
@@ -258,12 +364,12 @@ export default function QuizCreate() {
                   ✓
                 </div>
               )}
-              <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                <Smile className="w-6 h-6 text-emerald-400" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                <Smile className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-400" />
               </div>
               <div className="text-center">
-                <p className="font-bold text-white">Easy</p>
-                <p className="text-[9px] uppercase tracking-widest text-zinc-500 mt-1">FUNDAMENTALS</p>
+                <p className="font-bold text-white text-sm sm:text-base">Easy</p>
+                <p className="text-[9px] uppercase tracking-widest text-zinc-500 mt-1 hidden sm:block">FUNDAMENTALS</p>
               </div>
             </button>
 
@@ -271,7 +377,7 @@ export default function QuizCreate() {
             <button 
               type="button"
               onClick={() => setValue("difficulty", "medium")}
-              className={`relative h-40 rounded-2xl flex flex-col items-center justify-center gap-4 transition-all ${
+              className={`relative h-28 sm:h-40 rounded-2xl flex flex-col items-center justify-center gap-2 sm:gap-4 transition-all ${
                 watchDifficulty === 'medium' 
                   ? 'bg-indigo-300 border-[3px] border-indigo-200 shadow-[0_0_30px_rgba(165,180,252,0.3)]' 
                   : 'bg-[#131316] border border-white/5 hover:border-white/10'
@@ -282,12 +388,12 @@ export default function QuizCreate() {
                   ✓
                 </div>
               )}
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${watchDifficulty === 'medium' ? 'bg-[#1c1c21]/10' : 'bg-indigo-500/20'}`}>
-                <Brain className={`w-6 h-6 ${watchDifficulty === 'medium' ? 'text-indigo-950' : 'text-indigo-400'}`} />
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center ${watchDifficulty === 'medium' ? 'bg-[#1c1c21]/10' : 'bg-indigo-500/20'}`}>
+                <Brain className={`w-5 h-5 sm:w-6 sm:h-6 ${watchDifficulty === 'medium' ? 'text-indigo-950' : 'text-indigo-400'}`} />
               </div>
               <div className="text-center">
-                <p className={`font-bold ${watchDifficulty === 'medium' ? 'text-indigo-950' : 'text-white'}`}>Medium</p>
-                <p className={`text-[9px] uppercase tracking-widest mt-1 ${watchDifficulty === 'medium' ? 'text-indigo-900/60 font-bold' : 'text-zinc-500'}`}>STANDARD</p>
+                <p className={`font-bold text-sm sm:text-base ${watchDifficulty === 'medium' ? 'text-indigo-950' : 'text-white'}`}>Medium</p>
+                <p className={`text-[9px] uppercase tracking-widest mt-1 hidden sm:block ${watchDifficulty === 'medium' ? 'text-indigo-900/60 font-bold' : 'text-zinc-500'}`}>STANDARD</p>
               </div>
             </button>
 
@@ -295,7 +401,7 @@ export default function QuizCreate() {
             <button 
               type="button"
               onClick={() => setValue("difficulty", "hard")}
-              className={`relative h-40 rounded-2xl border flex flex-col items-center justify-center gap-4 transition-all ${
+              className={`relative h-28 sm:h-40 rounded-2xl border flex flex-col items-center justify-center gap-2 sm:gap-4 transition-all ${
                 watchDifficulty === 'hard' 
                   ? 'bg-[#3f1d1d]/50 border-red-500/50 shadow-[0_0_20px_rgba(239,68,68,0.1)]' 
                   : 'bg-[#131316] border-white/5 hover:border-white/10'
@@ -306,12 +412,12 @@ export default function QuizCreate() {
                   ✓
                 </div>
               )}
-              <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
-                <Zap className="w-6 h-6 text-red-500" />
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-red-500/20 flex items-center justify-center">
+                <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-red-500" />
               </div>
               <div className="text-center">
-                <p className="font-bold text-white">Hard</p>
-                <p className="text-[9px] uppercase tracking-widest text-zinc-500 mt-1">ADVANCED</p>
+                <p className="font-bold text-white text-sm sm:text-base">Hard</p>
+                <p className="text-[9px] uppercase tracking-widest text-zinc-500 mt-1 hidden sm:block">ADVANCED</p>
               </div>
             </button>
           </div>
@@ -321,16 +427,20 @@ export default function QuizCreate() {
       {/* Right Column: Tips & Preview */}
       <div className="space-y-6">
         {/* Teacher Tip Card */}
-        <div className="bg-[#1c1c21] rounded-[2rem] p-8 border border-white/5 shadow-xl relative overflow-hidden">
+        <div className="bg-[#1c1c21] rounded-[2rem] p-6 sm:p-8 border border-white/5 shadow-xl relative overflow-hidden">
           <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-indigo-300 to-[#a855f7]" />
           
           <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center mb-5">
             <Lightbulb className="w-5 h-5 text-indigo-200" />
           </div>
           
-          <h3 className="text-lg font-bold text-white mb-3" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Teacher Tip</h3>
+          <h3 className="text-lg font-bold text-white mb-3" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            {isEditMode ? "Editing Tips" : "Teacher Tip"}
+          </h3>
           <p className="text-sm text-zinc-400 leading-relaxed mb-6">
-            A clear, descriptive title helps students find your quiz in the library. Use the description to set expectations about time limits and question types.
+            {isEditMode
+              ? "You can update the title, description, difficulty, and visibility. Questions and quiz type cannot be changed after creation."
+              : "A clear, descriptive title helps students find your quiz in the library. Use the description to set expectations about time limits and question types."}
           </p>
           
           <div className="bg-[#131316] rounded-2xl p-5 border border-white/5">
@@ -348,12 +458,18 @@ export default function QuizCreate() {
                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <span>Subject categorized</span>
               </li>
+              {isEditMode && (
+                <li className="flex gap-3 text-sm text-zinc-400 items-start">
+                  <Lock className="w-4 h-4 text-zinc-600 shrink-0 mt-0.5" />
+                  <span>Quiz type locked</span>
+                </li>
+              )}
             </ul>
           </div>
         </div>
 
         {/* Dummy Quiz Preview Card */}
-        <div className="bg-[#1c1c21] rounded-[2rem] p-6 border border-white/5 shadow-xl">
+        <div className="bg-[#1c1c21] rounded-[2rem] p-6 border border-white/5 shadow-xl hidden lg:block">
           <p className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold mb-4 ml-2">QUIZ CARD PREVIEW</p>
           <div className="bg-[#131316] rounded-2xl overflow-hidden border border-white/5 aspect-square flex flex-col">
             <div className="h-1/2 bg-gradient-to-br from-[#4f46e5] to-[#7c3aed] relative p-4 flex flex-col justify-end">
@@ -377,16 +493,24 @@ export default function QuizCreate() {
   );
 
   const renderQuestionsStep = () => (
-    <div className="space-y-6">
-      <div className="bg-[#1c1c21] rounded-[2rem] p-8 border border-white/5 shadow-xl max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-6 border-b border-white/5 pb-4">
+    <div className="space-y-6 pb-16">
+      <div className="bg-[#1c1c21] rounded-[2rem] p-6 sm:p-8 border border-white/5 shadow-xl max-w-4xl mx-auto">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 border-b border-white/5 pb-4">
            <div>
-              <h2 className="text-xl font-bold text-white mb-1">Add Questions</h2>
-              <p className="text-zinc-400 text-sm">Create specific challenges for your students.</p>
+              <h2 className="text-xl font-bold text-white mb-1">
+                {isEditMode ? "Questions (Read Only)" : "Add Questions"}
+              </h2>
+              <p className="text-zinc-400 text-sm">
+                {isEditMode
+                  ? "Questions, options, and correct answers cannot be modified after creation."
+                  : "Create specific challenges for your students."}
+              </p>
            </div>
-           <Button onClick={addQuestion} className="bg-white/10 hover:bg-white/20 text-white rounded-full">
-             <Plus className="w-4 h-4 mr-2" /> Add Question
-           </Button>
+           {!isEditMode && (
+             <Button onClick={addQuestion} className="bg-white/10 hover:bg-white/20 text-white rounded-full">
+               <Plus className="w-4 h-4 mr-2" /> Add Question
+             </Button>
+           )}
         </div>
 
         {questions.length === 0 ? (
@@ -394,32 +518,53 @@ export default function QuizCreate() {
             <div className="w-16 h-16 bg-[#131316] rounded-full mx-auto flex items-center justify-center mb-4">
                <ListChecks className="w-8 h-8 text-zinc-600" />
             </div>
-            <h3 className="text-lg font-bold text-white mb-2">No Questions Yet</h3>
-            <p className="text-zinc-500 mb-6">Start building your quiz by adding the first question.</p>
-            <Button onClick={addQuestion} className="bg-indigo-500 hover:bg-indigo-600 text-white rounded-full px-8 shadow-[0_0_20px_rgba(99,102,241,0.2)]">
-              Create First Question
-            </Button>
+            <h3 className="text-lg font-bold text-white mb-2">
+              {isEditMode ? "No Questions Found" : "No Questions Yet"}
+            </h3>
+            <p className="text-zinc-500 mb-6">
+              {isEditMode ? "This quiz has no questions." : "Start building your quiz by adding the first question."}
+            </p>
+            {!isEditMode && (
+              <Button onClick={addQuestion} className="bg-indigo-500 hover:bg-indigo-600 text-white rounded-full px-8 shadow-[0_0_20px_rgba(99,102,241,0.2)]">
+                Create First Question
+              </Button>
+            )}
           </div>
         ) : (
           <div className="space-y-6">
+            {isEditMode && (
+              <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 flex items-center gap-3">
+                <Lock className="w-5 h-5 text-amber-400 shrink-0" />
+                <p className="text-sm text-amber-200">
+                  Questions are locked after quiz creation. You can update title, description, difficulty, and visibility from the Info and Settings tabs.
+                </p>
+              </div>
+            )}
             {questions.map((question, index) => (
-              <div key={index} className="bg-[#131316] rounded-2xl border border-white/5 p-1 relative overflow-hidden">
+              <div key={question.id || index} className="bg-[#131316] rounded-2xl border border-white/5 p-1 relative">
+                {isEditMode && (
+                  <div className="absolute top-3 right-3 z-10">
+                    <Lock className="w-4 h-4 text-zinc-600" />
+                  </div>
+                )}
                 <div className="flex items-center gap-2 mb-4 p-4 pb-0">
                   <Badge className="bg-indigo-500/20 text-indigo-300 border-none font-bold">Question {index + 1}</Badge>
                 </div>
                 <MemoizedQuestion
                   question={question}
-                  onChange={(q) => updateQuestion(index, q)}
-                  onRemove={() => removeQuestion(index)}
-                  mode="edit"
+                  onChange={isEditMode ? () => {} : (q: any) => updateQuestion(index, q)}
+                  onRemove={isEditMode ? undefined : () => removeQuestion(index)}
+                  mode={isEditMode ? "take" : "edit"}
                 />
               </div>
             ))}
-            <div className="flex justify-center mt-8">
-              <Button onClick={addQuestion} variant="outline" className="border-dashed border-white/10 text-zinc-400 hover:text-white bg-transparent hover:bg-white/5 rounded-xl px-12 py-8 h-auto">
-                <Plus className="w-4 h-4 mr-2" /> Add Another Question
-              </Button>
-            </div>
+            {!isEditMode && (
+              <div className="flex justify-center mt-8">
+                <Button onClick={addQuestion} variant="outline" className="border-dashed border-white/10 text-zinc-400 hover:text-white bg-transparent hover:bg-white/5 rounded-xl px-12 py-8 h-auto">
+                  <Plus className="w-4 h-4 mr-2" /> Add Another Question
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -427,8 +572,8 @@ export default function QuizCreate() {
   );
 
   const renderSettingsStep = () => (
-    <div className="space-y-6 max-w-4xl mx-auto">
-       <div className="bg-[#1c1c21] rounded-[2rem] p-8 border border-white/5 shadow-xl">
+    <div className="space-y-6 max-w-4xl mx-auto pb-16">
+       <div className="bg-[#1c1c21] rounded-[2rem] p-6 sm:p-8 border border-white/5 shadow-xl">
           <div className="flex items-center gap-3 mb-8">
             <div className="w-1.5 h-6 bg-purple-500 rounded-full shadow-[0_0_10px_rgba(168,85,247,0.5)]" />
             <h2 className="text-xl font-bold text-white">Quiz Settings</h2>
@@ -436,30 +581,45 @@ export default function QuizCreate() {
           
           <div className="space-y-8">
              <div className="space-y-3">
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest pl-1">QUIZ MODE</label>
-                <Select onValueChange={(val) => setValue("quizType", val as "standard"|"live")} defaultValue={watchType}>
-                  <SelectTrigger className="bg-[#131316] border-white/5 text-white h-14 rounded-xl">
-                    <SelectValue placeholder="Select Quiz Type" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#1c1c21] border-zinc-800 text-white">
-                    <SelectItem value="standard">Standard (Always Available)</SelectItem>
-                    <SelectItem value="live">Live Event (Teacher Controlled)</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center gap-2">
+                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest pl-1">QUIZ MODE</label>
+                  {isEditMode && <Lock className="w-3 h-3 text-zinc-600" />}
+                </div>
+                {isEditMode ? (
+                  <div className="bg-[#131316] border-white/5 text-zinc-400 h-14 rounded-xl flex items-center px-4 border cursor-not-allowed">
+                    {watchType === "live" ? "Live Event (Teacher Controlled)" : "Standard (Always Available)"}
+                    <Lock className="w-4 h-4 text-zinc-600 ml-auto" />
+                  </div>
+                ) : (
+                  <Select onValueChange={(val) => setValue("quizType", val as "standard"|"live")} defaultValue={watchType}>
+                    <SelectTrigger className="bg-[#131316] border-white/5 text-white h-14 rounded-xl">
+                      <SelectValue placeholder="Select Quiz Type" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-[#1c1c21] border-zinc-800 text-white">
+                      <SelectItem value="standard">Standard (Always Available)</SelectItem>
+                      <SelectItem value="live">Live Event (Teacher Controlled)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
              </div>
 
              {watchType === 'live' && (
                <div className="space-y-3">
                   <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest pl-1">TIME DURATION (MINUTES)</label>
-                  <Input type="number" {...form.register('duration')} className="bg-[#131316] border-white/5 text-white h-14 rounded-xl focus-visible:ring-indigo-500/50" />
+                  <Input type="number" {...form.register('duration', { valueAsNumber: true })} className="bg-[#131316] border-white/5 text-white h-14 rounded-xl focus-visible:ring-indigo-500/50" />
                </div>
              )}
 
              <div className="bg-[#131316] border border-white/5 rounded-2xl p-6 flex items-start gap-4">
-                <Checkbox id="public" defaultChecked onCheckedChange={(c) => setValue("isPublic", c === true)} className="mt-1" />
+                <Checkbox
+                  id="public"
+                  checked={watchIsPublic}
+                  onCheckedChange={(c) => setValue("isPublic", c === true)}
+                  className="mt-1"
+                />
                 <div>
                    <label htmlFor="public" className="font-bold text-white block mb-1">Make Quiz Public</label>
-                   <p className="text-sm text-zinc-500">Allow any student in the sanctuary to discover and attempt this quiz across the global networks.</p>
+                   <p className="text-sm text-zinc-500">Allow any student to discover and attempt this quiz. Private quizzes are hidden from all students.</p>
                 </div>
              </div>
           </div>
@@ -467,21 +627,33 @@ export default function QuizCreate() {
     </div>
   );
 
-
+  // Show loading state while fetching quiz data in edit mode
+  if (isEditMode && !dataLoaded) {
+    return (
+      <div className="min-h-screen bg-[#131316] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 rounded-full border-2 border-indigo-300/20 border-t-indigo-300 animate-spin mx-auto mb-4" />
+          <p className="text-zinc-400 text-sm">Loading quiz data...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Form {...form}>
-      <div className="min-h-screen bg-[#131316] text-white p-6 pb-32 font-sans relative overflow-x-hidden">
+      <div className="min-h-screen bg-[#131316] text-white p-4 sm:p-6 pb-48 sm:pb-56 font-sans relative overflow-x-hidden">
         {/* Glow Effects */}
         <div className="fixed top-0 left-[20%] w-[500px] h-[500px] bg-indigo-600/5 rounded-full blur-[120px] pointer-events-none" />
         <div className="fixed bottom-0 right-0 w-[600px] h-[600px] bg-purple-600/5 rounded-full blur-[150px] pointer-events-none" />
 
-        <div className="max-w-6xl mx-auto space-y-10 relative z-10 pt-4">
+        <div className="max-w-6xl mx-auto space-y-6 sm:space-y-10 relative z-10 pt-4">
           
           {/* Header section */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6">
             <div>
-              <h1 className="text-3xl md:text-4xl font-extrabold text-white mb-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Quiz Creation Wizard</h1>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white mb-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                {isEditMode ? "Edit Quiz" : "Quiz Creation Wizard"}
+              </h1>
               <p className="text-zinc-400 text-sm md:text-base max-w-xl">{getStepText(currentStep)}</p>
             </div>
             
@@ -498,7 +670,7 @@ export default function QuizCreate() {
           </div>
 
           {/* Stepper Tabs */}
-          <div className="flex gap-2 p-1.5 bg-[#1c1c21] rounded-2xl border border-white/5 w-fit">
+          <div className="flex gap-1 sm:gap-2 p-1.5 bg-[#1c1c21] rounded-2xl border border-white/5 w-fit overflow-x-auto">
             {stepLabels.map((step) => {
               const Icon = step.icon;
               const isActive = currentStep === step.id;
@@ -510,7 +682,7 @@ export default function QuizCreate() {
                   type="button"
                   onClick={() => setCurrentStep(step.id)}
                   disabled={step.id > currentStep && !formValid}
-                  className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                  className={`flex items-center gap-2 px-3 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
                     isActive 
                       ? 'bg-indigo-300 text-indigo-950 shadow-[0_0_15px_rgba(165,180,252,0.3)]' 
                       : isPast
@@ -526,7 +698,7 @@ export default function QuizCreate() {
           </div>
 
           {/* Content Area */}
-          <div className="min-h-[500px]">
+          <div className="min-h-[500px] pb-16">
             <AnimatePresence mode="wait">
               <motion.div
                 key={currentStep}
@@ -544,29 +716,39 @@ export default function QuizCreate() {
         </div>
         
         {/* Fixed bottom bar */}
-        <div className="fixed bottom-0 left-0 right-0 bg-[#09090b]/80 backdrop-blur-xl border-t border-white/5 py-4 px-6 md:px-12 flex justify-between items-center z-50">
-          <Button variant="ghost" className="text-zinc-400 hover:text-white" onClick={() => setLocation("/teacher")}>
-            <Trash2 className="w-4 h-4 mr-2" /> Discard Draft
+        <div className="fixed bottom-0 left-0 right-0 bg-[#09090b]/80 backdrop-blur-xl border-t border-white/5 py-3 sm:py-4 px-4 sm:px-6 md:px-12 flex justify-between items-center z-50">
+          <Button variant="ghost" className="text-zinc-400 hover:text-white text-xs sm:text-sm" onClick={() => setLocation("/teacher")}>
+            {isEditMode ? (
+              <><ArrowRight className="w-4 h-4 mr-2 rotate-180" /> Back</>
+            ) : (
+              <><Trash2 className="w-4 h-4 mr-2" /> Discard Draft</>
+            )}
           </Button>
           
-          <div className="flex items-center gap-4">
-            <Button variant="outline" className="hidden md:flex bg-[#1c1c21] border-white/5 text-zinc-300 hover:bg-white/5 hover:text-white rounded-xl">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Button
+              variant="outline"
+              className="hidden sm:flex bg-[#1c1c21] border-white/5 text-zinc-300 hover:bg-white/5 hover:text-white rounded-xl gap-2"
+              onClick={handleSaveDraft}
+              disabled={isPending || !formValid}
+            >
+              <Save className="w-4 h-4" />
               Save as Draft
             </Button>
             <Button 
               type="button"
-              className={`font-bold px-8 h-12 rounded-xl flex items-center shadow-lg transition-all ${
-                (!formValid) || createQuizMutation.isPending
+              className={`font-bold px-4 sm:px-8 h-10 sm:h-12 rounded-xl flex items-center shadow-lg transition-all text-xs sm:text-sm ${
+                (!formValid) || isPending
                   ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed shadow-none'
                   : 'bg-indigo-300 hover:bg-indigo-400 text-indigo-950 hover:shadow-[0_0_20px_rgba(165,180,252,0.5)]'
               }`}
               onClick={nextStep}
-              disabled={(!formValid) || createQuizMutation.isPending}
+              disabled={(!formValid) || isPending}
             >
               {currentStep < 3 ? (
                 <>Next Step <ArrowRight className="w-4 h-4 ml-2" /></>
               ) : (
-                createQuizMutation.isPending ? "Creating..." : "Launch Quiz"
+                isPending ? "Saving..." : (isEditMode ? "Save Changes" : "Launch Quiz")
               )}
             </Button>
           </div>

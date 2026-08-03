@@ -74,7 +74,7 @@ export function ProfileSidebar({ open, onOpenChange }: ProfileSidebarProps) {
         <div className="flex flex-col items-center py-6">
           <Avatar className="h-24 w-24 mb-4 border-2 border-primary/10">
             <AvatarImage 
-              src={user.profilePicture} 
+              src={user.profilePicture || undefined} 
               alt={user.username || "User"} 
             />
             <AvatarFallback className="text-2xl bg-primary-foreground">

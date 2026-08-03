@@ -341,7 +341,7 @@ export function registerRoutes(app: Express): Server {
         ...validatedData,
         createdBy: req.user.id,
         isPublic: validatedData.isPublic ?? false,
-      });
+      } as any);
       res.status(201).json(quiz);
     } catch (error: any) {
       console.error("Error creating quiz:", error);
@@ -371,7 +371,9 @@ export function registerRoutes(app: Express): Server {
         return res.status(403).json({ error: "Not authorized to update this quiz" });
       }
 
-      const validatedData = updateQuizSchema.parse(req.body);
+      // Strip immutable fields - quizType cannot be changed after creation
+      const { quizType, ...safeBody } = req.body;
+      const validatedData = updateQuizSchema.parse(safeBody);
       const updatedQuiz = await storage.updateQuiz(quizId, validatedData);
       res.json(updatedQuiz);
     } catch (error: any) {
@@ -446,6 +448,7 @@ export function registerRoutes(app: Express): Server {
 
       const updatedQuiz = await storage.updateQuiz(quizId, {
         isActive: true,
+        isStarted: true,
         startTime,
         endTime,
       });
@@ -485,6 +488,7 @@ export function registerRoutes(app: Express): Server {
 
       const updatedQuiz = await storage.updateQuiz(quizId, {
         isActive: false,
+        isStarted: false,
         endTime: new Date(),
       });
 
@@ -492,6 +496,71 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error("Error ending quiz:", error);
       res.status(500).json({ error: "Failed to end quiz" });
+    }
+  });
+
+  // Get quiz status (for waiting room polling)
+  app.get("/api/quizzes/:id/status", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const quizId = parseInt(req.params.id);
+      if (isNaN(quizId)) {
+        return res.status(400).json({ error: "Invalid quiz ID" });
+      }
+
+      const quiz = await storage.getQuiz(quizId);
+      if (!quiz) {
+        return res.status(404).json({ error: "Quiz not found" });
+      }
+
+      res.json({
+        id: quiz.id,
+        isActive: quiz.isActive,
+        isStarted: quiz.isStarted,
+        isPublic: quiz.isPublic,
+        isDraft: quiz.isDraft,
+        quizType: quiz.quizType,
+        startTime: quiz.startTime,
+        endTime: quiz.endTime,
+      });
+    } catch (error) {
+      console.error("Error fetching quiz status:", error);
+      res.status(500).json({ error: "Failed to fetch quiz status" });
+    }
+  });
+
+  // Publish a draft quiz
+  app.post("/api/quizzes/:id/publish", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== "teacher") {
+        return res.status(403).json({ error: "Teacher role required" });
+      }
+
+      const quizId = parseInt(req.params.id);
+      if (isNaN(quizId)) {
+        return res.status(400).json({ error: "Invalid quiz ID" });
+      }
+
+      const quiz = await storage.getQuiz(quizId);
+      if (!quiz) {
+        return res.status(404).json({ error: "Quiz not found" });
+      }
+
+      if (quiz.createdBy !== req.user.id) {
+        return res.status(403).json({ error: "Not authorized to publish this quiz" });
+      }
+
+      const updatedQuiz = await storage.updateQuiz(quizId, {
+        isDraft: false,
+      });
+
+      res.json(updatedQuiz);
+    } catch (error) {
+      console.error("Error publishing quiz:", error);
+      res.status(500).json({ error: "Failed to publish quiz" });
     }
   });
 
@@ -554,16 +623,18 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Quiz not found" });
       }
 
+      // Students cannot access draft quizzes
+      if (req.user.role === "student" && quiz.isDraft) {
+        return res.status(403).json({ error: "This quiz is not available" });
+      }
+
       // Check if user has access to this quiz
       if (!quiz.isPublic && quiz.createdBy !== req.user.id) {
         return res.status(403).json({ error: "Not authorized to access this quiz" });
       }
 
-      // For live quizzes, check if the quiz is active
-      if (quiz.quizType === "live" && !quiz.isActive && req.user.role === "student") {
-        return res.status(403).json({ error: "This live quiz is not currently active" });
-      }
-
+      // For live quizzes that are not started, students can still see the quiz (for waiting room)
+      // but we'll flag it so the client knows to show the waiting room
       res.json(quiz);
     } catch (error) {
       console.error("Error fetching quiz:", error);
@@ -592,7 +663,7 @@ export function registerRoutes(app: Express): Server {
         ...req.body,
         quizId: quizId
       });
-      const question = await storage.createQuestion(validatedData);
+      const question = await storage.createQuestion(validatedData as any);
       res.status(201).json(question);
     } catch (error: any) {
       console.error("Error creating question:", error);
@@ -681,14 +752,19 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Quiz not found" });
       }
 
+      // Students cannot access draft quizzes
+      if (req.user.role === "student" && quiz.isDraft) {
+        return res.status(403).json({ error: "This quiz is not available" });
+      }
+
       // Check if user has access to this quiz
       if (!quiz.isPublic && quiz.createdBy !== req.user.id) {
         return res.status(403).json({ error: "Not authorized to access this quiz" });
       }
 
-      // For live quizzes, check if the quiz is active
-      if (quiz.quizType === "live" && !quiz.isActive && req.user.role === "student") {
-        return res.status(403).json({ error: "This live quiz is not currently active" });
+      // For live quizzes, students can only get questions if the quiz is started
+      if (quiz.quizType === "live" && !quiz.isStarted && req.user.role === "student") {
+        return res.status(403).json({ error: "This live quiz has not started yet" });
       }
 
       const questions = await storage.getQuestionsByQuiz(quizId);
@@ -924,7 +1000,7 @@ export function registerRoutes(app: Express): Server {
       // Analyze actual question-level results using stored per-attempt answers
       // This requires that result.answers contains a JSON array of user's answers
       // Helper to parse stored answers in multiple possible formats
-      function parseAnswersField(val: any): string[] {
+      const parseAnswersField = (val: any): string[] => {
         if (val === null || val === undefined) return [];
         // If it's already an array, normalize to strings
         if (Array.isArray(val)) return val.map((v) => (v === null || v === undefined) ? "" : String(v));
@@ -1034,7 +1110,7 @@ export function registerRoutes(app: Express): Server {
 
       // Group results by date
       results.forEach(result => {
-        const completedAt = new Date(result.completedAt);
+        const completedAt = result.completedAt ? new Date(result.completedAt) : new Date();
         if (completedAt >= pastWeek) {
           const dateStr = completedAt.toISOString().split('T')[0];
           if (resultsByDate[dateStr]) {
@@ -1150,7 +1226,7 @@ export function registerRoutes(app: Express): Server {
 
       // For now, return a reasonable estimate based on registered users
       // In a production system, you'd track last_login timestamp
-      const users = await storage.getAllUsers?.();
+      const users = await (storage as any).getAllUsers?.();
       const activeCount = users?.length || 1200; // Default estimate if method not available
       
       res.json({ active: activeCount });

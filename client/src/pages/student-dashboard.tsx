@@ -194,7 +194,7 @@ export default function StudentDashboard() {
                         <div className="h-40 w-full relative overflow-hidden">
                           <img src={mockImages[i % 2]} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-60 mix-blend-screen mix-blend-overlay" />
                           <div className="absolute top-4 left-4 bg-white text-black px-3 py-1.5 rounded text-[9px] font-black uppercase tracking-widest leading-none shadow-lg">
-                            {quiz.category || 'General'}
+                            {(quiz as any).category || 'General'}
                           </div>
                           {alreadyAttempted && (
                             <div className="absolute top-4 right-4 bg-primary/90 text-primary-foreground px-3 py-1.5 rounded text-[9px] font-black uppercase tracking-widest leading-none shadow-lg">

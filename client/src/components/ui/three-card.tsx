@@ -6,9 +6,11 @@ const ThreeCard = forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => {
+  const { onDrag, ...restProps } = props as any;
   return (
     <motion.div
       ref={ref}
+      {...restProps}
       className={cn(
         "rounded-lg border bg-card text-card-foreground shadow-lg",
         "transform-gpu perspective-1000",

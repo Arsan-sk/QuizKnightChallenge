@@ -46,9 +46,9 @@ export function AnimatedCounter({
       scrollSpyOnce={scrollSpyOnce}
       className={cn("transition-all", className)}
     >
-      {({ countUpRef, start }) => (
-        <span ref={countUpRef} className="tabular-nums" onMouseEnter={start}>
-          {start}
+      {({ countUpRef, start: startFn }: any) => (
+        <span ref={countUpRef} className="tabular-nums" onMouseEnter={startFn}>
+          {null}
         </span>
       )}
     </CountUp>
