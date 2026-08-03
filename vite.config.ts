@@ -20,6 +20,9 @@ export default defineConfig({
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
   },
+  optimizeDeps: {
+    include: ["@mediapipe/face_mesh", "@mediapipe/camera_utils"],
+  },
   server: {
     host: '0.0.0.0', // Listen on all network interfaces
     port: parseInt(process.env.PORT || '5000'),
