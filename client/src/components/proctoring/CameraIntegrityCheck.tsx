@@ -96,7 +96,7 @@ export function CameraIntegrityCheck({ onVerified }: CameraIntegrityCheckProps) 
 
                 <CardContent className="space-y-6">
                     {/* Camera Preview */}
-                    <div className="relative w-full aspect-square sm:aspect-video min-h-[320px] sm:min-h-0 bg-muted rounded-xl overflow-hidden border-2 border-border flex items-center justify-center">
+                    <div className="relative aspect-square sm:aspect-video bg-muted rounded-lg overflow-hidden border-2 border-border">
                         {permissionGranted === null && (
                             <div className="absolute inset-0 flex items-center justify-center">
                                 <div className="text-center space-y-2">
@@ -132,7 +132,7 @@ export function CameraIntegrityCheck({ onVerified }: CameraIntegrityCheckProps) 
                                     autoPlay
                                     playsInline
                                     muted
-                                    className="absolute inset-0 w-full h-full object-contain mx-auto"
+                                    className="w-full h-full object-cover"
                                     style={{ transform: 'scaleX(-1)' }}
                                 />
 
