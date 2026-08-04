@@ -14,9 +14,10 @@ const Layout: React.FC<Props> = ({ children }) => {
   const { user } = useAuth();
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
 
-  // Hide sidebar/topbar on public pages or when not authenticated
+  // Hide sidebar/topbar/mobilenav on public routes or during quiz-taking
   const isPublicRoute = location === '/' || location.startsWith('/auth');
-  const showNav = !!user && !isPublicRoute;
+  const isQuizTakePage = location.startsWith('/student/quiz/') || location.startsWith('/quiz-take');
+  const showNav = !!user && !isPublicRoute && !isQuizTakePage;
 
   // Close sidebar when route changes on mobile
   useEffect(() => {

@@ -1863,8 +1863,8 @@ export default function QuizTake() {
 
         </main>
 
-        {/* Bottom Action Bar */}
-        <footer className="bg-[#09090b]/90 backdrop-blur-2xl border-t border-white/5 py-4 px-4 lg:px-12 flex flex-col sm:flex-row justify-between items-center gap-4 relative z-30">
+        {/* Bottom Action Bar (Sticky at bottom for seamless fullscreen & mobile navigation) */}
+        <footer className="sticky bottom-0 left-0 right-0 z-40 bg-[#09090b]/95 backdrop-blur-2xl border-t border-white/10 py-3.5 px-4 lg:px-12 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
           <div className="flex items-center gap-4 sm:gap-10 w-full sm:w-auto">
             <div className="hidden sm:block shrink-0">
               <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-1">Attempt Progress</span>
@@ -1881,10 +1881,10 @@ export default function QuizTake() {
                     setCurrentQuestion(index);
                   }}
                   className={cn(
-                    "flex-shrink-0 h-2 rounded-full transition-all duration-300",
-                    currentQuestion === index ? "bg-indigo-400 w-12"
-                    : answers[index] ? "bg-emerald-500 w-6 sm:w-8" 
-                    : "bg-zinc-800 hover:bg-zinc-700 w-6 sm:w-8"
+                    "flex-shrink-0 h-2.5 rounded-full transition-all duration-300",
+                    currentQuestion === index ? "bg-indigo-400 w-10 sm:w-12"
+                    : answers[index] ? "bg-emerald-500 w-5 sm:w-8" 
+                    : "bg-zinc-800 hover:bg-zinc-700 w-5 sm:w-8"
                   )}
                   title={`Question ${index + 1}`}
                 />
@@ -1896,7 +1896,7 @@ export default function QuizTake() {
             <Button 
               type="button"
               variant="ghost" 
-              className="text-zinc-400 hover:text-white hover:bg-white/5 text-xs sm:text-sm font-bold min-h-12"
+              className="text-zinc-400 hover:text-white hover:bg-white/5 text-xs sm:text-sm font-bold h-11 px-3"
               onClick={handleQuizSubmission}
               disabled={submitting}
             >
@@ -1909,7 +1909,7 @@ export default function QuizTake() {
                 onClick={previous}
                 disabled={currentQuestion === 0}
                 variant="outline"
-                className="bg-[#1c1c21] border-white/5 text-zinc-300 hover:bg-white/10 hover:text-white rounded-xl h-12 w-12 p-0 flex items-center justify-center shrink-0"
+                className="bg-[#1c1c21] border-white/10 text-zinc-300 hover:bg-white/10 hover:text-white rounded-xl h-11 w-11 p-0 flex items-center justify-center shrink-0"
               >
                 <ArrowLeft className="w-5 h-5" />
               </Button>
@@ -1917,7 +1917,7 @@ export default function QuizTake() {
               {currentQuestion < (typedQuestions?.length || 0) - 1 ? (
                 <Button 
                   type="button"
-                  className="bg-indigo-300 hover:bg-indigo-400 text-indigo-950 font-bold px-4 sm:px-8 h-12 rounded-xl text-xs sm:text-sm shadow-[0_0_20px_rgba(165,180,252,0.3)] whitespace-nowrap shrink-0"
+                  className="bg-indigo-400 hover:bg-indigo-500 text-indigo-950 font-bold px-5 sm:px-8 h-11 rounded-xl text-xs sm:text-sm shadow-[0_0_20px_rgba(165,180,252,0.3)] whitespace-nowrap shrink-0"
                   onClick={next}
                 >
                   Next <span className="hidden sm:inline">Question</span> <ArrowRight className="w-4 h-4 ml-1 sm:ml-2 shrink-0" />
@@ -1927,7 +1927,7 @@ export default function QuizTake() {
                   type="button"
                   onClick={handleQuizSubmission}
                   disabled={submitting}
-                  className="bg-emerald-400 hover:bg-emerald-500 text-emerald-950 font-bold px-4 sm:px-8 h-12 rounded-xl text-xs sm:text-sm shadow-[0_0_20px_rgba(52,211,153,0.3)] whitespace-nowrap shrink-0"
+                  className="bg-emerald-400 hover:bg-emerald-500 text-emerald-950 font-bold px-5 sm:px-8 h-11 rounded-xl text-xs sm:text-sm shadow-[0_0_20px_rgba(52,211,153,0.3)] whitespace-nowrap shrink-0"
                 >
                   {submitting ? <><Loader2 className="w-4 h-4 animate-spin mr-1 sm:mr-2 shrink-0" /> Processing</> : <><Send className="w-4 h-4 mr-1 sm:mr-2 shrink-0" /> Finish <span className="hidden sm:inline">Quiz</span></>}
                 </Button>
