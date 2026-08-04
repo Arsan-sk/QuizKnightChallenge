@@ -21,7 +21,7 @@ export default defineConfig({
     emptyOutDir: true,
   },
   optimizeDeps: {
-    include: ["@mediapipe/face_mesh", "@mediapipe/camera_utils"],
+    include: ["@mediapipe/camera_utils"],
   },
   server: {
     host: '0.0.0.0', // Listen on all network interfaces

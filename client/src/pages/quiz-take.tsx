@@ -1432,7 +1432,7 @@ export default function QuizTake() {
                             autoPlay
                             playsInline
                             muted
-                            className="w-full h-full object-cover"
+                            className="absolute inset-0 w-full h-full object-contain mx-auto"
                             style={{ transform: 'scaleX(-1)' }}
                           />
                           

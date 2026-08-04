@@ -1,13 +1,42 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import * as faceMeshModule from '@mediapipe/face_mesh';
-type Results = faceMeshModule.Results;
 
-// Safely extract FaceMesh constructor across Vite dev server and Rollup production build
-const FaceMeshConstructor: any =
-    (faceMeshModule as any).FaceMesh ||
-    ((faceMeshModule as any).default && (faceMeshModule as any).default.FaceMesh) ||
-    (faceMeshModule as any).default ||
-    faceMeshModule;
+// Types from @mediapipe/face_mesh (used only for TypeScript typing, not runtime)
+interface Results {
+    multiFaceLandmarks?: any[][];
+    image: HTMLCanvasElement | HTMLVideoElement;
+}
+
+const CDN_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619';
+
+/**
+ * Load FaceMesh constructor from CDN via script tag.
+ * This completely bypasses Vite/Rollup bundling which mangles the CJS→ESM interop
+ * causing "TypeError: FaceMesh is not a constructor" in production.
+ */
+let _faceMeshLoadPromise: Promise<any> | null = null;
+function loadFaceMeshFromCDN(): Promise<any> {
+    if (_faceMeshLoadPromise) return _faceMeshLoadPromise;
+    _faceMeshLoadPromise = new Promise((resolve, reject) => {
+        // Check if already loaded
+        if ((window as any).FaceMesh) {
+            return resolve((window as any).FaceMesh);
+        }
+        const script = document.createElement('script');
+        script.src = `${CDN_BASE}/face_mesh.js`;
+        script.crossOrigin = 'anonymous';
+        script.onload = () => {
+            const FM = (window as any).FaceMesh;
+            if (FM) {
+                resolve(FM);
+            } else {
+                reject(new Error('FaceMesh not found on window after script load'));
+            }
+        };
+        script.onerror = () => reject(new Error('Failed to load FaceMesh CDN script'));
+        document.head.appendChild(script);
+    });
+    return _faceMeshLoadPromise;
+}
 
 interface FaceProctoringConfig {
     enabled: boolean;
@@ -301,21 +330,14 @@ export function useFaceProctoring(
                     });
                 }
 
-                // Create FaceMesh once
+                // Create FaceMesh once (load from CDN to bypass Vite bundling issues)
                 if (!faceMeshRef.current) {
-                    const CDN_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619';
-                    const getAssetUrl = (file: string) => {
-                        if (typeof window !== 'undefined' && window.location.origin) {
-                            return `${window.location.origin}/mediapipe/${file}`;
-                        }
-                        return `/mediapipe/${file}`;
-                    };
+                    const FaceMeshClass = await loadFaceMeshFromCDN();
+
                     const createFaceMesh = (opts: { refineLandmarks: boolean; minDetectionConfidence: number; minTrackingConfidence: number; }) => {
-                        return new FaceMeshConstructor({
-                            locateFile: (file: string | undefined) => {
-                                if (!file) return getAssetUrl('');
-                                // Fallback to CDN URL if local asset fetch is not used
-                                return getAssetUrl(file);
+                        return new FaceMeshClass({
+                            locateFile: (file: string) => {
+                                return `${CDN_BASE}/${file}`;
                             },
                         });
                     };
