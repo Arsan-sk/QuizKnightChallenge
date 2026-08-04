@@ -240,7 +240,7 @@ if (!process.env.DATABASE_URL) {
     "DATABASE_URL is not set. Using in-memory mode for development."
   );
 }
-var connectionString = process.env.NODE_ENV === "production" ? process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL || "postgresql://fake" : process.env.DATABASE_URL || process.env.SUPABASE_DATABASE_URL || "postgresql://fake";
+var connectionString = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL || "postgresql://fake";
 var isCloudOrProduction = process.env.NODE_ENV === "production" || connectionString.includes("supabase") || connectionString.includes("neon.tech") || connectionString.includes("render.com") || connectionString.includes("cockroach") || connectionString.includes("aiven") || connectionString !== "postgresql://fake" && !connectionString.includes("localhost") && !connectionString.includes("127.0.0.1");
 var pool = new Pool({
   connectionString,

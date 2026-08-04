@@ -17,10 +17,7 @@ if (!process.env.DATABASE_URL) {
   // We'll still initialize the objects, but they won't connect to a real database
   // This allows the app to start for development purposes
 }
-const connectionString = 
-  process.env.NODE_ENV === 'production' 
-    ? (process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL || 'postgresql://fake')
-    : (process.env.DATABASE_URL || process.env.SUPABASE_DATABASE_URL || 'postgresql://fake');
+const connectionString = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL || 'postgresql://fake';
 const isCloudOrProduction = 
   process.env.NODE_ENV === 'production' || 
   connectionString.includes('supabase') || 
