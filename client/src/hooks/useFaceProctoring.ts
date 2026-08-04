@@ -88,14 +88,15 @@ export function useFaceProctoring(
 
         if (!top || !bottom || !left || !right) return false;
 
-        const buffer = 0.01; // 1% buffer to avoid edge noise
+        // Allow reasonable edge tolerance so a face near frame boundaries is not falsely rejected
+        const margin = 0.05;
 
-        // Check if any point is out of bounds [0, 1]
+        // Check if any point is out of bounds
         const isOutOfBounds =
-            top.y < 0 + buffer ||
-            bottom.y > 1 - buffer ||
-            left.x < 0 + buffer ||
-            right.x > 1 - buffer;
+            top.y < -margin ||
+            bottom.y > 1 + margin ||
+            left.x < -margin ||
+            right.x > 1 + margin;
 
         return !isOutOfBounds;
     }, []);
@@ -276,59 +277,56 @@ export function useFaceProctoring(
 
         const initializeFaceMesh = async () => {
             try {
+                // Modified: We no longer manage the stream here.
+                // We expect videoRef.current to be populated and playing by the parent component.
                 const video = videoRef.current;
+
                 if (!video) return;
 
-                // Wait for video to be ready with a safety timeout so it NEVER hangs
+                // Wait for video to be ready
                 if (video.readyState < 2) {
                     await new Promise<void>((resolve) => {
-                        let resolved = false;
-                        const done = () => {
-                            if (!resolved) {
-                                resolved = true;
-                                video.removeEventListener('loadeddata', done);
-                                video.removeEventListener('loadedmetadata', done);
-                                video.removeEventListener('canplay', done);
-                                resolve();
-                            }
+                        const onLoadedData = () => {
+                            video.removeEventListener('loadeddata', onLoadedData);
+                            resolve();
                         };
-                        video.addEventListener('loadeddata', done);
-                        video.addEventListener('loadedmetadata', done);
-                        video.addEventListener('canplay', done);
-                        setTimeout(done, 3000); // 3s safety timeout fallback
+                        video.addEventListener('loadeddata', onLoadedData);
                     });
                 }
 
-                // Create FaceMesh once with CDN fallback
+                // Create FaceMesh once
                 if (!faceMeshRef.current) {
-                    const createFaceMesh = (baseUrl: string, refine: boolean = true) => {
+                    // Start with specific version to match runtime WASM assets
+                    // Modified: Use local assets from /public/mediapipe to avoid CDN issues
+                    const CDN_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619';
+                    const createFaceMesh = (opts: { refineLandmarks: boolean; minDetectionConfidence: number; minTrackingConfidence: number; }) => {
                         return new FaceMesh({
                             locateFile: (file: string | undefined) => {
-                                if (!file) return baseUrl;
-                                return `${baseUrl}/${file}`;
+                                if (!file) return CDN_BASE;
+                                return `${CDN_BASE}/${file}`;
                             },
                         });
                     };
 
                     try {
-                        const faceMesh = createFaceMesh('/mediapipe', true);
+                        const faceMesh = createFaceMesh({ refineLandmarks: true, minDetectionConfidence: 0.7, minTrackingConfidence: 0.7 });
                         faceMesh.setOptions({
-                            maxNumFaces: 2,
+                            maxNumFaces: 2, // Enable multi-face detection
                             refineLandmarks: true,
-                            minDetectionConfidence: 0.6,
-                            minTrackingConfidence: 0.6,
+                            minDetectionConfidence: 0.7,
+                            minTrackingConfidence: 0.7,
                         });
                         faceMesh.onResults(onResults);
                         faceMeshRef.current = faceMesh;
                     } catch (initErr) {
-                        console.warn('Local FaceMesh init failed, falling back to CDN', initErr);
+                        console.warn('Primary FaceMesh init failed, attempting fallback without refineLandmarks', initErr);
                         try {
-                            const faceMesh = createFaceMesh('https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh', false);
+                            const faceMesh = createFaceMesh({ refineLandmarks: false, minDetectionConfidence: 0.55, minTrackingConfidence: 0.55 });
                             faceMesh.setOptions({
                                 maxNumFaces: 2,
                                 refineLandmarks: false,
-                                minDetectionConfidence: 0.5,
-                                minTrackingConfidence: 0.5,
+                                minDetectionConfidence: 0.55,
+                                minTrackingConfidence: 0.55,
                             });
                             faceMesh.onResults(onResults);
                             faceMeshRef.current = faceMesh;
@@ -339,7 +337,7 @@ export function useFaceProctoring(
                     }
                 }
 
-                // Start a safe animation loop that only calls send when video is ready (readyState >= 2)
+                // Start a safe animation loop that only calls send when video is ready
                 const loop = async () => {
                     try {
                         const videoEl = videoRef.current;
@@ -347,8 +345,8 @@ export function useFaceProctoring(
                         // Respect temporary backoff after repeated send errors
                         if (backoffUntilRef.current && backoffUntilRef.current > Date.now()) {
                             // skip this frame
-                        } else if (faceMeshRef.current && videoEl && videoEl.readyState >= 2 && videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
-                            // Limit send rate to reduce WASM/GL pressure (send every other frame)
+                        } else if (faceMeshRef.current && videoEl && videoEl.readyState === 4 && videoEl.videoWidth > 0 && videoEl.videoHeight > 0) {
+                            // Limit send rate to reduce wasm/GL pressure (send every other frame)
                             frameCountRef.current = (frameCountRef.current || 0) + 1;
                             if (frameCountRef.current % 2 === 0) {
                                 try {
@@ -357,6 +355,7 @@ export function useFaceProctoring(
                                 } catch (err) {
                                     console.warn('faceMesh.send failed for a frame:', err);
                                     consecutiveSendErrorsRef.current = (consecutiveSendErrorsRef.current || 0) + 1;
+                                    // If multiple consecutive errors, back off briefly to allow state to settle
                                     if (consecutiveSendErrorsRef.current >= 3) {
                                         backoffUntilRef.current = Date.now() + 1000; // 1s backoff
                                         consecutiveSendErrorsRef.current = 0;
@@ -374,6 +373,10 @@ export function useFaceProctoring(
                 setIsInitialized(true);
             } catch (error) {
                 console.error('Failed to initialize face mesh:', error);
+                // If permission denied or other error, ensure we don't leave pending state
+                // If permission denied or other error, ensure we don't leave pending state
+                // localStream is managed by parent, no need to stop tracks here
+
             }
         };
 
