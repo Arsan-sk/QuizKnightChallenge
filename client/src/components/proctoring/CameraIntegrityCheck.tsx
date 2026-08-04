@@ -116,7 +116,7 @@ export function CameraIntegrityCheck({ onVerified }: CameraIntegrityCheckProps) 
                         )}
 
                         {permissionGranted && !checkingFace && (
-                            <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="absolute inset-0 flex items-center justify-center bg-muted/80 backdrop-blur-sm z-10">
                                 <div className="text-center space-y-2">
                                     <CheckCircle className="h-12 w-12 mx-auto text-green-500" />
                                     <p className="text-sm text-muted-foreground">Camera ready</p>
@@ -125,17 +125,19 @@ export function CameraIntegrityCheck({ onVerified }: CameraIntegrityCheckProps) 
                             </div>
                         )}
 
+                        {permissionGranted && (
+                            <video
+                                ref={videoRef}
+                                autoPlay
+                                playsInline
+                                muted
+                                className="w-full h-full object-cover"
+                                style={{ transform: 'scaleX(-1)' }}
+                            />
+                        )}
+
                         {checkingFace && (
                             <>
-                                <video
-                                    ref={videoRef}
-                                    autoPlay
-                                    playsInline
-                                    muted
-                                    className="w-full h-full object-cover"
-                                    style={{ transform: 'scaleX(-1)' }}
-                                />
-
                                 {/* Confidence Indicator */}
                                 <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-sm px-3 py-2 rounded-md">
                                     <div className="flex items-center gap-2">
