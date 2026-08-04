@@ -7,6 +7,7 @@ import dotenv from "dotenv";
 import path from 'path';
 import fs from 'fs';
 
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 dotenv.config();
 
 // Check for DATABASE_URL and provide a fallback for development

@@ -1415,7 +1415,7 @@ export default function QuizTake() {
 
                   {/* Camera Preview Area */}
                   <div className="mb-6">
-                    <div className="relative aspect-square sm:aspect-video bg-black rounded-xl overflow-hidden border border-emerald-500/20 flex items-center justify-center group">
+                    <div className="relative w-full aspect-square sm:aspect-video min-h-[320px] sm:min-h-0 bg-black rounded-xl overflow-hidden border border-emerald-500/20 flex items-center justify-center group">
                       {!checkingCamera && !cameraPermissionGranted && (
                         <div className="text-center space-y-3">
                           <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto">

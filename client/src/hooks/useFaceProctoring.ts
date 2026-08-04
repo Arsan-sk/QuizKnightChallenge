@@ -80,7 +80,6 @@ export function useFaceProctoring(
     const isFaceFullyVisible = useCallback((landmarks: any[]): boolean => {
         if (!landmarks || landmarks.length < 468) return false;
 
-        // Key extremities indices
         const top = landmarks[10];    // Top of forehead
         const bottom = landmarks[152]; // Chin
         const left = landmarks[234];   // Left cheek
@@ -88,10 +87,10 @@ export function useFaceProctoring(
 
         if (!top || !bottom || !left || !right) return false;
 
-        // Allow reasonable edge tolerance so a face near frame boundaries is not falsely rejected
-        const margin = 0.05;
+        // Generous margin tolerance (15%) so face near edges is detected accurately
+        const margin = 0.15;
 
-        // Check if any point is out of bounds
+        // Check if any point is significantly out of bounds
         const isOutOfBounds =
             top.y < -margin ||
             bottom.y > 1 + margin ||
@@ -298,12 +297,17 @@ export function useFaceProctoring(
                 if (!faceMeshRef.current) {
                     // Start with specific version to match runtime WASM assets
                     // Modified: Use local assets from /public/mediapipe to avoid CDN issues
-                    const CDN_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619';
+                    const getAssetUrl = (file: string) => {
+                        if (typeof window !== 'undefined' && window.location.origin) {
+                            return `${window.location.origin}/mediapipe/${file}`;
+                        }
+                        return `/mediapipe/${file}`;
+                    };
                     const createFaceMesh = (opts: { refineLandmarks: boolean; minDetectionConfidence: number; minTrackingConfidence: number; }) => {
                         return new FaceMesh({
                             locateFile: (file: string | undefined) => {
-                                if (!file) return CDN_BASE;
-                                return `${CDN_BASE}/${file}`;
+                                if (!file) return getAssetUrl('');
+                                return getAssetUrl(file);
                             },
                         });
                     };

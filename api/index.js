@@ -233,7 +233,9 @@ var submitResultSchema = z.object({
 import pg from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import dotenv from "dotenv";
+import path from "path";
 var { Pool } = pg;
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 dotenv.config();
 if (!process.env.DATABASE_URL) {
   console.warn(
@@ -1115,17 +1117,17 @@ function registerStatsRoutes(app2) {
 
 // server/routes.ts
 import multer from "multer";
-import path from "path";
+import path2 from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { createClient } from "@supabase/supabase-js";
 var __filename = fileURLToPath(import.meta.url);
-var __dirname = path.dirname(__filename);
+var __dirname = path2.dirname(__filename);
 var supabaseUrl = process.env.SUPABASE_URL;
 var supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 var supabaseUrlFull = supabaseUrl ?? "https://fmzwbrjdlnechdquodig.supabase.co";
 var supabase = supabaseUrlFull && supabaseKey ? createClient(supabaseUrlFull, supabaseKey) : null;
-var uploadDir = path.join(__dirname, "../uploads");
+var uploadDir = path2.join(__dirname, "../uploads");
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
@@ -1144,7 +1146,7 @@ var upload = multer({
 });
 function registerRoutes(app2) {
   setupAuth(app2);
-  app2.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+  app2.use("/uploads", express.static(path2.join(__dirname, "../uploads")));
   app2.post("/api/upload", upload.single("image"), async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
@@ -1155,7 +1157,7 @@ function registerRoutes(app2) {
       }
       if (supabase) {
         const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-        const ext = path.extname(req.file.originalname);
+        const ext = path2.extname(req.file.originalname);
         const filename = `quiz-image-${uniqueSuffix}${ext}`;
         const { data, error } = await supabase.storage.from("quiz-images").upload(filename, req.file.buffer, {
           contentType: req.file.mimetype,
