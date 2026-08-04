@@ -18,48 +18,54 @@ if (!process.env.DATABASE_URL) {
   // This allows the app to start for development purposes
 }
 const connectionString = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL || 'postgresql://fake';
-const isSupabase = connectionString.includes('supabase.co') || connectionString.includes('supabase.com');
+const isCloudOrProduction = 
+  process.env.NODE_ENV === 'production' || 
+  connectionString.includes('supabase') || 
+  connectionString.includes('neon.tech') || 
+  connectionString.includes('render.com') ||
+  connectionString.includes('cockroach') ||
+  connectionString.includes('aiven') ||
+  (connectionString !== 'postgresql://fake' && !connectionString.includes('localhost') && !connectionString.includes('127.0.0.1'));
 
 // Create pool with either real connection string or empty string (will fail gracefully)
 export const pool = new Pool({
   connectionString,
-  // Add connection options to handle retries and timeouts
   max: 10,
   connectionTimeoutMillis: 15000,
   idleTimeoutMillis: 30000,
   keepAlive: true,
-  ...(isSupabase ? { ssl: { rejectUnauthorized: false } } : {})
+  ...(isCloudOrProduction ? { ssl: { rejectUnauthorized: false } } : {})
 });
 
 // Add error handler to prevent idle client errors from crashing the process
-pool.on('error', (err, client) => {
-  console.error('Unexpected error on idle database client', err);
+pool.on('error', (err, _client) => {
+  console.error('Unexpected error on idle database client', err?.message || err);
 });
 
-// Test the database connection
-pool.connect((err, client, done) => {
-  if (err) {
-    console.error('Error connecting to the database:', err.stack);
-  } else {
-    console.log('Successfully connected to the database');
-    done();
-  }
-});
+// Test the database connection if non-fake
+if (connectionString !== 'postgresql://fake') {
+  pool.connect((err, _client, done) => {
+    if (err) {
+      console.error('Error connecting to the database:', err.message);
+    } else {
+      console.log('Successfully connected to the database');
+      done();
+    }
+  });
+}
 
 export const db = drizzle(pool, { schema });
 
 // Apply schema changes directly
 async function applySchemaChanges() {
   try {
-    console.log('Applying schema changes...');
-    // Add a small delay to avoid race conditions on startup
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
     // Check if using fake connection String
     if (connectionString === 'postgresql://fake') {
       console.log('Using fake database, skipping schema changes');
       return;
     }
+
+    console.log('Applying schema changes...');
 
     const client = await pool.connect();
     console.log('Got client for schema changes');
