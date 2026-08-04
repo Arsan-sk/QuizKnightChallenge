@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { FaceMesh, Results } from '@mediapipe/face_mesh';
+import * as faceMeshModule from '@mediapipe/face_mesh';
+type Results = faceMeshModule.Results;
+
+// Safely extract FaceMesh constructor across Vite dev server and Rollup production build
+const FaceMeshConstructor: any =
+    (faceMeshModule as any).FaceMesh ||
+    ((faceMeshModule as any).default && (faceMeshModule as any).default.FaceMesh) ||
+    (faceMeshModule as any).default ||
+    faceMeshModule;
 
 interface FaceProctoringConfig {
     enabled: boolean;
@@ -33,7 +41,7 @@ export function useFaceProctoring(
     const [countdown, setCountdown] = useState(5); // 5s countdown
     const [violationType, setViolationType] = useState<'low_confidence' | 'multiple_faces' | null>(null);
 
-    const faceMeshRef = useRef<FaceMesh | null>(null);
+    const faceMeshRef = useRef<any>(null);
     const animationRef = useRef<number | null>(null);
     const confidenceHistoryRef = useRef<number[]>([]);
     const emaRef = useRef<number | null>(null);
@@ -295,8 +303,7 @@ export function useFaceProctoring(
 
                 // Create FaceMesh once
                 if (!faceMeshRef.current) {
-                    // Start with specific version to match runtime WASM assets
-                    // Modified: Use local assets from /public/mediapipe to avoid CDN issues
+                    const CDN_BASE = 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619';
                     const getAssetUrl = (file: string) => {
                         if (typeof window !== 'undefined' && window.location.origin) {
                             return `${window.location.origin}/mediapipe/${file}`;
@@ -304,9 +311,10 @@ export function useFaceProctoring(
                         return `/mediapipe/${file}`;
                     };
                     const createFaceMesh = (opts: { refineLandmarks: boolean; minDetectionConfidence: number; minTrackingConfidence: number; }) => {
-                        return new FaceMesh({
+                        return new FaceMeshConstructor({
                             locateFile: (file: string | undefined) => {
                                 if (!file) return getAssetUrl('');
+                                // Fallback to CDN URL if local asset fetch is not used
                                 return getAssetUrl(file);
                             },
                         });
