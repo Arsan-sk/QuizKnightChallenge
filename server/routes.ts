@@ -960,45 +960,6 @@ export function registerRoutes(app: Express): Server {
       }
       const userMap = Object.fromEntries(users.filter(Boolean).map(user => [user.id, user]));
 
-      // Create student reports
-      const studentReports = results.map(result => {
-        const user = userMap[result.userId];
-        // Calculate score as percentage
-        const scorePercentage = result.totalQuestions > 0
-          ? (result.correctAnswers / result.totalQuestions) * 100
-          : 0;
-
-        return {
-          userId: result.userId,
-          username: user ? user.username : 'Unknown',
-          score: parseFloat(scorePercentage.toFixed(1)),
-          correctAnswers: result.correctAnswers,
-          wrongAnswers: result.wrongAnswers,
-          timeTaken: result.timeTaken,
-          completedAt: result.completedAt,
-          answers: parseAnswersField(result.answers),
-          tabSwitchCount: result.tabSwitchCount || 0,
-          copyPasteAttempts: result.copyPasteAttempts || 0,
-          proctoringFlags: result.proctoringFlags || 0
-        };
-      });
-
-      // Create a mapping of question IDs to their total attempts, correct counts, and average times
-      const questionData: Record<number, any> = {};
-
-      // Initialize question data
-      questions.forEach(q => {
-        questionData[q.id] = {
-          id: q.id,
-          text: q.questionText,
-          totalAttempts: results.length,
-          correctCount: 0,
-          totalTime: 0
-        };
-      });
-
-      // Analyze actual question-level results using stored per-attempt answers
-      // This requires that result.answers contains a JSON array of user's answers
       // Helper to parse stored answers in multiple possible formats
       const parseAnswersField = (val: any): string[] => {
         if (val === null || val === undefined) return [];
@@ -1046,7 +1007,44 @@ export function registerRoutes(app: Express): Server {
         // Unknown format: log and return empty
         console.warn("Unable to parse answers field, returning empty array. Raw value:", val);
         return [];
-      }
+      };
+
+      // Create student reports
+      const studentReports = results.map(result => {
+        const user = userMap[result.userId];
+        // Calculate score as percentage
+        const scorePercentage = result.totalQuestions > 0
+          ? (result.correctAnswers / result.totalQuestions) * 100
+          : 0;
+
+        return {
+          userId: result.userId,
+          username: user ? user.username : 'Unknown',
+          score: parseFloat(scorePercentage.toFixed(1)),
+          correctAnswers: result.correctAnswers,
+          wrongAnswers: result.wrongAnswers,
+          timeTaken: result.timeTaken,
+          completedAt: result.completedAt,
+          answers: parseAnswersField(result.answers),
+          tabSwitchCount: result.tabSwitchCount || 0,
+          copyPasteAttempts: result.copyPasteAttempts || 0,
+          proctoringFlags: result.proctoringFlags || 0
+        };
+      });
+
+      // Create a mapping of question IDs to their total attempts, correct counts, and average times
+      const questionData: Record<number, any> = {};
+
+      // Initialize question data
+      questions.forEach(q => {
+        questionData[q.id] = {
+          id: q.id,
+          text: q.questionText,
+          totalAttempts: results.length,
+          correctCount: 0,
+          totalTime: 0
+        };
+      });
 
       results.forEach(result => {
         let answersArray: string[] = parseAnswersField(result.answers);

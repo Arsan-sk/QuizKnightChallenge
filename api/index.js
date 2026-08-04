@@ -988,7 +988,7 @@ function setupAuth(app2) {
 }
 
 // server/stats.ts
-import { eq as eq2, desc as desc2, sql as sql2, count } from "drizzle-orm";
+import { eq as eq2, desc as desc2, count, inArray, gt as gt2 } from "drizzle-orm";
 async function calculateStudentStats(userId) {
   const userResults = await db.select().from(results).where(eq2(results.userId, userId)).orderBy(desc2(results.completedAt));
   const quizzesCompleted = userResults.length;
@@ -1019,13 +1019,13 @@ async function calculateTeacherStats(userId) {
   const quizIds = teacherQuizzes.map((q) => q.id);
   let totalQuestions = 0;
   if (quizIds.length > 0) {
-    const questionCounts = await db.select({ count: count() }).from(questions).where(sql2`${questions.quizId} IN ${quizIds}`);
-    totalQuestions = questionCounts[0]?.count || 0;
+    const questionCounts = await db.select({ count: count() }).from(questions).where(inArray(questions.quizId, quizIds));
+    totalQuestions = Number(questionCounts[0]?.count) || 0;
   }
   let allResults = [];
   let studentsReached = 0;
   if (quizIds.length > 0) {
-    allResults = await db.select().from(results).where(sql2`${results.quizId} IN ${quizIds}`);
+    allResults = await db.select().from(results).where(inArray(results.quizId, quizIds));
     const uniqueStudents = new Set(allResults.map((r) => r.userId));
     studentsReached = uniqueStudents.size;
   }
@@ -1038,7 +1038,7 @@ async function calculateTeacherStats(userId) {
       const [questionCount] = await db.select({ count: count() }).from(questions).where(eq2(questions.quizId, quiz.id));
       return {
         ...quiz,
-        questionCount: questionCount?.count || 0
+        questionCount: Number(questionCount?.count) || 0
       };
     })
   );
@@ -1080,8 +1080,8 @@ function calculateStreak(results2) {
 async function calculateRank(userId) {
   const [user] = await db.select({ points: users.points }).from(users).where(eq2(users.id, userId)).limit(1);
   if (!user) return 0;
-  const [result] = await db.select({ count: count() }).from(users).where(sql2`${users.points} > ${user.points}`);
-  return (result?.count || 0) + 1;
+  const [result] = await db.select({ count: count() }).from(users).where(gt2(users.points, user.points ?? 0));
+  return (Number(result?.count) || 0) + 1;
 }
 
 // server/statsRoutes.ts
@@ -1845,33 +1845,6 @@ function registerRoutes(app2) {
         console.warn("Error loading users for analytics:", e);
       }
       const userMap = Object.fromEntries(users2.filter(Boolean).map((user) => [user.id, user]));
-      const studentReports = results2.map((result) => {
-        const user = userMap[result.userId];
-        const scorePercentage = result.totalQuestions > 0 ? result.correctAnswers / result.totalQuestions * 100 : 0;
-        return {
-          userId: result.userId,
-          username: user ? user.username : "Unknown",
-          score: parseFloat(scorePercentage.toFixed(1)),
-          correctAnswers: result.correctAnswers,
-          wrongAnswers: result.wrongAnswers,
-          timeTaken: result.timeTaken,
-          completedAt: result.completedAt,
-          answers: parseAnswersField(result.answers),
-          tabSwitchCount: result.tabSwitchCount || 0,
-          copyPasteAttempts: result.copyPasteAttempts || 0,
-          proctoringFlags: result.proctoringFlags || 0
-        };
-      });
-      const questionData = {};
-      questions2.forEach((q) => {
-        questionData[q.id] = {
-          id: q.id,
-          text: q.questionText,
-          totalAttempts: results2.length,
-          correctCount: 0,
-          totalTime: 0
-        };
-      });
       const parseAnswersField = (val) => {
         if (val === null || val === void 0) return [];
         if (Array.isArray(val)) return val.map((v) => v === null || v === void 0 ? "" : String(v));
@@ -1907,6 +1880,33 @@ function registerRoutes(app2) {
         console.warn("Unable to parse answers field, returning empty array. Raw value:", val);
         return [];
       };
+      const studentReports = results2.map((result) => {
+        const user = userMap[result.userId];
+        const scorePercentage = result.totalQuestions > 0 ? result.correctAnswers / result.totalQuestions * 100 : 0;
+        return {
+          userId: result.userId,
+          username: user ? user.username : "Unknown",
+          score: parseFloat(scorePercentage.toFixed(1)),
+          correctAnswers: result.correctAnswers,
+          wrongAnswers: result.wrongAnswers,
+          timeTaken: result.timeTaken,
+          completedAt: result.completedAt,
+          answers: parseAnswersField(result.answers),
+          tabSwitchCount: result.tabSwitchCount || 0,
+          copyPasteAttempts: result.copyPasteAttempts || 0,
+          proctoringFlags: result.proctoringFlags || 0
+        };
+      });
+      const questionData = {};
+      questions2.forEach((q) => {
+        questionData[q.id] = {
+          id: q.id,
+          text: q.questionText,
+          totalAttempts: results2.length,
+          correctCount: 0,
+          totalTime: 0
+        };
+      });
       results2.forEach((result) => {
         let answersArray = parseAnswersField(result.answers);
         const timePerQuestion = result.totalQuestions > 0 ? Math.round(result.timeTaken / result.totalQuestions) : 0;

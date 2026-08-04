@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertUserSchema, InsertUser } from "@shared/schema";
-import { Shield, GraduationCap, BookOpen, Zap, Trophy, Lock, User } from "lucide-react";
+import { Shield, GraduationCap, BookOpen, Zap, Trophy, Lock, User, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +20,8 @@ export default function AuthPage() {
   const { user, loginMutation, registerMutation } = useAuth();
   const [tab, setTab] = useState<TabType>("login");
   const [role, setRole] = useState<RoleType>("student");
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegisterPassword, setShowRegisterPassword] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -134,11 +136,24 @@ export default function AuthPage() {
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))]" />
                   <Input
-                    type="password"
+                    type={showLoginPassword ? "text" : "password"}
                     {...loginForm.register("password")}
                     placeholder="••••••••"
-                    className="pl-9 input-field"
+                    className="pl-9 pr-10 input-field"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowLoginPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors p-1"
+                    tabIndex={-1}
+                    aria-label={showLoginPassword ? "Hide password" : "Show password"}
+                  >
+                    {showLoginPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
                 </div>
               </div>
               <motion.div whileTap={{ scale: 0.98 }} className="pt-2">
@@ -219,11 +234,24 @@ export default function AuthPage() {
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[hsl(var(--muted-foreground))]" />
                   <Input
-                    type="password"
+                    type={showRegisterPassword ? "text" : "password"}
                     {...registerForm.register("password")}
                     placeholder="••••••••"
-                    className="pl-9 input-field"
+                    className="pl-9 pr-10 input-field"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowRegisterPassword((prev) => !prev)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))] transition-colors p-1"
+                    tabIndex={-1}
+                    aria-label={showRegisterPassword ? "Hide password" : "Show password"}
+                  >
+                    {showRegisterPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </button>
                 </div>
               </div>
 

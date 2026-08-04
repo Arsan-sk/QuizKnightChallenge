@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { users, results, quizzes, questions } from "@shared/schema";
-import { eq, and, desc, sql, count } from "drizzle-orm";
+import { eq, and, desc, sql, count, inArray, gt } from "drizzle-orm";
 
 /**
  * Calculate comprehensive statistics for a student user
@@ -75,8 +75,8 @@ export async function calculateTeacherStats(userId: number) {
         const questionCounts = await db
             .select({ count: count() })
             .from(questions)
-            .where(sql`${questions.quizId} IN ${quizIds}`);
-        totalQuestions = questionCounts[0]?.count || 0;
+            .where(inArray(questions.quizId, quizIds));
+        totalQuestions = Number(questionCounts[0]?.count) || 0;
     }
 
     // Get all results for teacher's quizzes
@@ -86,7 +86,7 @@ export async function calculateTeacherStats(userId: number) {
         allResults = await db
             .select()
             .from(results)
-            .where(sql`${results.quizId} IN ${quizIds}`);
+            .where(inArray(results.quizId, quizIds));
 
         // Count unique students
         const uniqueStudents = new Set(allResults.map(r => r.userId));
@@ -113,7 +113,7 @@ export async function calculateTeacherStats(userId: number) {
 
             return {
                 ...quiz,
-                questionCount: questionCount?.count || 0,
+                questionCount: Number(questionCount?.count) || 0,
             };
         })
     );
@@ -184,7 +184,7 @@ async function calculateRank(userId: number): Promise<number> {
     const [result] = await db
         .select({ count: count() })
         .from(users)
-        .where(sql`${users.points} > ${user.points}`);
+        .where(gt(users.points, user.points ?? 0));
 
-    return (result?.count || 0) + 1;
+    return (Number(result?.count) || 0) + 1;
 }
