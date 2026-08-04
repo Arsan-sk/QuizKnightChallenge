@@ -16,7 +16,6 @@ shared/.env
 dist/
 build/
 out/
-api/index.mjs
 
 # Debug logs
 npm-debug.log*
