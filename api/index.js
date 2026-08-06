@@ -88,6 +88,7 @@ var quizzes = pgTable("quizzes", {
   targetYear: text("target_year", { enum: ["1st", "2nd", "3rd", "4th"] }),
   startTime: timestamp("start_time"),
   endTime: timestamp("end_time"),
+  accessCode: text("access_code").unique(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow()
 });
@@ -367,6 +368,18 @@ async function applySchemaChanges() {
     await addColumnIfNotExists("results", "copy_paste_attempts", "integer", "DEFAULT 0");
     await addColumnIfNotExists("results", "proctoring_flags", "integer", "DEFAULT 0");
     await addColumnIfNotExists("results", "session_id", "integer");
+    await addColumnIfNotExists("quizzes", "access_code", "text");
+    const missingCodesResult = await client.query(`SELECT id FROM quizzes WHERE access_code IS NULL OR access_code = ''`);
+    if (missingCodesResult.rows.length > 0) {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      for (const row of missingCodesResult.rows) {
+        let code = "";
+        for (let i = 0; i < 6; i++) {
+          code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        await client.query(`UPDATE quizzes SET access_code = $1 WHERE id = $2`, [code, row.id]);
+      }
+    }
     client.release();
     console.log("Schema changes applied successfully");
   } catch (error) {
@@ -498,8 +511,16 @@ var DatabaseStorage = class {
   }
   async createQuiz(quiz) {
     const now = /* @__PURE__ */ new Date();
+    let accessCode = quiz.accessCode || "";
+    if (!accessCode) {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      for (let i = 0; i < 6; i++) {
+        accessCode += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+    }
     const [newQuiz] = await db.insert(quizzes).values({
       ...quiz,
+      accessCode,
       createdAt: now,
       updatedAt: now
     }).returning();
@@ -521,9 +542,29 @@ var DatabaseStorage = class {
     const [quiz] = await db.select().from(quizzes).where(eq(quizzes.id, id));
     return quiz;
   }
+  async getQuizByAccessCode(code) {
+    try {
+      const cleanCode = code.trim().toUpperCase();
+      const [quiz] = await db.select().from(quizzes).where(sql`UPPER(${quizzes.accessCode}) = ${cleanCode}`);
+      return quiz;
+    } catch (error) {
+      console.error("Error in getQuizByAccessCode:", error);
+      return void 0;
+    }
+  }
   async getQuizzesByTeacher(teacherId) {
     try {
-      return await db.select().from(quizzes).where(eq(quizzes.createdBy, teacherId)).orderBy(desc(quizzes.createdAt));
+      const teacherQuizzes = await db.select().from(quizzes).where(eq(quizzes.createdBy, teacherId)).orderBy(desc(quizzes.createdAt));
+      const quizzesWithAttempts = await Promise.all(
+        teacherQuizzes.map(async (q) => {
+          const attempts = await db.select({ count: sql`count(*)` }).from(results).where(eq(results.quizId, q.id));
+          return {
+            ...q,
+            attemptCount: Number(attempts[0]?.count || 0)
+          };
+        })
+      );
+      return quizzesWithAttempts;
     } catch (error) {
       console.error("Error in getQuizzesByTeacher:", error);
       return [];
@@ -548,7 +589,16 @@ var DatabaseStorage = class {
           eq(quizzes.isDraft, false)
         )
       ).orderBy(desc(quizzes.createdAt));
-      return quizzesWithTeachers;
+      const resultList = await Promise.all(
+        quizzesWithTeachers.map(async (q) => {
+          const attempts = await db.select({ count: sql`count(*)` }).from(results).where(eq(results.quizId, q.id));
+          return {
+            ...q,
+            attemptCount: Number(attempts[0]?.count || 0)
+          };
+        })
+      );
+      return resultList;
     } catch (error) {
       console.error("Error in getPublicQuizzesWithTeachers:", error);
       return [];
@@ -1489,6 +1539,39 @@ function registerRoutes(app2) {
     } catch (error) {
       console.error("Error deleting quiz:", error);
       res.status(500).json({ error: "Failed to delete quiz" });
+    }
+  });
+  app2.post("/api/quizzes/join-by-code", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      const { accessCode } = req.body;
+      if (!accessCode || typeof accessCode !== "string" || !accessCode.trim()) {
+        return res.status(400).json({ error: "Valid access code is required" });
+      }
+      const quiz = await storage.getQuizByAccessCode(accessCode.trim());
+      if (!quiz) {
+        return res.status(404).json({ error: "Invalid access code. No quiz found with this code." });
+      }
+      if (quiz.isDraft) {
+        return res.status(400).json({ error: "This quiz is currently in draft mode and not available." });
+      }
+      const activeSession = quiz.quizType === "live" ? await storage.getActiveLiveSession(quiz.id) : null;
+      res.json({
+        quizId: quiz.id,
+        quizType: quiz.quizType,
+        title: quiz.title,
+        isPublic: quiz.isPublic,
+        isActive: quiz.isActive,
+        activeSession: activeSession ? {
+          id: activeSession.id,
+          sessionName: activeSession.sessionName
+        } : null
+      });
+    } catch (error) {
+      console.error("Error joining quiz by code:", error);
+      res.status(500).json({ error: error.message || "Failed to join quiz" });
     }
   });
   app2.post("/api/quizzes/:id/start", async (req, res) => {

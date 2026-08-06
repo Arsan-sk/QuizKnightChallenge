@@ -51,6 +51,7 @@ export const quizzes = pgTable("quizzes", {
   targetYear: text("target_year", { enum: ["1st", "2nd", "3rd", "4th"] }),
   startTime: timestamp("start_time"),
   endTime: timestamp("end_time"),
+  accessCode: text("access_code").unique(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -18,9 +18,10 @@ export interface IStorage {
   updateQuiz(id: number, quiz: Partial<UpdateQuiz>): Promise<Quiz>;
   deleteQuiz(id: number): Promise<void>;
   getQuiz(id: number): Promise<Quiz | undefined>;
-  getQuizzesByTeacher(teacherId: number): Promise<Quiz[]>;
+  getQuizByAccessCode(code: string): Promise<Quiz | undefined>;
+  getQuizzesByTeacher(teacherId: number): Promise<(Quiz & { attemptCount?: number })[]>;
   getPublicQuizzes(): Promise<Quiz[]>;
-  getPublicQuizzesWithTeachers(): Promise<(Quiz & { teacherName: string })[]>;
+  getPublicQuizzesWithTeachers(): Promise<(Quiz & { teacherName: string; attemptCount?: number })[]>;
   getLiveQuizzes(): Promise<(Quiz & { teacherName: string })[]>;
   getQuizzesForStudent(userId: number): Promise<Quiz[]>;
 
@@ -237,10 +238,19 @@ export class DatabaseStorage implements IStorage {
 
   async createQuiz(quiz: Omit<Quiz, "id" | "createdAt">): Promise<Quiz> {
     const now = new Date();
+    let accessCode = (quiz as any).accessCode || '';
+    if (!accessCode) {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      for (let i = 0; i < 6; i++) {
+        accessCode += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+    }
+
     const [newQuiz] = await db
       .insert(quizzes)
       .values({ 
         ...quiz, 
+        accessCode,
         createdAt: now,
         updatedAt: now
       })
@@ -274,13 +284,43 @@ export class DatabaseStorage implements IStorage {
     return quiz;
   }
 
-  async getQuizzesByTeacher(teacherId: number): Promise<Quiz[]> {
+  async getQuizByAccessCode(code: string): Promise<Quiz | undefined> {
     try {
-      return await db
+      const cleanCode = code.trim().toUpperCase();
+      const [quiz] = await db
+        .select()
+        .from(quizzes)
+        .where(sql`UPPER(${quizzes.accessCode}) = ${cleanCode}`);
+      return quiz;
+    } catch (error) {
+      console.error("Error in getQuizByAccessCode:", error);
+      return undefined;
+    }
+  }
+
+  async getQuizzesByTeacher(teacherId: number): Promise<(Quiz & { attemptCount: number })[]> {
+    try {
+      const teacherQuizzes = await db
         .select()
         .from(quizzes)
         .where(eq(quizzes.createdBy, teacherId))
         .orderBy(desc(quizzes.createdAt));
+
+      const quizzesWithAttempts = await Promise.all(
+        teacherQuizzes.map(async (q) => {
+          const attempts = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(results)
+            .where(eq(results.quizId, q.id));
+
+          return {
+            ...q,
+            attemptCount: Number(attempts[0]?.count || 0),
+          };
+        })
+      );
+
+      return quizzesWithAttempts;
     } catch (error) {
       console.error("Error in getQuizzesByTeacher:", error);
       return [];
@@ -300,7 +340,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getPublicQuizzesWithTeachers(): Promise<(Quiz & { teacherName: string })[]> {
+  async getPublicQuizzesWithTeachers(): Promise<(Quiz & { teacherName: string; attemptCount: number })[]> {
     try {
       const quizzesWithTeachers = await db
         .select({
@@ -316,7 +356,22 @@ export class DatabaseStorage implements IStorage {
           )
         )
         .orderBy(desc(quizzes.createdAt));
-      return quizzesWithTeachers as (Quiz & { teacherName: string })[];
+
+      const resultList = await Promise.all(
+        quizzesWithTeachers.map(async (q) => {
+          const attempts = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(results)
+            .where(eq(results.quizId, q.id));
+
+          return {
+            ...(q as any),
+            attemptCount: Number(attempts[0]?.count || 0),
+          };
+        })
+      );
+
+      return resultList;
     } catch (error) {
       console.error("Error in getPublicQuizzesWithTeachers:", error);
       return [];

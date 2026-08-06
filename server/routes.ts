@@ -412,6 +412,46 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Join quiz by access code
+  app.post("/api/quizzes/join-by-code", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const { accessCode } = req.body;
+      if (!accessCode || typeof accessCode !== "string" || !accessCode.trim()) {
+        return res.status(400).json({ error: "Valid access code is required" });
+      }
+
+      const quiz = await storage.getQuizByAccessCode(accessCode.trim());
+      if (!quiz) {
+        return res.status(404).json({ error: "Invalid access code. No quiz found with this code." });
+      }
+
+      if (quiz.isDraft) {
+        return res.status(400).json({ error: "This quiz is currently in draft mode and not available." });
+      }
+
+      const activeSession = quiz.quizType === "live" ? await storage.getActiveLiveSession(quiz.id) : null;
+
+      res.json({
+        quizId: quiz.id,
+        quizType: quiz.quizType,
+        title: quiz.title,
+        isPublic: quiz.isPublic,
+        isActive: quiz.isActive,
+        activeSession: activeSession ? {
+          id: activeSession.id,
+          sessionName: activeSession.sessionName,
+        } : null,
+      });
+    } catch (error: any) {
+      console.error("Error joining quiz by code:", error);
+      res.status(500).json({ error: error.message || "Failed to join quiz" });
+    }
+  });
+
   // Start a live quiz session
   app.post("/api/quizzes/:id/start", async (req, res) => {
     try {

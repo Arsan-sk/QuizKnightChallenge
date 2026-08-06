@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Quiz } from "@shared/schema";
 import { Link } from "wouter";
-import { User, Play, Square, Clock, Eye, BarChart, Globe, Lock, Send } from "lucide-react";
+import { User, Play, Square, Clock, Eye, BarChart, Globe, Lock, Send, Copy, Users } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useState } from "react";
@@ -169,6 +169,34 @@ export function QuizCard({
                   {quiz.isPublic ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
                   {quiz.isPublic ? "Public" : "Private"}
                 </span>
+              )}
+              {/* Attempt Count Badge for Teachers */}
+              {isTeacher && typeof (quiz as any).attemptCount === 'number' && (
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 flex items-center gap-1">
+                  <Users className="h-3 w-3" />
+                  {(quiz as any).attemptCount} Attempts
+                </span>
+              )}
+              {/* Permanent Access Code badge with 1-click copy */}
+              {quiz.accessCode && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(quiz.accessCode!);
+                    toast({
+                      title: "Access Code Copied!",
+                      description: `Code "${quiz.accessCode}" copied to clipboard. Share with students to join.`,
+                      variant: "info",
+                    });
+                  }}
+                  title="Click to copy quiz access code"
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-mono text-[11px] font-bold cursor-pointer transition-colors"
+                >
+                  <Copy className="h-3 w-3 text-indigo-400 shrink-0" />
+                  <span>Code: {quiz.accessCode}</span>
+                </button>
               )}
             </div>
           </div>

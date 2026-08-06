@@ -168,6 +168,20 @@ async function applySchemaChanges() {
     await addColumnIfNotExists('results', 'copy_paste_attempts', 'integer', 'DEFAULT 0');
     await addColumnIfNotExists('results', 'proctoring_flags', 'integer', 'DEFAULT 0');
     await addColumnIfNotExists('results', 'session_id', 'integer');
+    await addColumnIfNotExists('quizzes', 'access_code', 'text');
+
+    // Auto-generate unique access codes for existing quizzes if missing
+    const missingCodesResult = await client.query(`SELECT id FROM quizzes WHERE access_code IS NULL OR access_code = ''`);
+    if (missingCodesResult.rows.length > 0) {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      for (const row of missingCodesResult.rows) {
+        let code = '';
+        for (let i = 0; i < 6; i++) {
+          code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        await client.query(`UPDATE quizzes SET access_code = $1 WHERE id = $2`, [code, row.id]);
+      }
+    }
 
     client.release();
     console.log('Schema changes applied successfully');
