@@ -122,6 +122,26 @@ export function QuizCard({
       >
         {/* Status indicators */}
         <div className="absolute top-3 right-3 flex items-center gap-1.5 flex-wrap justify-end">
+          {quiz.accessCode && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                navigator.clipboard.writeText(quiz.accessCode!);
+                toast({
+                  title: "Access Code Copied!",
+                  description: `Code "${quiz.accessCode}" copied to clipboard.`,
+                  variant: "info",
+                });
+              }}
+              title="Click to copy quiz access code"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 font-mono text-[10px] font-bold cursor-pointer transition-colors"
+            >
+              <Copy className="h-3 w-3 text-indigo-400 shrink-0" />
+              <span>{quiz.accessCode}</span>
+            </button>
+          )}
           {quiz.isActive && (
             <div className="flex items-center gap-1">
               <span className="live-dot" />

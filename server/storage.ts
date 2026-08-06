@@ -1,6 +1,6 @@
 import { users, quizzes, questions, results, achievements, userAchievements, friendships, liveSessions, type User, type Quiz, type Question, type Result, type UpdateQuiz, type UpdateQuestion, type UpdateUserProfile, type Achievement, type UserAchievement, type Friendship, type LiveSession, type InsertLiveSession } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, gt, lt, or, asc, getTableColumns } from "drizzle-orm";
+import { eq, and, desc, sql, gt, lt, or, asc, getTableColumns, isNull } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
@@ -40,7 +40,7 @@ export interface IStorage {
 
   createResult(result: Omit<Result, "id" | "completedAt">): Promise<Result>;
   getResultsByQuiz(quizId: number, sessionId?: number): Promise<Result[]>;
-  getResultsByUser(userId: number): Promise<Result[]>;
+  getResultsByUser(userId: number): Promise<(Result & { quizTitle?: string; maxScore?: number })[]>;
   getQuizLeaderboard(quizId: number, sessionId?: number): Promise<(Result & { username: string })[]>;
   getGlobalLeaderboard(limit?: number): Promise<(User & { totalScore: number })[]>;
 
@@ -352,7 +352,7 @@ export class DatabaseStorage implements IStorage {
         .where(
           and(
             eq(quizzes.isPublic, true),
-            eq(quizzes.isDraft, false)
+            or(eq(quizzes.isDraft, false), isNull(quizzes.isDraft))
           )
         )
         .orderBy(desc(quizzes.createdAt));
@@ -385,17 +385,14 @@ export class DatabaseStorage implements IStorage {
       
       if (!user) return [];
       
-      // Get quizzes that are either:
-      // 1. Public with no target branch/year, OR
-      // 2. Public with matching target branch/year
-      // AND not drafts
+      // Get quizzes that are public and not drafts
       return await db
         .select()
         .from(quizzes)
         .where(
           and(
             eq(quizzes.isPublic, true),
-            eq(quizzes.isDraft, false),
+            or(eq(quizzes.isDraft, false), isNull(quizzes.isDraft)),
             or(
               // No targeting
               and(
@@ -633,12 +630,22 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(results.score), desc(results.completedAt));
   }
 
-  async getResultsByUser(userId: number): Promise<Result[]> {
-    return db
-      .select()
+  async getResultsByUser(userId: number): Promise<(Result & { quizTitle: string; maxScore: number })[]> {
+    const userResults = await db
+      .select({
+        ...getTableColumns(results),
+        quizTitle: quizzes.title,
+      })
       .from(results)
+      .leftJoin(quizzes, eq(results.quizId, quizzes.id))
       .where(eq(results.userId, userId))
       .orderBy(desc(results.completedAt));
+
+    return userResults.map((r) => ({
+      ...r,
+      quizTitle: r.quizTitle || `Quiz #${r.quizId}`,
+      maxScore: (r.totalQuestions && r.totalQuestions > 0) ? (r.totalQuestions * 10) : 100,
+    })) as (Result & { quizTitle: string; maxScore: number })[];
   }
 
   async getQuizLeaderboard(quizId: number, sessionId?: number): Promise<(Result & { username: string })[]> {

@@ -183,6 +183,10 @@ async function applySchemaChanges() {
       }
     }
 
+    // Backfill is_draft for existing public quizzes where is_draft IS NULL
+    await client.query(`UPDATE quizzes SET is_draft = false WHERE is_draft IS NULL AND is_public = true;`);
+    await client.query(`UPDATE quizzes SET is_draft = true WHERE is_draft IS NULL AND (is_public = false OR is_public IS NULL);`);
+
     client.release();
     console.log('Schema changes applied successfully');
   } catch (error) {

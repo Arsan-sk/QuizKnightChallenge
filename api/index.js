@@ -380,6 +380,8 @@ async function applySchemaChanges() {
         await client.query(`UPDATE quizzes SET access_code = $1 WHERE id = $2`, [code, row.id]);
       }
     }
+    await client.query(`UPDATE quizzes SET is_draft = false WHERE is_draft IS NULL AND is_public = true;`);
+    await client.query(`UPDATE quizzes SET is_draft = true WHERE is_draft IS NULL AND (is_public = false OR is_public IS NULL);`);
     client.release();
     console.log("Schema changes applied successfully");
   } catch (error) {
@@ -389,7 +391,7 @@ async function applySchemaChanges() {
 applySchemaChanges();
 
 // server/storage.ts
-import { eq, and, desc, sql, or, asc, getTableColumns } from "drizzle-orm";
+import { eq, and, desc, sql, or, asc, getTableColumns, isNull } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 var PostgresSessionStore = connectPg(session);
@@ -586,7 +588,7 @@ var DatabaseStorage = class {
       }).from(quizzes).leftJoin(users, eq(quizzes.createdBy, users.id)).where(
         and(
           eq(quizzes.isPublic, true),
-          eq(quizzes.isDraft, false)
+          or(eq(quizzes.isDraft, false), isNull(quizzes.isDraft))
         )
       ).orderBy(desc(quizzes.createdAt));
       const resultList = await Promise.all(
@@ -611,7 +613,7 @@ var DatabaseStorage = class {
       return await db.select().from(quizzes).where(
         and(
           eq(quizzes.isPublic, true),
-          eq(quizzes.isDraft, false),
+          or(eq(quizzes.isDraft, false), isNull(quizzes.isDraft)),
           or(
             // No targeting
             and(
@@ -762,7 +764,15 @@ var DatabaseStorage = class {
     return db.select().from(results).where(eq(results.quizId, quizId)).orderBy(desc(results.score), desc(results.completedAt));
   }
   async getResultsByUser(userId) {
-    return db.select().from(results).where(eq(results.userId, userId)).orderBy(desc(results.completedAt));
+    const userResults = await db.select({
+      ...getTableColumns(results),
+      quizTitle: quizzes.title
+    }).from(results).leftJoin(quizzes, eq(results.quizId, quizzes.id)).where(eq(results.userId, userId)).orderBy(desc(results.completedAt));
+    return userResults.map((r) => ({
+      ...r,
+      quizTitle: r.quizTitle || `Quiz #${r.quizId}`,
+      maxScore: r.totalQuestions && r.totalQuestions > 0 ? r.totalQuestions * 10 : 100
+    }));
   }
   async getQuizLeaderboard(quizId, sessionId) {
     try {

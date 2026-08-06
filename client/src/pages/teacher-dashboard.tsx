@@ -27,99 +27,6 @@ export default function TeacherDashboard() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const [viewMode, setViewMode] = useState<"card" | "list">("card");
-
-  const renderQuizListTable = (quizList: Quiz[]) => (
-    <div className="bg-[#1c1c21] rounded-2xl border border-white/5 overflow-hidden shadow-xl">
-      <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-white/5 bg-[#131316]">
-              <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Quiz Title</th>
-              <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Type</th>
-              <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Access Code</th>
-              <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Attempts</th>
-              <th className="px-4 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Visibility</th>
-              <th className="px-5 py-4 text-[10px] font-bold uppercase tracking-widest text-zinc-400 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-white/5">
-            {quizList.map((quiz) => (
-              <tr key={quiz.id} className="hover:bg-white/[0.02] transition-colors">
-                <td className="px-5 py-4">
-                  <div className="font-bold text-white text-sm">{quiz.title}</div>
-                  <div className="text-xs text-zinc-400 line-clamp-1 max-w-xs">{quiz.description}</div>
-                </td>
-                <td className="px-4 py-4">
-                  <span className="text-xs px-2.5 py-1 rounded-full font-semibold border capitalize bg-indigo-500/10 text-indigo-300 border-indigo-500/30">
-                    {quiz.quizType}
-                  </span>
-                </td>
-                <td className="px-4 py-4">
-                  {quiz.accessCode ? (
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(quiz.accessCode!);
-                        toast({
-                          title: "Access Code Copied!",
-                          description: `Code "${quiz.accessCode}" copied to clipboard.`,
-                          variant: "info",
-                        });
-                      }}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-mono text-xs font-bold transition-colors cursor-pointer"
-                    >
-                      <Copy className="w-3 h-3 text-indigo-400" />
-                      {quiz.accessCode}
-                    </button>
-                  ) : (
-                    <span className="text-xs text-zinc-500">-</span>
-                  )}
-                </td>
-                <td className="px-4 py-4">
-                  <span className="text-xs font-bold text-white">
-                    {(quiz as any).attemptCount || 0}
-                  </span>
-                </td>
-                <td className="px-4 py-4">
-                  <span className={cn(
-                    "text-[10px] px-2.5 py-1 rounded-full font-semibold border",
-                    quiz.isPublic
-                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                      : "bg-zinc-500/10 text-zinc-400 border-zinc-500/30"
-                  )}>
-                    {quiz.isPublic ? "Public" : "Private"}
-                  </span>
-                </td>
-                <td className="px-5 py-4 text-right">
-                  <div className="flex items-center justify-end gap-2">
-                    {quiz.isDraft && (
-                      <Button
-                        size="sm"
-                        onClick={() => publishMutation.mutate(quiz.id)}
-                        className="h-8 px-3 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
-                      >
-                        Publish
-                      </Button>
-                    )}
-                    <Link href={`/teacher/quiz/create?id=${quiz.id}`}>
-                      <Button variant="outline" size="sm" className="h-8 px-3 text-xs bg-transparent border-zinc-700 text-zinc-300 hover:bg-zinc-800">
-                        Edit
-                      </Button>
-                    </Link>
-                    <Link href={`/quiz-analytics/${quiz.id}`}>
-                      <Button variant="outline" size="sm" className="h-8 px-3 text-xs bg-transparent border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20">
-                        Analytics
-                      </Button>
-                    </Link>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
 
   const { data: quizzes, isLoading: loadingQuizzes } = useQuery<Quiz[]>({
     queryKey: ["/api/quizzes/teacher"],
@@ -410,53 +317,19 @@ export default function TeacherDashboard() {
             </div>
           ) : (
             <Tabs defaultValue="published">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
-                <TabsList
-                  className="rounded-xl p-1"
-                  style={{ background: "hsl(var(--muted))" }}
-                >
-                  <TabsTrigger value="published" className="rounded-lg text-xs sm:text-sm font-medium gap-1.5">
-                    <FileCheck className="w-3.5 h-3.5" />
-                    Published ({publishedQuizzes.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="drafts" className="rounded-lg text-xs sm:text-sm font-medium gap-1.5">
-                    <FileText className="w-3.5 h-3.5" />
-                    Drafts ({draftQuizzes.length})
-                  </TabsTrigger>
-                </TabsList>
-
-                {/* View Mode Switcher (Card vs List) */}
-                <div className="flex items-center gap-1 bg-[#1c1c21] border border-white/5 p-1 rounded-xl w-fit">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setViewMode("card")}
-                    className={cn(
-                      "h-8 px-3 text-xs font-semibold rounded-lg flex items-center gap-1.5",
-                      viewMode === "card"
-                        ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
-                        : "text-zinc-400 hover:text-white"
-                    )}
-                  >
-                    <LayoutGrid className="w-3.5 h-3.5" />
-                    Card View
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setViewMode("list")}
-                    className={cn(
-                      "h-8 px-3 text-xs font-semibold rounded-lg flex items-center gap-1.5",
-                      viewMode === "list"
-                        ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
-                        : "text-zinc-400 hover:text-white"
-                    )}
-                  >
-                    <List className="w-3.5 h-3.5" />
-                    List View
-                  </Button>
-                </div>
-              </div>
+              <TabsList
+                className="mb-5 rounded-xl p-1"
+                style={{ background: "hsl(var(--muted))" }}
+              >
+                <TabsTrigger value="published" className="rounded-lg text-xs sm:text-sm font-medium gap-1.5">
+                  <FileCheck className="w-3.5 h-3.5" />
+                  Published ({publishedQuizzes.length})
+                </TabsTrigger>
+                <TabsTrigger value="drafts" className="rounded-lg text-xs sm:text-sm font-medium gap-1.5">
+                  <FileText className="w-3.5 h-3.5" />
+                  Drafts ({draftQuizzes.length})
+                </TabsTrigger>
+              </TabsList>
 
               <TabsContent value="published">
                 {publishedQuizzes.length === 0 ? (
@@ -466,8 +339,6 @@ export default function TeacherDashboard() {
                       No published quizzes yet. Create a quiz and publish it.
                     </p>
                   </div>
-                ) : viewMode === "list" ? (
-                  renderQuizListTable(publishedQuizzes)
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     {publishedQuizzes.map((quiz) => (
@@ -491,8 +362,6 @@ export default function TeacherDashboard() {
                       No drafts. Saved drafts will appear here.
                     </p>
                   </div>
-                ) : viewMode === "list" ? (
-                  renderQuizListTable(draftQuizzes)
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     {draftQuizzes.map((quiz) => (
