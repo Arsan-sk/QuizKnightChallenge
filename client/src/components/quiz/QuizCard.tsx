@@ -111,160 +111,144 @@ export function QuizCard({
     >
       <div
         className={cn(
-          "rounded-xl overflow-hidden border-l-4 relative",
+          "rounded-2xl overflow-hidden border-l-4 relative flex flex-col justify-between h-full transition-all duration-200",
           "border border-[hsl(var(--border))]",
           diffConf.border,
           "bg-[hsl(var(--card))]",
         )}
         style={{
-          boxShadow: "0 4px 16px -4px hsl(0 0% 0% / 0.4), inset 0 1px 0 rgba(255,255,255,0.04)",
+          boxShadow: "0 8px 24px -6px hsl(0 0% 0% / 0.35), inset 0 1px 0 rgba(255,255,255,0.05)",
         }}
       >
-        {/* Status indicators */}
-        <div className="absolute top-3 right-3 flex items-center gap-1.5 flex-wrap justify-end">
-          {quiz.accessCode && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                navigator.clipboard.writeText(quiz.accessCode!);
-                toast({
-                  title: "Access Code Copied!",
-                  description: `Code "${quiz.accessCode}" copied to clipboard. Share with students to join.`,
-                  variant: "info",
-                });
-              }}
-              title="Click to copy quiz access code"
-              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-500/15 hover:bg-indigo-500/30 border border-indigo-500/30 text-indigo-300 font-mono text-[10px] font-bold cursor-pointer transition-all shadow-sm"
-            >
-              <Copy className="h-3 w-3 text-indigo-400 shrink-0" />
-              <span>Code: {quiz.accessCode}</span>
-            </button>
-          )}
-          {quiz.isActive && (
-            <div className="flex items-center gap-1">
-              <span className="live-dot" />
-              <span className="text-[10px] font-bold text-red-400">LIVE</span>
-            </div>
-          )}
-          {isTeacher && quiz.isDraft && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">
-              DRAFT
-            </span>
-          )}
-        </div>
-
-        <div className="p-4 sm:p-5">
-          <div className="mb-3">
-            <h3
-              className="font-bold text-[hsl(var(--foreground))] text-sm sm:text-base leading-tight mb-2 pr-16"
-              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-            >
-              {quiz.title}
-            </h3>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span
-                className={cn(
-                  "text-xs px-2.5 py-0.5 rounded-full font-semibold border capitalize",
-                  diffConf.badge
-                )}
+        <div className="p-5 sm:p-6 flex flex-col flex-1 justify-between gap-4">
+          <div>
+            {/* Header: Title & Access Code / Status Badges */}
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2.5 mb-3">
+              <h3
+                className="font-bold text-[hsl(var(--foreground))] text-base sm:text-lg leading-snug tracking-tight"
+                style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
               >
-                {quiz.difficulty}
-              </span>
-              {quiz.quizType === "live" && (
-                <span className="text-xs px-2.5 py-0.5 rounded-full font-semibold border badge-primary">
-                  <Clock className="h-3 w-3 inline mr-1" />
-                  Live Quiz
-                </span>
-              )}
-              {/* Subject Badge */}
-              {(quiz as any).subject && (
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20 capitalize">
-                  {(quiz as any).subject}
-                </span>
-              )}
-              {/* Visibility badge for teachers */}
-              {isTeacher && !quiz.isDraft && (
-                <span className={cn(
-                  "text-[10px] px-2 py-0.5 rounded-full font-semibold border flex items-center gap-1",
-                  quiz.isPublic
-                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-                    : "bg-zinc-500/10 text-zinc-400 border-zinc-500/30"
-                )}>
-                  {quiz.isPublic ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
-                  {quiz.isPublic ? "Public" : "Private"}
-                </span>
-              )}
-              {/* Attempt Count Badge for Teachers */}
-              {isTeacher && typeof (quiz as any).attemptCount === 'number' && (
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 flex items-center gap-1">
-                  <Users className="h-3 w-3" />
-                  {(quiz as any).attemptCount} Attempts
-                </span>
-              )}
+                {quiz.title}
+              </h3>
+
+              <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+                {quiz.accessCode && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      navigator.clipboard.writeText(quiz.accessCode!);
+                      toast({
+                        title: "Access Code Copied!",
+                        description: `Code "${quiz.accessCode}" copied to clipboard. Share with students to join.`,
+                        variant: "info",
+                      });
+                    }}
+                    title="Click to copy quiz access code"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-indigo-500/15 hover:bg-indigo-500/30 border border-indigo-500/30 text-indigo-300 font-mono text-[10px] font-bold cursor-pointer transition-all shadow-sm active:scale-95"
+                  >
+                    <Copy className="h-3 w-3 text-indigo-400 shrink-0" />
+                    <span>Code: {quiz.accessCode}</span>
+                  </button>
+                )}
+                {quiz.isActive && (
+                  <div className="flex items-center gap-1 bg-red-500/10 border border-red-500/30 px-2 py-0.5 rounded-full">
+                    <span className="live-dot" />
+                    <span className="text-[10px] font-bold text-red-400">LIVE</span>
+                  </div>
+                )}
+                {isTeacher && quiz.isDraft && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30">
+                    DRAFT
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
 
-          <p className="text-xs text-[hsl(var(--muted-foreground))] mb-4 line-clamp-2 leading-relaxed">
-            {quiz.description}
-          </p>
-
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-xs text-[hsl(var(--muted-foreground))] min-w-0">
-              {teacherName && (
-                <div className="flex items-center gap-1">
-                  <User className="h-3 w-3 shrink-0" />
-                  <span className="truncate">{teacherName}</span>
-                </div>
-              )}
-              <span className="shrink-0">·</span>
-              <span className="shrink-0">
+            {/* Badges & Date Flow Row (space-between) */}
+            <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
+              <span className="text-xs text-[hsl(var(--muted-foreground))] font-medium">
                 {quiz.createdAt ? new Date(quiz.createdAt).toLocaleDateString() : 'Recently'}
               </span>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Difficulty text tag commented out while preserving border-l color */}
+                {/* <span className={cn("text-[11px] px-2.5 py-0.5 rounded-full font-semibold border capitalize", diffConf.badge)}>{quiz.difficulty}</span> */}
+
+                {quiz.quizType === "live" && (
+                  <span className="text-[11px] px-2.5 py-0.5 rounded-full font-semibold border badge-primary flex items-center gap-1">
+                    <Clock className="h-3 w-3 inline" />
+                    Live Quiz
+                  </span>
+                )}
+                {/* Subject Badge */}
+                {(quiz as any).subject && (
+                  <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20 capitalize">
+                    {(quiz as any).subject}
+                  </span>
+                )}
+                {/* Visibility badge for teachers */}
+                {isTeacher && !quiz.isDraft && (
+                  <span className={cn(
+                    "text-[10px] px-2 py-0.5 rounded-full font-semibold border flex items-center gap-1",
+                    quiz.isPublic
+                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                      : "bg-zinc-500/10 text-zinc-400 border-zinc-500/30"
+                  )}>
+                    {quiz.isPublic ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
+                    {quiz.isPublic ? "Public" : "Private"}
+                  </span>
+                )}
+                {/* Attempt Count Badge for Teachers */}
+                {isTeacher && typeof (quiz as any).attemptCount === 'number' && (
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-300 border border-indigo-500/20 flex items-center gap-1">
+                    <Users className="h-3 w-3" />
+                    {(quiz as any).attemptCount} Attempts
+                  </span>
+                )}
+              </div>
             </div>
 
-            <div className="flex gap-1.5 shrink-0 flex-wrap justify-end">
-              {isTeacher && (
-                <Link href={`/quiz-analytics/${quiz.id}`}>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
-                  >
-                    <BarChart className="h-3.5 w-3.5" />
-                  </Button>
-                </Link>
-              )}
+            <p className="text-xs text-[hsl(var(--muted-foreground))] line-clamp-2 leading-relaxed">
+              {quiz.description}
+            </p>
+          </div>
 
-              {isTeacher && quiz.quizType === "live" && (
+          {/* Footer Metadata & Actions */}
+          <div className="pt-3 border-t border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            {/* Left side of footer: Live Quiz Start/Monitor controls OR Instructor name */}
+            <div className="flex items-center gap-2 text-xs text-[hsl(var(--muted-foreground))] min-w-0">
+              {isTeacher && quiz.quizType === "live" ? (
                 <>
                   {quiz.isActive ? (
-                    <>
+                    <div className="flex items-center gap-1.5">
                       <Link href={`/teacher/monitor/${quiz.id}`}>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 px-2 text-xs text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+                          className="h-8 px-2.5 text-xs text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-white/5 rounded-lg"
+                          title="Monitor Live Session"
                         >
-                          <Eye className="h-3.5 w-3.5" />
+                          <Eye className="h-4 w-4 mr-1" />
+                          <span>Monitor</span>
                         </Button>
                       </Link>
                       <Button
                         size="sm"
-                        className="h-7 px-2 text-xs"
+                        className="h-8 px-3 text-xs font-semibold rounded-lg"
                         style={{ background: "hsl(var(--danger-h) var(--danger-s) var(--danger-l))", color: "white" }}
                         onClick={() => stopQuizMutation.mutate()}
                         disabled={isStopping}
                       >
-                        <Square className="h-3 w-3 mr-1" />
+                        <Square className="h-3.5 w-3.5 mr-1" />
                         {isStopping ? "..." : "Stop"}
                       </Button>
-                    </>
+                    </div>
                   ) : (
                     <Button
                       size="sm"
-                      className="h-7 px-3 text-xs"
+                      className="h-8 px-3.5 text-xs font-semibold rounded-lg"
                       style={{
                         background: "hsl(var(--primary))",
                         boxShadow: "0 2px 8px -2px hsl(var(--primary) / 0.4)",
@@ -272,18 +256,42 @@ export function QuizCard({
                       onClick={() => setShowSessionDialog(true)}
                       disabled={isStarting}
                     >
-                      <Play className="h-3 w-3 mr-1" />
-                      {isStarting ? "..." : "Start"}
+                      <Play className="h-3.5 w-3.5 mr-1" />
+                      {isStarting ? "Launching..." : "Start Live Quiz"}
                     </Button>
                   )}
                 </>
+              ) : (
+                teacherName && (
+                  <div className="flex items-center gap-1 font-medium">
+                    <User className="h-3.5 w-3.5 shrink-0 text-indigo-400" />
+                    <span className="truncate">{teacherName}</span>
+                  </div>
+                )
+              )}
+            </div>
+
+            {/* Right side of footer: Analytics, Publish, and Primary Action */}
+            <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+              {isTeacher && (
+                <Link href={`/quiz-analytics/${quiz.id}`}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-3 text-xs font-semibold border-indigo-500/30 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 hover:text-white rounded-lg transition-colors flex items-center gap-1.5"
+                    title="View Detailed Analytics"
+                  >
+                    <BarChart className="h-3.5 w-3.5 text-indigo-400" />
+                    <span>Analytics</span>
+                  </Button>
+                </Link>
               )}
 
               {/* Publish button for draft quizzes */}
               {isTeacher && quiz.isDraft && onPublish && (
                 <Button
                   size="sm"
-                  className="h-7 px-3 text-xs font-medium"
+                  className="h-8 px-3 text-xs font-semibold rounded-lg"
                   style={{
                     background: "hsl(145 63% 42%)",
                     color: "white",
@@ -294,7 +302,7 @@ export function QuizCard({
                     onPublish();
                   }}
                 >
-                  <Send className="h-3 w-3 mr-1" />
+                  <Send className="h-3.5 w-3.5 mr-1" />
                   Publish
                 </Button>
               )}
@@ -302,7 +310,7 @@ export function QuizCard({
               <Link href={actionPath}>
                 <Button
                   size="sm"
-                  className="h-7 px-3 text-xs font-medium"
+                  className="h-8 px-3.5 text-xs font-semibold rounded-lg"
                   style={{
                     background: "hsl(var(--primary))",
                     boxShadow: "0 2px 8px -2px hsl(var(--primary) / 0.4)",
