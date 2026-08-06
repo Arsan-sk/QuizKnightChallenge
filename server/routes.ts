@@ -1060,23 +1060,28 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Quiz not found" });
       }
 
-      // If user is not the creator of the quiz and not a teacher, deny access
       if (quiz.createdBy !== req.user.id && req.user.role !== "teacher") {
         return res.status(403).json({ error: "Not authorized to access this quiz's analytics" });
       }
 
-      // Get results for this quiz (filtered by sessionId if provided)
       const reqSessionId = req.query.sessionId ? Number(req.query.sessionId) : undefined;
       const results = await storage.getResultsByQuiz(quizId, reqSessionId);
+      const questions = (await storage.getQuestionsByQuiz(quizId)) || [];
 
       if (!results || results.length === 0) {
         return res.json({
           totalAttempts: 0,
-          averageScore: null,
-          highestScore: null,
-          lowestScore: null,
-          averageTime: null,
-          questionStats: [],
+          averageScore: 0,
+          highestScore: 0,
+          lowestScore: 0,
+          averageTime: 0,
+          questionStats: questions.map(q => ({
+            questionId: q.id,
+            questionText: q.questionText,
+            totalAttempts: 0,
+            correctCount: 0,
+            averageTime: 0
+          })),
           performanceDistribution: [
               { scoreRange: "0-39%", count: 0 },
               { scoreRange: "40-59%", count: 0 },
@@ -1085,31 +1090,28 @@ export function registerRoutes(app: Express): Server {
           ],
           timePerformance: [],
           studentReports: [],
-          questions: []
+          questions
         });
       }
 
-      // Get the maximum possible score for this quiz (based on total questions)
-      // In this case we use the number of questions as a reference
-      const questions = await storage.getQuestionsByQuiz(quizId);
-      const maxPossibleScore = questions.length; // Maximum score is 1 point per question
       const totalAttempts = results.length;
 
-      // Calculate scores as percentages (0-100%)
+      // Safely calculate scores for each result
       const scores = results.map(r => {
-        if (r.totalQuestions === 0) return 0; // Handle edge case
-        return (r.correctAnswers / r.totalQuestions) * 100; // Convert to percentage based on correct answers
-      }).filter(s => typeof s === 'number' && !isNaN(s));
+        const totalQ = (r.totalQuestions && r.totalQuestions > 0) ? r.totalQuestions : (questions.length > 0 ? questions.length : 1);
+        const correct = typeof r.correctAnswers === 'number' ? r.correctAnswers : (typeof r.score === 'number' ? Math.round((r.score / 100) * totalQ) : 0);
+        const pct = (correct / totalQ) * 100;
+        return isNaN(pct) ? 0 : Math.min(100, Math.max(0, pct));
+      });
 
-      const durations = results.map(r => Number(r.timeTaken) || 0).filter(d => typeof d === 'number' && !isNaN(d));
+      const durations = results.map(r => Number(r.timeTaken) || 0).filter(d => !isNaN(d) && d >= 0);
 
-      // Calculate stats with safety checks for edge cases
-      const averageScore = scores.length > 0 ? scores.reduce((acc, val) => acc + val, 0) / totalAttempts : 0;
-      const highestScore = scores.length > 0 ? Math.max(...scores) : 0;
-      const lowestScore = scores.length > 0 ? Math.min(...scores) : 0;
-      const averageTime = durations.length > 0 ? Math.round(durations.reduce((acc, val) => acc + val, 0) / totalAttempts) : 0;
+      const sumScores = scores.reduce((acc, val) => acc + val, 0);
+      const averageScore = scores.length > 0 ? Math.round((sumScores / scores.length) * 10) / 10 : 0;
+      const highestScore = scores.length > 0 ? Math.round(Math.max(...scores) * 10) / 10 : 0;
+      const lowestScore = scores.length > 0 ? Math.round(Math.min(...scores) * 10) / 10 : 0;
+      const averageTime = durations.length > 0 ? Math.round(durations.reduce((acc, val) => acc + val, 0) / durations.length) : 0;
 
-      // Get all users who attempted this quiz
       const userIds = [...new Set(results.map(r => r.userId))];
       let users: any[] = [];
       try {
@@ -1119,40 +1121,28 @@ export function registerRoutes(app: Express): Server {
       }
       const userMap = Object.fromEntries(users.filter(Boolean).map(user => [user.id, user]));
 
-      // Helper to parse stored answers in multiple possible formats
       const parseAnswersField = (val: any): string[] => {
         if (val === null || val === undefined) return [];
-        // If it's already an array, normalize to strings
         if (Array.isArray(val)) return val.map((v) => (v === null || v === undefined) ? "" : String(v));
-
-        // If it's an object with toJSON, try that
         if (typeof val === 'object') {
           try {
             const j = JSON.stringify(val);
             const parsed = JSON.parse(j);
             if (Array.isArray(parsed)) return parsed.map((v) => (v === null || v === undefined) ? "" : String(v));
-          } catch (e) {
-            // fallthrough to try string handling
-          }
+          } catch (e) {}
         }
-
         if (typeof val === 'string') {
           const s = val.trim();
           if (s === '' || s === '[]') return [];
-
-          // Try JSON first
           try {
             const parsed = JSON.parse(s);
             if (Array.isArray(parsed)) return parsed.map((v) => (v === null || v === undefined) ? "" : String(v));
           } catch (e) {
-            // Try Postgres array literal like {"a","b"} or {a,b}
             if (s.startsWith('{') && s.endsWith('}')) {
               const inner = s.slice(1, -1);
               if (inner.trim() === '') return [];
-              // split on commas not inside quotes
               const parts = inner.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/g).map(p => p.trim());
               const cleaned = parts.map(p => {
-                // remove surrounding quotes if present
                 if ((p.startsWith('"') && p.endsWith('"')) || (p.startsWith("'") && p.endsWith("'"))) {
                   return p.slice(1, -1).replace(/\\"/g, '"').replace(/\\'/g, "'");
                 }
@@ -1162,28 +1152,23 @@ export function registerRoutes(app: Express): Server {
             }
           }
         }
-
-        // Unknown format: log and return empty
-        console.warn("Unable to parse answers field, returning empty array. Raw value:", val);
         return [];
       };
 
-      // Create student reports
       const studentReports = results.map(result => {
         const user = userMap[result.userId];
-        // Calculate score as percentage
-        const scorePercentage = result.totalQuestions > 0
-          ? (result.correctAnswers / result.totalQuestions) * 100
-          : 0;
+        const totalQ = (result.totalQuestions && result.totalQuestions > 0) ? result.totalQuestions : (questions.length > 0 ? questions.length : 1);
+        const correct = typeof result.correctAnswers === 'number' ? result.correctAnswers : 0;
+        const scorePercentage = Math.min(100, Math.max(0, (correct / totalQ) * 100));
 
         return {
           userId: result.userId,
           username: user ? user.username : 'Unknown',
-          score: parseFloat(scorePercentage.toFixed(1)),
-          correctAnswers: result.correctAnswers,
-          wrongAnswers: result.wrongAnswers,
-          timeTaken: result.timeTaken,
-          completedAt: result.completedAt,
+          score: parseFloat((isNaN(scorePercentage) ? 0 : scorePercentage).toFixed(1)),
+          correctAnswers: correct,
+          wrongAnswers: typeof result.wrongAnswers === 'number' ? result.wrongAnswers : Math.max(0, totalQ - correct),
+          timeTaken: Number(result.timeTaken) || 0,
+          completedAt: result.completedAt || new Date().toISOString(),
           answers: parseAnswersField(result.answers),
           tabSwitchCount: result.tabSwitchCount || 0,
           copyPasteAttempts: result.copyPasteAttempts || 0,
@@ -1191,10 +1176,7 @@ export function registerRoutes(app: Express): Server {
         };
       });
 
-      // Create a mapping of question IDs to their total attempts, correct counts, and average times
       const questionData: Record<number, any> = {};
-
-      // Initialize question data
       questions.forEach(q => {
         questionData[q.id] = {
           id: q.id,
@@ -1207,30 +1189,21 @@ export function registerRoutes(app: Express): Server {
 
       results.forEach(result => {
         let answersArray: string[] = parseAnswersField(result.answers);
+        const totalQ = (result.totalQuestions && result.totalQuestions > 0) ? result.totalQuestions : (questions.length > 0 ? questions.length : 1);
+        const timePerQuestion = totalQ > 0 ? Math.round((Number(result.timeTaken) || 0) / totalQ) : 0;
 
-        // Estimate time per question by dividing total time by number of answered questions
-        const timePerQuestion = result.totalQuestions > 0 ? Math.round(result.timeTaken / result.totalQuestions) : 0;
-
-        // Iterate questions in the canonical order and map answers by index
         questions.forEach((q, idx) => {
           const qd = questionData[q.id];
           if (!qd) return;
 
           const userAns = answersArray[idx];
-          // Total attempts are initialized to results.length.
-          
-          // Count correct when the user's answer equals the stored correctAnswer
           if (userAns !== undefined && userAns !== null && String(userAns).trim() === String(q.correctAnswer).trim()) {
             qd.correctCount++;
           }
-
-          // Accumulate approximate time for this question
           qd.totalTime += timePerQuestion;
         });
       });
 
-      // Transform question data into the required format
-      // Preserve question order when producing stats
       const questionStats = questions.map(q => {
         const qd = questionData[q.id];
         return {
@@ -1242,21 +1215,18 @@ export function registerRoutes(app: Express): Server {
         };
       });
 
-      // Calculate performance distribution
       const performanceDistribution = [
-          { scoreRange: "0-39%", count: scores.filter(s => s < 40).length },
-          { scoreRange: "40-59%", count: scores.filter(s => s >= 40 && s < 60).length },
-          { scoreRange: "60-79%", count: scores.filter(s => s >= 60 && s < 80).length },
-          { scoreRange: "80-100%", count: scores.filter(s => s >= 80).length }
+        { scoreRange: "0-39%", count: scores.filter(s => s < 40).length },
+        { scoreRange: "40-59%", count: scores.filter(s => s >= 40 && s < 60).length },
+        { scoreRange: "60-79%", count: scores.filter(s => s >= 60 && s < 80).length },
+        { scoreRange: "80-100%", count: scores.filter(s => s >= 80).length }
       ];
 
-      // Generate time performance data based on actual completion dates
       const timePerformance: any[] = [];
       const now = new Date();
       const pastWeek = new Date(now);
       pastWeek.setDate(pastWeek.getDate() - 6);
 
-      // Create a map of dates to results
       const resultsByDate: Record<string, any[]> = {};
       for (let i = 0; i <= 6; i++) {
         const date = new Date(now);
@@ -1265,7 +1235,6 @@ export function registerRoutes(app: Express): Server {
         resultsByDate[dateStr] = [];
       }
 
-      // Group results by date
       results.forEach(result => {
         const completedAt = result.completedAt ? new Date(result.completedAt) : new Date();
         if (completedAt >= pastWeek) {
@@ -1276,7 +1245,6 @@ export function registerRoutes(app: Express): Server {
         }
       });
 
-      // Calculate performance for each day
       Object.entries(resultsByDate).forEach(([dateStr, dateResults]) => {
         if (dateResults.length === 0) {
           timePerformance.push({
@@ -1287,26 +1255,25 @@ export function registerRoutes(app: Express): Server {
             wrong: 0
           });
         } else {
-          const totalCorrect = dateResults.reduce((sum, r) => sum + r.correctAnswers, 0);
-          const totalWrong = dateResults.reduce((sum, r) => sum + r.wrongAnswers, 0);
+          const totalCorrect = dateResults.reduce((sum, r) => sum + (r.correctAnswers || 0), 0);
+          const totalWrong = dateResults.reduce((sum, r) => sum + (r.wrongAnswers || 0), 0);
 
-          // Calculate average score as percentage
-          const dayScores = dateResults.map(r =>
-            r.totalQuestions > 0 ? (r.correctAnswers / r.totalQuestions) * 100 : 0
-          );
+          const dayScores = dateResults.map(r => {
+            const totalQ = (r.totalQuestions && r.totalQuestions > 0) ? r.totalQuestions : (questions.length > 0 ? questions.length : 1);
+            return ((r.correctAnswers || 0) / totalQ) * 100;
+          });
           const avgScore = dayScores.reduce((sum, score) => sum + score, 0) / dayScores.length;
 
           timePerformance.push({
             date: dateStr,
             attempts: dateResults.length,
-            averageScore: Math.round(avgScore),
+            averageScore: Math.round(isNaN(avgScore) ? 0 : avgScore),
             correct: totalCorrect,
             wrong: totalWrong
           });
         }
       });
 
-      // Sort by date ascending
       timePerformance.sort((a, b) => a.date.localeCompare(b.date));
 
       res.json({

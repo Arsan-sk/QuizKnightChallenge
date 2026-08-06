@@ -52,6 +52,7 @@ export const quizzes = pgTable("quizzes", {
   startTime: timestamp("start_time"),
   endTime: timestamp("end_time"),
   accessCode: text("access_code").unique(),
+  subject: text("subject"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

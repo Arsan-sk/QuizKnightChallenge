@@ -169,6 +169,7 @@ async function applySchemaChanges() {
     await addColumnIfNotExists('results', 'proctoring_flags', 'integer', 'DEFAULT 0');
     await addColumnIfNotExists('results', 'session_id', 'integer');
     await addColumnIfNotExists('quizzes', 'access_code', 'text');
+    await addColumnIfNotExists('quizzes', 'subject', 'text');
 
     // Auto-generate unique access codes for existing quizzes if missing
     const missingCodesResult = await client.query(`SELECT id FROM quizzes WHERE access_code IS NULL OR access_code = ''`);

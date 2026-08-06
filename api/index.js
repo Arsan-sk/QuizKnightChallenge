@@ -89,6 +89,7 @@ var quizzes = pgTable("quizzes", {
   startTime: timestamp("start_time"),
   endTime: timestamp("end_time"),
   accessCode: text("access_code").unique(),
+  subject: text("subject"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow()
 });
@@ -369,6 +370,7 @@ async function applySchemaChanges() {
     await addColumnIfNotExists("results", "proctoring_flags", "integer", "DEFAULT 0");
     await addColumnIfNotExists("results", "session_id", "integer");
     await addColumnIfNotExists("quizzes", "access_code", "text");
+    await addColumnIfNotExists("quizzes", "subject", "text");
     const missingCodesResult = await client.query(`SELECT id FROM quizzes WHERE access_code IS NULL OR access_code = ''`);
     if (missingCodesResult.rows.length > 0) {
       const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -2067,14 +2069,21 @@ function registerRoutes(app2) {
       }
       const reqSessionId = req.query.sessionId ? Number(req.query.sessionId) : void 0;
       const results2 = await storage.getResultsByQuiz(quizId, reqSessionId);
+      const questions2 = await storage.getQuestionsByQuiz(quizId) || [];
       if (!results2 || results2.length === 0) {
         return res.json({
           totalAttempts: 0,
-          averageScore: null,
-          highestScore: null,
-          lowestScore: null,
-          averageTime: null,
-          questionStats: [],
+          averageScore: 0,
+          highestScore: 0,
+          lowestScore: 0,
+          averageTime: 0,
+          questionStats: questions2.map((q) => ({
+            questionId: q.id,
+            questionText: q.questionText,
+            totalAttempts: 0,
+            correctCount: 0,
+            averageTime: 0
+          })),
           performanceDistribution: [
             { scoreRange: "0-39%", count: 0 },
             { scoreRange: "40-59%", count: 0 },
@@ -2083,21 +2092,22 @@ function registerRoutes(app2) {
           ],
           timePerformance: [],
           studentReports: [],
-          questions: []
+          questions: questions2
         });
       }
-      const questions2 = await storage.getQuestionsByQuiz(quizId);
-      const maxPossibleScore = questions2.length;
       const totalAttempts = results2.length;
       const scores = results2.map((r) => {
-        if (r.totalQuestions === 0) return 0;
-        return r.correctAnswers / r.totalQuestions * 100;
-      }).filter((s) => typeof s === "number" && !isNaN(s));
-      const durations = results2.map((r) => Number(r.timeTaken) || 0).filter((d) => typeof d === "number" && !isNaN(d));
-      const averageScore = scores.length > 0 ? scores.reduce((acc, val) => acc + val, 0) / totalAttempts : 0;
-      const highestScore = scores.length > 0 ? Math.max(...scores) : 0;
-      const lowestScore = scores.length > 0 ? Math.min(...scores) : 0;
-      const averageTime = durations.length > 0 ? Math.round(durations.reduce((acc, val) => acc + val, 0) / totalAttempts) : 0;
+        const totalQ = r.totalQuestions && r.totalQuestions > 0 ? r.totalQuestions : questions2.length > 0 ? questions2.length : 1;
+        const correct = typeof r.correctAnswers === "number" ? r.correctAnswers : typeof r.score === "number" ? Math.round(r.score / 100 * totalQ) : 0;
+        const pct = correct / totalQ * 100;
+        return isNaN(pct) ? 0 : Math.min(100, Math.max(0, pct));
+      });
+      const durations = results2.map((r) => Number(r.timeTaken) || 0).filter((d) => !isNaN(d) && d >= 0);
+      const sumScores = scores.reduce((acc, val) => acc + val, 0);
+      const averageScore = scores.length > 0 ? Math.round(sumScores / scores.length * 10) / 10 : 0;
+      const highestScore = scores.length > 0 ? Math.round(Math.max(...scores) * 10) / 10 : 0;
+      const lowestScore = scores.length > 0 ? Math.round(Math.min(...scores) * 10) / 10 : 0;
+      const averageTime = durations.length > 0 ? Math.round(durations.reduce((acc, val) => acc + val, 0) / durations.length) : 0;
       const userIds = [...new Set(results2.map((r) => r.userId))];
       let users2 = [];
       try {
@@ -2138,20 +2148,21 @@ function registerRoutes(app2) {
             }
           }
         }
-        console.warn("Unable to parse answers field, returning empty array. Raw value:", val);
         return [];
       };
       const studentReports = results2.map((result) => {
         const user = userMap[result.userId];
-        const scorePercentage = result.totalQuestions > 0 ? result.correctAnswers / result.totalQuestions * 100 : 0;
+        const totalQ = result.totalQuestions && result.totalQuestions > 0 ? result.totalQuestions : questions2.length > 0 ? questions2.length : 1;
+        const correct = typeof result.correctAnswers === "number" ? result.correctAnswers : 0;
+        const scorePercentage = Math.min(100, Math.max(0, correct / totalQ * 100));
         return {
           userId: result.userId,
           username: user ? user.username : "Unknown",
-          score: parseFloat(scorePercentage.toFixed(1)),
-          correctAnswers: result.correctAnswers,
-          wrongAnswers: result.wrongAnswers,
-          timeTaken: result.timeTaken,
-          completedAt: result.completedAt,
+          score: parseFloat((isNaN(scorePercentage) ? 0 : scorePercentage).toFixed(1)),
+          correctAnswers: correct,
+          wrongAnswers: typeof result.wrongAnswers === "number" ? result.wrongAnswers : Math.max(0, totalQ - correct),
+          timeTaken: Number(result.timeTaken) || 0,
+          completedAt: result.completedAt || (/* @__PURE__ */ new Date()).toISOString(),
           answers: parseAnswersField(result.answers),
           tabSwitchCount: result.tabSwitchCount || 0,
           copyPasteAttempts: result.copyPasteAttempts || 0,
@@ -2170,7 +2181,8 @@ function registerRoutes(app2) {
       });
       results2.forEach((result) => {
         let answersArray = parseAnswersField(result.answers);
-        const timePerQuestion = result.totalQuestions > 0 ? Math.round(result.timeTaken / result.totalQuestions) : 0;
+        const totalQ = result.totalQuestions && result.totalQuestions > 0 ? result.totalQuestions : questions2.length > 0 ? questions2.length : 1;
+        const timePerQuestion = totalQ > 0 ? Math.round((Number(result.timeTaken) || 0) / totalQ) : 0;
         questions2.forEach((q, idx) => {
           const qd = questionData[q.id];
           if (!qd) return;
@@ -2227,16 +2239,17 @@ function registerRoutes(app2) {
             wrong: 0
           });
         } else {
-          const totalCorrect = dateResults.reduce((sum, r) => sum + r.correctAnswers, 0);
-          const totalWrong = dateResults.reduce((sum, r) => sum + r.wrongAnswers, 0);
-          const dayScores = dateResults.map(
-            (r) => r.totalQuestions > 0 ? r.correctAnswers / r.totalQuestions * 100 : 0
-          );
+          const totalCorrect = dateResults.reduce((sum, r) => sum + (r.correctAnswers || 0), 0);
+          const totalWrong = dateResults.reduce((sum, r) => sum + (r.wrongAnswers || 0), 0);
+          const dayScores = dateResults.map((r) => {
+            const totalQ = r.totalQuestions && r.totalQuestions > 0 ? r.totalQuestions : questions2.length > 0 ? questions2.length : 1;
+            return (r.correctAnswers || 0) / totalQ * 100;
+          });
           const avgScore = dayScores.reduce((sum, score) => sum + score, 0) / dayScores.length;
           timePerformance.push({
             date: dateStr,
             attempts: dateResults.length,
-            averageScore: Math.round(avgScore),
+            averageScore: Math.round(isNaN(avgScore) ? 0 : avgScore),
             correct: totalCorrect,
             wrong: totalWrong
           });

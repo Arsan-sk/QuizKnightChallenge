@@ -43,6 +43,7 @@ import { Quiz, Question as QuestionType } from "@shared/schema";
 const quizFormSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string(),
+  subject: z.string().optional(),
   difficulty: z.enum(["easy", "medium", "hard"]),
   isPublic: z.boolean(),
   quizType: z.enum(["standard", "live"]),
@@ -77,6 +78,7 @@ export default function QuizCreate() {
     defaultValues: {
       title: "",
       description: "",
+      subject: "",
       difficulty: "easy" as "easy" | "medium" | "hard",
       isPublic: true,
       quizType: "standard" as "standard" | "live",
@@ -109,6 +111,7 @@ export default function QuizCreate() {
       reset({
         title: existingQuiz.title || "",
         description: existingQuiz.description || "",
+        subject: (existingQuiz as any).subject || "",
         difficulty: (existingQuiz.difficulty as "easy" | "medium" | "hard") || "easy",
         isPublic: existingQuiz.isPublic ?? true,
         quizType: (existingQuiz.quizType as "standard" | "live") || "standard",
@@ -314,16 +317,11 @@ export default function QuizCreate() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest pl-1">SUBJECT</label>
-                <Select defaultValue="physics">
-                  <SelectTrigger className="bg-[#131316] border-white/5 text-white h-14 rounded-xl">
-                    <SelectValue placeholder="Select a Subject" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-[#1c1c21] border-zinc-800 text-white">
-                    <SelectItem value="physics">Physics</SelectItem>
-                    <SelectItem value="compsci">Computer Science</SelectItem>
-                    <SelectItem value="math">Mathematics</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Input
+                  {...form.register("subject")}
+                  placeholder="e.g. Physics, Computer Science, Biology, History..."
+                  className="bg-[#131316] border-white/5 text-white h-14 rounded-xl focus-visible:ring-indigo-500/50"
+                />
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest pl-1">LANGUAGE</label>
