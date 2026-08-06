@@ -383,6 +383,7 @@ async function applySchemaChanges() {
       }
     }
     await client.query(`UPDATE quizzes SET is_draft = false WHERE is_public = true OR is_public IS NULL;`);
+    await client.query(`UPDATE quizzes SET is_draft = true WHERE is_draft IS NULL AND is_public = false;`);
     client.release();
     console.log("Schema changes applied successfully");
   } catch (error) {
@@ -587,9 +588,9 @@ var DatabaseStorage = class {
         ...getTableColumns(quizzes),
         teacherName: users.username
       }).from(quizzes).leftJoin(users, eq(quizzes.createdBy, users.id)).where(
-        or(
+        and(
           eq(quizzes.isPublic, true),
-          isNull(quizzes.isPublic)
+          or(eq(quizzes.isDraft, false), isNull(quizzes.isDraft))
         )
       ).orderBy(desc(quizzes.createdAt));
       const resultList = await Promise.all(
@@ -616,10 +617,30 @@ var DatabaseStorage = class {
   }
   async getQuizzesForStudent(userId) {
     try {
+      const user = await this.getUser(userId);
+      if (!user) return this.getPublicQuizzes();
       return await db.select().from(quizzes).where(
-        or(
+        and(
           eq(quizzes.isPublic, true),
-          isNull(quizzes.isPublic)
+          or(eq(quizzes.isDraft, false), isNull(quizzes.isDraft)),
+          or(
+            and(
+              sql`${quizzes.targetBranch} IS NULL`,
+              sql`${quizzes.targetYear} IS NULL`
+            ),
+            and(
+              eq(quizzes.targetBranch, user.branch),
+              sql`${quizzes.targetYear} IS NULL`
+            ),
+            and(
+              eq(quizzes.targetYear, user.year),
+              sql`${quizzes.targetBranch} IS NULL`
+            ),
+            and(
+              eq(quizzes.targetBranch, user.branch),
+              eq(quizzes.targetYear, user.year)
+            )
+          )
         )
       ).orderBy(desc(quizzes.createdAt));
     } catch (error) {

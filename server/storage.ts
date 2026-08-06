@@ -350,9 +350,9 @@ export class DatabaseStorage implements IStorage {
         .from(quizzes)
         .leftJoin(users, eq(quizzes.createdBy, users.id))
         .where(
-          or(
+          and(
             eq(quizzes.isPublic, true),
-            isNull(quizzes.isPublic)
+            or(eq(quizzes.isDraft, false), isNull(quizzes.isDraft))
           )
         )
         .orderBy(desc(quizzes.createdAt));
@@ -387,13 +387,35 @@ export class DatabaseStorage implements IStorage {
 
   async getQuizzesForStudent(userId: number): Promise<Quiz[]> {
     try {
+      const user = await this.getUser(userId);
+      
+      if (!user) return this.getPublicQuizzes();
+      
       return await db
         .select()
         .from(quizzes)
         .where(
-          or(
+          and(
             eq(quizzes.isPublic, true),
-            isNull(quizzes.isPublic)
+            or(eq(quizzes.isDraft, false), isNull(quizzes.isDraft)),
+            or(
+              and(
+                sql`${quizzes.targetBranch} IS NULL`,
+                sql`${quizzes.targetYear} IS NULL`
+              ),
+              and(
+                eq(quizzes.targetBranch, user.branch as any),
+                sql`${quizzes.targetYear} IS NULL`
+              ),
+              and(
+                eq(quizzes.targetYear, user.year as any),
+                sql`${quizzes.targetBranch} IS NULL`
+              ),
+              and(
+                eq(quizzes.targetBranch, user.branch as any),
+                eq(quizzes.targetYear, user.year as any)
+              )
+            )
           )
         )
         .orderBy(desc(quizzes.createdAt));

@@ -186,6 +186,7 @@ async function applySchemaChanges() {
 
     // Backfill is_draft for existing public quizzes
     await client.query(`UPDATE quizzes SET is_draft = false WHERE is_public = true OR is_public IS NULL;`);
+    await client.query(`UPDATE quizzes SET is_draft = true WHERE is_draft IS NULL AND is_public = false;`);
 
     client.release();
     console.log('Schema changes applied successfully');
