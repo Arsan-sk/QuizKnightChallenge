@@ -382,8 +382,7 @@ async function applySchemaChanges() {
         await client.query(`UPDATE quizzes SET access_code = $1 WHERE id = $2`, [code, row.id]);
       }
     }
-    await client.query(`UPDATE quizzes SET is_draft = false WHERE is_draft IS NULL AND is_public = true;`);
-    await client.query(`UPDATE quizzes SET is_draft = true WHERE is_draft IS NULL AND (is_public = false OR is_public IS NULL);`);
+    await client.query(`UPDATE quizzes SET is_draft = false WHERE is_public = true OR is_public IS NULL;`);
     client.release();
     console.log("Schema changes applied successfully");
   } catch (error) {
@@ -588,17 +587,24 @@ var DatabaseStorage = class {
         ...getTableColumns(quizzes),
         teacherName: users.username
       }).from(quizzes).leftJoin(users, eq(quizzes.createdBy, users.id)).where(
-        and(
+        or(
           eq(quizzes.isPublic, true),
-          or(eq(quizzes.isDraft, false), isNull(quizzes.isDraft))
+          isNull(quizzes.isPublic)
         )
       ).orderBy(desc(quizzes.createdAt));
       const resultList = await Promise.all(
         quizzesWithTeachers.map(async (q) => {
-          const attempts = await db.select({ count: sql`count(*)` }).from(results).where(eq(results.quizId, q.id));
+          let attemptCount = 0;
+          try {
+            const attempts = await db.select({ count: sql`count(*)` }).from(results).where(eq(results.quizId, q.id));
+            attemptCount = Number(attempts[0]?.count || 0);
+          } catch (e) {
+            console.warn(`Error counting attempts for quiz ${q.id}:`, e);
+          }
           return {
             ...q,
-            attemptCount: Number(attempts[0]?.count || 0)
+            teacherName: q.teacherName || "Instructor",
+            attemptCount
           };
         })
       );
@@ -610,34 +616,10 @@ var DatabaseStorage = class {
   }
   async getQuizzesForStudent(userId) {
     try {
-      const user = await this.getUser(userId);
-      if (!user) return [];
       return await db.select().from(quizzes).where(
-        and(
+        or(
           eq(quizzes.isPublic, true),
-          or(eq(quizzes.isDraft, false), isNull(quizzes.isDraft)),
-          or(
-            // No targeting
-            and(
-              sql`${quizzes.targetBranch} IS NULL`,
-              sql`${quizzes.targetYear} IS NULL`
-            ),
-            // Branch targeting matches
-            and(
-              eq(quizzes.targetBranch, user.branch),
-              sql`${quizzes.targetYear} IS NULL`
-            ),
-            // Year targeting matches
-            and(
-              eq(quizzes.targetYear, user.year),
-              sql`${quizzes.targetBranch} IS NULL`
-            ),
-            // Both branch and year targeting match
-            and(
-              eq(quizzes.targetBranch, user.branch),
-              eq(quizzes.targetYear, user.year)
-            )
-          )
+          isNull(quizzes.isPublic)
         )
       ).orderBy(desc(quizzes.createdAt));
     } catch (error) {
@@ -1841,7 +1823,7 @@ function registerRoutes(app2) {
       if (!quiz) {
         return res.status(404).json({ error: "Quiz not found" });
       }
-      if (req.user.role === "student" && quiz.isDraft) {
+      if (req.user.role === "student" && quiz.isDraft === true && !quiz.isPublic) {
         return res.status(403).json({ error: "This quiz is not available" });
       }
       if (!quiz.isPublic && quiz.createdBy !== req.user.id) {

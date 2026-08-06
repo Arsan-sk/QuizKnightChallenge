@@ -771,8 +771,8 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Quiz not found" });
       }
 
-      // Students cannot access draft quizzes
-      if (req.user.role === "student" && quiz.isDraft) {
+      // Students cannot access draft quizzes if they are non-public
+      if (req.user.role === "student" && quiz.isDraft === true && !quiz.isPublic) {
         return res.status(403).json({ error: "This quiz is not available" });
       }
 

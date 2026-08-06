@@ -350,23 +350,30 @@ export class DatabaseStorage implements IStorage {
         .from(quizzes)
         .leftJoin(users, eq(quizzes.createdBy, users.id))
         .where(
-          and(
+          or(
             eq(quizzes.isPublic, true),
-            or(eq(quizzes.isDraft, false), isNull(quizzes.isDraft))
+            isNull(quizzes.isPublic)
           )
         )
         .orderBy(desc(quizzes.createdAt));
 
       const resultList = await Promise.all(
         quizzesWithTeachers.map(async (q) => {
-          const attempts = await db
-            .select({ count: sql<number>`count(*)` })
-            .from(results)
-            .where(eq(results.quizId, q.id));
+          let attemptCount = 0;
+          try {
+            const attempts = await db
+              .select({ count: sql<number>`count(*)` })
+              .from(results)
+              .where(eq(results.quizId, q.id));
+            attemptCount = Number(attempts[0]?.count || 0);
+          } catch (e) {
+            console.warn(`Error counting attempts for quiz ${q.id}:`, e);
+          }
 
           return {
             ...(q as any),
-            attemptCount: Number(attempts[0]?.count || 0),
+            teacherName: q.teacherName || "Instructor",
+            attemptCount,
           };
         })
       );
@@ -380,41 +387,13 @@ export class DatabaseStorage implements IStorage {
 
   async getQuizzesForStudent(userId: number): Promise<Quiz[]> {
     try {
-      // Get user's branch and year
-      const user = await this.getUser(userId);
-      
-      if (!user) return [];
-      
-      // Get quizzes that are public and not drafts
       return await db
         .select()
         .from(quizzes)
         .where(
-          and(
+          or(
             eq(quizzes.isPublic, true),
-            or(eq(quizzes.isDraft, false), isNull(quizzes.isDraft)),
-            or(
-              // No targeting
-              and(
-                sql`${quizzes.targetBranch} IS NULL`,
-                sql`${quizzes.targetYear} IS NULL`
-              ),
-              // Branch targeting matches
-              and(
-                eq(quizzes.targetBranch, user.branch as any),
-                sql`${quizzes.targetYear} IS NULL`
-              ),
-              // Year targeting matches
-              and(
-                eq(quizzes.targetYear, user.year as any),
-                sql`${quizzes.targetBranch} IS NULL`
-              ),
-              // Both branch and year targeting match
-              and(
-                eq(quizzes.targetBranch, user.branch as any),
-                eq(quizzes.targetYear, user.year as any)
-              )
-            )
+            isNull(quizzes.isPublic)
           )
         )
         .orderBy(desc(quizzes.createdAt));
