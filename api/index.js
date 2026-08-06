@@ -746,7 +746,10 @@ var DatabaseStorage = class {
   }
   async getResultsByQuiz(quizId, sessionId) {
     if (sessionId !== void 0 && sessionId !== null && !isNaN(sessionId)) {
-      return db.select().from(results).where(and(eq(results.quizId, quizId), eq(results.sessionId, sessionId))).orderBy(desc(results.score), desc(results.completedAt));
+      const sessionResults = await db.select().from(results).where(and(eq(results.quizId, quizId), eq(results.sessionId, sessionId))).orderBy(desc(results.score), desc(results.completedAt));
+      if (sessionResults.length > 0) {
+        return sessionResults;
+      }
     }
     return db.select().from(results).where(eq(results.quizId, quizId)).orderBy(desc(results.score), desc(results.completedAt));
   }
@@ -1964,6 +1967,11 @@ function registerRoutes(app2) {
         const activeSession = await storage.getActiveLiveSession(quizId);
         if (activeSession) {
           targetSessionId = activeSession.id;
+        } else {
+          const recentSessions = await storage.getLiveSessionsByQuiz(quizId);
+          if (recentSessions.length > 0) {
+            targetSessionId = recentSessions[0].id;
+          }
         }
       }
       const questionsForQuiz = await storage.getQuestionsByQuiz(quizId);

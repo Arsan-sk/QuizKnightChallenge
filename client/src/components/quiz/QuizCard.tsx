@@ -131,15 +131,15 @@ export function QuizCard({
                 navigator.clipboard.writeText(quiz.accessCode!);
                 toast({
                   title: "Access Code Copied!",
-                  description: `Code "${quiz.accessCode}" copied to clipboard.`,
+                  description: `Code "${quiz.accessCode}" copied to clipboard. Share with students to join.`,
                   variant: "info",
                 });
               }}
               title="Click to copy quiz access code"
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 font-mono text-[10px] font-bold cursor-pointer transition-colors"
+              className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-indigo-500/15 hover:bg-indigo-500/30 border border-indigo-500/30 text-indigo-300 font-mono text-[10px] font-bold cursor-pointer transition-all shadow-sm"
             >
               <Copy className="h-3 w-3 text-indigo-400 shrink-0" />
-              <span>{quiz.accessCode}</span>
+              <span>Code: {quiz.accessCode}</span>
             </button>
           )}
           {quiz.isActive && (
@@ -178,6 +178,12 @@ export function QuizCard({
                   Live Quiz
                 </span>
               )}
+              {/* Subject Badge */}
+              {(quiz as any).subject && (
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/20 capitalize">
+                  {(quiz as any).subject}
+                </span>
+              )}
               {/* Visibility badge for teachers */}
               {isTeacher && !quiz.isDraft && (
                 <span className={cn(
@@ -196,27 +202,6 @@ export function QuizCard({
                   <Users className="h-3 w-3" />
                   {(quiz as any).attemptCount} Attempts
                 </span>
-              )}
-              {/* Permanent Access Code badge with 1-click copy */}
-              {quiz.accessCode && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    navigator.clipboard.writeText(quiz.accessCode!);
-                    toast({
-                      title: "Access Code Copied!",
-                      description: `Code "${quiz.accessCode}" copied to clipboard. Share with students to join.`,
-                      variant: "info",
-                    });
-                  }}
-                  title="Click to copy quiz access code"
-                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-300 font-mono text-[11px] font-bold cursor-pointer transition-colors"
-                >
-                  <Copy className="h-3 w-3 text-indigo-400 shrink-0" />
-                  <span>Code: {quiz.accessCode}</span>
-                </button>
               )}
             </div>
           </div>

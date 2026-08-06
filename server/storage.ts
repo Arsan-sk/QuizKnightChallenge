@@ -598,11 +598,15 @@ export class DatabaseStorage implements IStorage {
 
   async getResultsByQuiz(quizId: number, sessionId?: number): Promise<Result[]> {
     if (sessionId !== undefined && sessionId !== null && !isNaN(sessionId)) {
-      return db
+      const sessionResults = await db
         .select()
         .from(results)
         .where(and(eq(results.quizId, quizId), eq(results.sessionId, sessionId)))
         .orderBy(desc(results.score), desc(results.completedAt));
+
+      if (sessionResults.length > 0) {
+        return sessionResults;
+      }
     }
     return db
       .select()

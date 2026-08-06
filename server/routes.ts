@@ -954,6 +954,11 @@ export function registerRoutes(app: Express): Server {
         const activeSession = await storage.getActiveLiveSession(quizId);
         if (activeSession) {
           targetSessionId = activeSession.id;
+        } else {
+          const recentSessions = await storage.getLiveSessionsByQuiz(quizId);
+          if (recentSessions.length > 0) {
+            targetSessionId = recentSessions[0].id;
+          }
         }
       }
 
