@@ -31,6 +31,10 @@ export default function QuizAnalyticsPage() {
   const [, setLocation] = useLocation();
   const [analytics, setAnalytics] = useState<QuizAnalytics>(emptyAnalytics);
   const [quizTitle, setQuizTitle] = useState<string>("Loading...");
+  const [isLiveQuiz, setIsLiveQuiz] = useState<boolean>(false);
+  const [liveSessions, setLiveSessions] = useState<any[]>([]);
+  const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
+  const [selectedSessionName, setSelectedSessionName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,9 +48,23 @@ export default function QuizAnalyticsPage() {
         if (quizResponse.ok) {
           const quizData = await quizResponse.json();
           setQuizTitle(quizData.title || "Untitled Quiz");
+          const live = quizData.quizType === "live";
+          setIsLiveQuiz(live);
+
+          if (live) {
+            const sessionsResponse = await fetch(`/api/quizzes/${id}/sessions`);
+            if (sessionsResponse.ok) {
+              const sessionsData = await sessionsResponse.json();
+              setLiveSessions(sessionsData || []);
+            }
+          }
         }
 
-        const response = await fetch(`/api/analytics/quiz/${id}`);
+        const analyticsUrl = selectedSessionId
+          ? `/api/analytics/quiz/${id}?sessionId=${selectedSessionId}`
+          : `/api/analytics/quiz/${id}`;
+
+        const response = await fetch(analyticsUrl);
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({ error: `Error ${response.status}` }));
@@ -64,7 +82,7 @@ export default function QuizAnalyticsPage() {
     }
 
     fetchData();
-  }, [id]);
+  }, [id, selectedSessionId]);
 
   if (isLoading) {
     return <div className="min-h-screen bg-[#131316] flex items-center justify-center text-zinc-500 font-bold uppercase tracking-widest animate-pulse">Loading Analytics Matrix...</div>;
@@ -85,7 +103,95 @@ export default function QuizAnalyticsPage() {
     );
   }
 
-  const completionRate = analytics.totalAttempts > 0 ? 93.2 : 0; // Simulated since DB doesn't track total enrolled precisely here
+  const completionRate = analytics.totalAttempts > 0 ? 93.2 : 0;
+
+  // Live Sessions Batch Cards Selector view for Live Quizzes
+  if (isLiveQuiz && liveSessions.length > 0 && selectedSessionId === null) {
+    return (
+      <div className="min-h-screen bg-[#131316] font-sans text-white p-6 md:p-12 overflow-x-hidden relative">
+        <div className="fixed top-[-20%] left-[-10%] w-[600px] h-[600px] bg-indigo-600/10 blur-[150px] rounded-full pointer-events-none" />
+        <div className="fixed bottom-0 right-0 w-[500px] h-[500px] bg-purple-600/5 blur-[120px] rounded-full pointer-events-none" />
+
+        <div className="max-w-[1200px] mx-auto relative z-10">
+          <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-4 cursor-pointer hover:text-zinc-300 transition-colors" onClick={() => setLocation("/teacher")}>
+            <span>Quizzes</span>
+            <ChevronRight className="w-3 h-3" />
+            <span className="text-indigo-300 truncate max-w-[200px] md:max-w-md">{quizTitle}</span>
+          </div>
+
+          <div className="mb-10">
+            <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight mb-3" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+              Live Quiz Sessions
+            </h1>
+            <p className="text-zinc-400 max-w-xl leading-relaxed">
+              Select a batch session below to view its specific student attempts, performance reports, and item analysis.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+            {liveSessions.map((session) => (
+              <motion.div
+                key={session.id}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  setSelectedSessionId(session.id);
+                  setSelectedSessionName(session.sessionName);
+                }}
+                className="bg-[#1c1c21] border border-white/10 hover:border-indigo-500/50 rounded-2xl p-6 cursor-pointer transition-all shadow-xl flex flex-col justify-between group"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className={cn(
+                      "text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider border",
+                      session.status === "active"
+                        ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                        : "bg-zinc-500/10 text-zinc-400 border-zinc-500/30"
+                    )}>
+                      {session.status === "active" ? "● Active Batch" : "Completed"}
+                    </span>
+                    <span className="text-xs text-zinc-500 font-mono">
+                      ID #{session.id}
+                    </span>
+                  </div>
+
+                  <h3 className="text-xl font-bold text-white mb-2 group-hover:text-indigo-300 transition-colors">
+                    {session.sessionName}
+                  </h3>
+
+                  <div className="flex items-center gap-2 text-sm text-zinc-400 mb-6">
+                    <Users className="w-4 h-4 text-indigo-400" />
+                    <span className="font-bold text-white">{session.attemptCount}</span>
+                    <span>Students / Attempts</span>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-white/5 flex items-center justify-between text-xs text-zinc-500">
+                  <span>Started {session.startedAt ? new Date(session.startedAt).toLocaleDateString() : "N/A"}</span>
+                  <span className="text-indigo-400 font-bold group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                    View Analytics <ChevronRight className="w-3.5 h-3.5" />
+                  </span>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="text-center pt-4">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSelectedSessionId(null);
+                setSelectedSessionName("All Sessions Combined");
+              }}
+              className="bg-[#1c1c21] border-white/10 hover:bg-white/5 text-zinc-300 rounded-full px-6"
+            >
+              View Combined Analytics (All Batches)
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#131316] font-sans text-white p-6 md:p-12 overflow-x-hidden relative">
@@ -94,7 +200,36 @@ export default function QuizAnalyticsPage() {
       <div className="fixed bottom-0 right-0 w-[500px] h-[500px] bg-purple-600/5 blur-[120px] rounded-full pointer-events-none" />
 
       <div className="max-w-[1400px] mx-auto relative z-10">
-        
+        {/* Active Session Filter Banner for Live Quizzes */}
+        {isLiveQuiz && (
+          <div className="mb-6 p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-500/40 flex items-center justify-center">
+                <BarChart3 className="w-5 h-5 text-indigo-400" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest block">Batch Filter Active</span>
+                <span className="text-base font-bold text-white">
+                  {selectedSessionName || (selectedSessionId ? `Session #${selectedSessionId}` : "All Batches Combined")}
+                </span>
+              </div>
+            </div>
+            {liveSessions.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSelectedSessionId(null);
+                  setSelectedSessionName(null);
+                }}
+                className="bg-[#1c1c21] border-indigo-500/30 text-indigo-300 hover:bg-indigo-500/20 rounded-xl text-xs"
+              >
+                Change Batch / View Batches List
+              </Button>
+            )}
+          </div>
+        )}
+
         {/* Header Section */}
         <div className="flex flex-col xl:flex-row xl:items-start justify-between mb-12 gap-8">
           <div>

@@ -18,10 +18,12 @@ __export(schema_exports, {
   branchEnum: () => branchEnum,
   difficultyEnum: () => difficultyEnum,
   friendships: () => friendships,
+  insertLiveSessionSchema: () => insertLiveSessionSchema,
   insertQuestionSchema: () => insertQuestionSchema,
   insertQuizSchema: () => insertQuizSchema,
   insertResultSchema: () => insertResultSchema,
   insertUserSchema: () => insertUserSchema,
+  liveSessions: () => liveSessions,
   questionTypeEnum: () => questionTypeEnum,
   questions: () => questions,
   quizTypeEnum: () => quizTypeEnum,
@@ -122,7 +124,18 @@ var results = pgTable("results", {
   tabSwitchCount: integer("tab_switch_count").default(0),
   copyPasteAttempts: integer("copy_paste_attempts").default(0),
   proctoringFlags: integer("proctoring_flags").default(0),
+  sessionId: integer("session_id"),
+  // Optional session/batch ID for live quizzes
   completedAt: timestamp("completed_at").defaultNow()
+});
+var liveSessions = pgTable("live_sessions", {
+  id: serial("id").primaryKey(),
+  quizId: integer("quiz_id").notNull(),
+  sessionName: text("session_name").notNull(),
+  status: text("status", { enum: ["active", "completed"] }).default("active").notNull(),
+  startedAt: timestamp("started_at").defaultNow(),
+  endedAt: timestamp("ended_at"),
+  createdAt: timestamp("created_at").defaultNow()
 });
 var achievements = pgTable("achievements", {
   id: serial("id").primaryKey(),
@@ -226,7 +239,12 @@ var submitResultSchema = z.object({
   timeTaken: z.number().optional(),
   tabSwitchCount: z.number().optional(),
   copyPasteAttempts: z.number().optional(),
-  proctoringFlags: z.number().optional()
+  proctoringFlags: z.number().optional(),
+  sessionId: z.number().optional()
+});
+var insertLiveSessionSchema = createInsertSchema(liveSessions).pick({
+  quizId: true,
+  sessionName: true
 });
 
 // server/db.ts
@@ -333,10 +351,22 @@ async function applySchemaChanges() {
         "earned_at" timestamp DEFAULT now()
       );
     `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "live_sessions" (
+        "id" serial PRIMARY KEY NOT NULL,
+        "quiz_id" integer NOT NULL,
+        "session_name" text NOT NULL,
+        "status" text NOT NULL DEFAULT 'active',
+        "started_at" timestamp DEFAULT now(),
+        "ended_at" timestamp,
+        "created_at" timestamp DEFAULT now()
+      );
+    `);
     await addColumnIfNotExists("results", "points_earned", "integer", "DEFAULT 0");
     await addColumnIfNotExists("results", "tab_switch_count", "integer", "DEFAULT 0");
     await addColumnIfNotExists("results", "copy_paste_attempts", "integer", "DEFAULT 0");
     await addColumnIfNotExists("results", "proctoring_flags", "integer", "DEFAULT 0");
+    await addColumnIfNotExists("results", "session_id", "integer");
     client.release();
     console.log("Schema changes applied successfully");
   } catch (error) {
@@ -639,18 +669,58 @@ var DatabaseStorage = class {
       throw error;
     }
   }
-  async getResultsByQuiz(quizId) {
+  // Live Session implementations
+  async createLiveSession(quizId, sessionName) {
+    await db.update(liveSessions).set({ status: "completed", endedAt: /* @__PURE__ */ new Date() }).where(and(eq(liveSessions.quizId, quizId), eq(liveSessions.status, "active")));
+    const [session3] = await db.insert(liveSessions).values({
+      quizId,
+      sessionName,
+      status: "active",
+      startedAt: /* @__PURE__ */ new Date()
+    }).returning();
+    return session3;
+  }
+  async getActiveLiveSession(quizId) {
+    const [session3] = await db.select().from(liveSessions).where(and(eq(liveSessions.quizId, quizId), eq(liveSessions.status, "active"))).orderBy(desc(liveSessions.startedAt)).limit(1);
+    return session3;
+  }
+  async endLiveSession(sessionId) {
+    const [session3] = await db.update(liveSessions).set({ status: "completed", endedAt: /* @__PURE__ */ new Date() }).where(eq(liveSessions.id, sessionId)).returning();
+    return session3;
+  }
+  async getLiveSessionsByQuiz(quizId) {
+    const sessions = await db.select().from(liveSessions).where(eq(liveSessions.quizId, quizId)).orderBy(desc(liveSessions.startedAt));
+    const resultList = await Promise.all(
+      sessions.map(async (sess) => {
+        const attempts = await db.select({ count: sql`count(*)` }).from(results).where(eq(results.sessionId, sess.id));
+        return {
+          ...sess,
+          attemptCount: Number(attempts[0]?.count || 0)
+        };
+      })
+    );
+    return resultList;
+  }
+  async getLiveSession(sessionId) {
+    const [session3] = await db.select().from(liveSessions).where(eq(liveSessions.id, sessionId));
+    return session3;
+  }
+  async getResultsByQuiz(quizId, sessionId) {
+    if (sessionId !== void 0 && sessionId !== null && !isNaN(sessionId)) {
+      return db.select().from(results).where(and(eq(results.quizId, quizId), eq(results.sessionId, sessionId))).orderBy(desc(results.score), desc(results.completedAt));
+    }
     return db.select().from(results).where(eq(results.quizId, quizId)).orderBy(desc(results.score), desc(results.completedAt));
   }
   async getResultsByUser(userId) {
     return db.select().from(results).where(eq(results.userId, userId)).orderBy(desc(results.completedAt));
   }
-  async getQuizLeaderboard(quizId) {
+  async getQuizLeaderboard(quizId, sessionId) {
     try {
+      const whereClause = sessionId !== void 0 && sessionId !== null && !isNaN(sessionId) ? and(eq(results.quizId, quizId), eq(results.sessionId, sessionId)) : eq(results.quizId, quizId);
       const leaderboard = await db.select({
         ...getTableColumns(results),
         username: users.username
-      }).from(results).leftJoin(users, eq(results.userId, users.id)).where(eq(results.quizId, quizId)).orderBy(desc(results.score), sql`${results.timeTaken} ASC`, desc(results.completedAt)).limit(10);
+      }).from(results).leftJoin(users, eq(results.userId, users.id)).where(whereClause).orderBy(desc(results.score), sql`${results.timeTaken} ASC`, desc(results.completedAt)).limit(10);
       return leaderboard;
     } catch (error) {
       console.error("Error in getQuizLeaderboard:", error);
@@ -1440,10 +1510,9 @@ function registerRoutes(app2) {
       if (quiz.quizType !== "live") {
         return res.status(400).json({ error: "Only live quizzes can be started" });
       }
-      const duration = req.body.duration || quiz.duration;
-      if (!duration) {
-        return res.status(400).json({ error: "Duration is required for live quizzes" });
-      }
+      const duration = req.body.duration || quiz.duration || 60;
+      const sessionName = req.body.sessionName || req.body.batchName || `Batch ${(/* @__PURE__ */ new Date()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+      const liveSession = await storage.createLiveSession(quizId, sessionName);
       const startTime = /* @__PURE__ */ new Date();
       const endTime = new Date(startTime.getTime() + duration * 6e4);
       const updatedQuiz = await storage.updateQuiz(quizId, {
@@ -1452,10 +1521,78 @@ function registerRoutes(app2) {
         startTime,
         endTime
       });
-      res.json(updatedQuiz);
+      res.json({ quiz: updatedQuiz, session: liveSession });
     } catch (error) {
-      console.error("Error starting quiz:", error);
-      res.status(500).json({ error: "Failed to start quiz" });
+      console.error("Error starting quiz session:", error);
+      res.status(500).json({ error: "Failed to start quiz session" });
+    }
+  });
+  app2.post("/api/quizzes/:id/sessions/start", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== "teacher") {
+        return res.status(403).json({ error: "Teacher role required" });
+      }
+      const quizId = parseInt(req.params.id);
+      if (isNaN(quizId)) {
+        return res.status(400).json({ error: "Invalid quiz ID" });
+      }
+      const quiz = await storage.getQuiz(quizId);
+      if (!quiz) {
+        return res.status(404).json({ error: "Quiz not found" });
+      }
+      if (quiz.createdBy !== req.user.id) {
+        return res.status(403).json({ error: "Not authorized to start this quiz session" });
+      }
+      const sessionName = (req.body.sessionName || "").trim();
+      if (!sessionName) {
+        return res.status(400).json({ error: "Session name (Batch name) is required" });
+      }
+      const duration = req.body.duration || quiz.duration || 60;
+      const liveSession = await storage.createLiveSession(quizId, sessionName);
+      const startTime = /* @__PURE__ */ new Date();
+      const endTime = new Date(startTime.getTime() + duration * 6e4);
+      const updatedQuiz = await storage.updateQuiz(quizId, {
+        isActive: true,
+        isStarted: true,
+        startTime,
+        endTime
+      });
+      res.json({ quiz: updatedQuiz, session: liveSession });
+    } catch (error) {
+      console.error("Error starting live session:", error);
+      res.status(500).json({ error: "Failed to start live session" });
+    }
+  });
+  app2.post("/api/quizzes/:id/sessions/stop", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== "teacher") {
+        return res.status(403).json({ error: "Teacher role required" });
+      }
+      const quizId = parseInt(req.params.id);
+      if (isNaN(quizId)) {
+        return res.status(400).json({ error: "Invalid quiz ID" });
+      }
+      const quiz = await storage.getQuiz(quizId);
+      if (!quiz) {
+        return res.status(404).json({ error: "Quiz not found" });
+      }
+      if (quiz.createdBy !== req.user.id) {
+        return res.status(403).json({ error: "Not authorized to stop this quiz session" });
+      }
+      const activeSession = await storage.getActiveLiveSession(quizId);
+      let endedSession = null;
+      if (activeSession) {
+        endedSession = await storage.endLiveSession(activeSession.id);
+      }
+      const updatedQuiz = await storage.updateQuiz(quizId, {
+        isActive: false,
+        isStarted: false,
+        endTime: /* @__PURE__ */ new Date()
+      });
+      res.json({ quiz: updatedQuiz, session: endedSession });
+    } catch (error) {
+      console.error("Error stopping live session:", error);
+      res.status(500).json({ error: "Failed to stop live session" });
     }
   });
   app2.post("/api/quizzes/:id/end", async (req, res) => {
@@ -1474,8 +1611,9 @@ function registerRoutes(app2) {
       if (quiz.createdBy !== req.user.id) {
         return res.status(403).json({ error: "Not authorized to end this quiz" });
       }
-      if (!quiz.isActive) {
-        return res.status(400).json({ error: "Quiz is not active" });
+      const activeSession = await storage.getActiveLiveSession(quizId);
+      if (activeSession) {
+        await storage.endLiveSession(activeSession.id);
       }
       const updatedQuiz = await storage.updateQuiz(quizId, {
         isActive: false,
@@ -1486,6 +1624,22 @@ function registerRoutes(app2) {
     } catch (error) {
       console.error("Error ending quiz:", error);
       res.status(500).json({ error: "Failed to end quiz" });
+    }
+  });
+  app2.get("/api/quizzes/:id/sessions", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      const quizId = parseInt(req.params.id);
+      if (isNaN(quizId)) {
+        return res.status(400).json({ error: "Invalid quiz ID" });
+      }
+      const sessions = await storage.getLiveSessionsByQuiz(quizId);
+      res.json(sessions);
+    } catch (error) {
+      console.error("Error fetching live sessions:", error);
+      res.status(500).json({ error: "Failed to fetch live sessions" });
     }
   });
   app2.get("/api/quizzes/:id/status", async (req, res) => {
@@ -1501,6 +1655,7 @@ function registerRoutes(app2) {
       if (!quiz) {
         return res.status(404).json({ error: "Quiz not found" });
       }
+      const activeSession = quiz.quizType === "live" ? await storage.getActiveLiveSession(quizId) : null;
       res.json({
         id: quiz.id,
         isActive: quiz.isActive,
@@ -1509,7 +1664,8 @@ function registerRoutes(app2) {
         isDraft: quiz.isDraft,
         quizType: quiz.quizType,
         startTime: quiz.startTime,
-        endTime: quiz.endTime
+        endTime: quiz.endTime,
+        activeSession: activeSession || null
       });
     } catch (error) {
       console.error("Error fetching quiz status:", error);
@@ -1723,6 +1879,13 @@ function registerRoutes(app2) {
       const tabSwitchCount = validatedData.tabSwitchCount ?? 0;
       const copyPasteAttempts = validatedData.copyPasteAttempts ?? 0;
       const proctoringFlags = validatedData.proctoringFlags ?? 0;
+      let targetSessionId = validatedData.sessionId || req.body.sessionId;
+      if (!targetSessionId && quiz.quizType === "live") {
+        const activeSession = await storage.getActiveLiveSession(quizId);
+        if (activeSession) {
+          targetSessionId = activeSession.id;
+        }
+      }
       const questionsForQuiz = await storage.getQuestionsByQuiz(quizId);
       const totalQuestions = questionsForQuiz.length;
       let correctAnswers = 0;
@@ -1751,7 +1914,8 @@ function registerRoutes(app2) {
         answers: JSON.stringify(userAnswers || []),
         tabSwitchCount,
         copyPasteAttempts,
-        proctoringFlags
+        proctoringFlags,
+        sessionId: targetSessionId || null
       });
       await storage.updateUserPoints(req.user.id, pointsEarned);
       res.status(201).json(result);
@@ -1784,7 +1948,8 @@ function registerRoutes(app2) {
       if (!quiz) {
         return res.status(404).json({ error: "Quiz not found" });
       }
-      const leaderboard = await storage.getQuizLeaderboard(quizId);
+      const reqSessionId = req.query.sessionId ? Number(req.query.sessionId) : void 0;
+      const leaderboard = await storage.getQuizLeaderboard(quizId, reqSessionId);
       res.json(leaderboard);
     } catch (error) {
       console.error("Error fetching leaderboard:", error);
@@ -1807,7 +1972,8 @@ function registerRoutes(app2) {
       if (quiz.createdBy !== req.user.id && req.user.role !== "teacher") {
         return res.status(403).json({ error: "Not authorized to access this quiz's analytics" });
       }
-      const results2 = await storage.getResultsByQuiz(quizId);
+      const reqSessionId = req.query.sessionId ? Number(req.query.sessionId) : void 0;
+      const results2 = await storage.getResultsByQuiz(quizId, reqSessionId);
       if (!results2 || results2.length === 0) {
         return res.json({
           totalAttempts: 0,

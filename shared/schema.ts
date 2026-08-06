@@ -84,7 +84,19 @@ export const results = pgTable("results", {
   tabSwitchCount: integer("tab_switch_count").default(0),
   copyPasteAttempts: integer("copy_paste_attempts").default(0),
   proctoringFlags: integer("proctoring_flags").default(0),
+  sessionId: integer("session_id"), // Optional session/batch ID for live quizzes
   completedAt: timestamp("completed_at").defaultNow(),
+});
+
+// Live Sessions (Batches) table for Live Quizzes
+export const liveSessions = pgTable("live_sessions", {
+  id: serial("id").primaryKey(),
+  quizId: integer("quiz_id").notNull(),
+  sessionName: text("session_name").notNull(),
+  status: text("status", { enum: ["active", "completed"] }).default("active").notNull(),
+  startedAt: timestamp("started_at").defaultNow(),
+  endedAt: timestamp("ended_at"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Add achievements table
@@ -205,6 +217,12 @@ export const submitResultSchema = z.object({
   tabSwitchCount: z.number().optional(),
   copyPasteAttempts: z.number().optional(),
   proctoringFlags: z.number().optional(),
+  sessionId: z.number().optional(),
+});
+
+export const insertLiveSessionSchema = createInsertSchema(liveSessions).pick({
+  quizId: true,
+  sessionName: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -214,6 +232,7 @@ export type UpdateQuiz = z.infer<typeof updateQuizSchema>;
 export type InsertQuestion = z.infer<typeof insertQuestionSchema>;
 export type UpdateQuestion = z.infer<typeof updateQuestionSchema>;
 export type InsertResult = z.infer<typeof insertResultSchema>;
+export type InsertLiveSession = z.infer<typeof insertLiveSessionSchema>;
 
 export type User = typeof users.$inferSelect;
 export type Quiz = typeof quizzes.$inferSelect;
@@ -222,3 +241,4 @@ export type Result = typeof results.$inferSelect;
 export type Achievement = typeof achievements.$inferSelect;
 export type UserAchievement = typeof userAchievements.$inferSelect;
 export type Friendship = typeof friendships.$inferSelect;
+export type LiveSession = typeof liveSessions.$inferSelect;

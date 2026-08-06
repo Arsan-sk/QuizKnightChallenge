@@ -150,10 +150,24 @@ async function applySchemaChanges() {
       );
     `);
 
+    // Create live_sessions table if it doesn't exist
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS "live_sessions" (
+        "id" serial PRIMARY KEY NOT NULL,
+        "quiz_id" integer NOT NULL,
+        "session_name" text NOT NULL,
+        "status" text NOT NULL DEFAULT 'active',
+        "started_at" timestamp DEFAULT now(),
+        "ended_at" timestamp,
+        "created_at" timestamp DEFAULT now()
+      );
+    `);
+
     await addColumnIfNotExists('results', 'points_earned', 'integer', 'DEFAULT 0');
     await addColumnIfNotExists('results', 'tab_switch_count', 'integer', 'DEFAULT 0');
     await addColumnIfNotExists('results', 'copy_paste_attempts', 'integer', 'DEFAULT 0');
     await addColumnIfNotExists('results', 'proctoring_flags', 'integer', 'DEFAULT 0');
+    await addColumnIfNotExists('results', 'session_id', 'integer');
 
     client.release();
     console.log('Schema changes applied successfully');

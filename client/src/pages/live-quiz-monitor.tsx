@@ -10,6 +10,8 @@ import {
   BarChart, CheckCircle2, AlertTriangle, Radio
 } from "lucide-react";
 import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 export default function LiveQuizMonitorPage() {
   const [, params] = useRoute("/teacher/monitor/:quizId");
@@ -17,6 +19,8 @@ export default function LiveQuizMonitorPage() {
   const quizId = params?.quizId ? parseInt(params.quizId) : null;
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const [showSessionDialog, setShowSessionDialog] = useState(false);
+  const [sessionNameInput, setSessionNameInput] = useState("");
   const [isStarting, setIsStarting] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
 
@@ -26,27 +30,39 @@ export default function LiveQuizMonitorPage() {
     refetchInterval: 5000,
   });
 
+  const { data: statusData } = useQuery<any>({
+    queryKey: [`/api/quizzes/${quizId}/status`],
+    enabled: !!quizId,
+    refetchInterval: 3000,
+  });
+
+  const activeSession = statusData?.activeSession;
+
   const { data: questions } = useQuery<QuestionType[]>({
     queryKey: [`/api/quizzes/${quizId}/questions`],
     enabled: !!quizId,
   });
 
-  const startMutation = useMutation({
-    mutationFn: async () => {
+  const startSessionMutation = useMutation({
+    mutationFn: async (sessionName: string) => {
       setIsStarting(true);
-      const res = await apiRequest("POST", `/api/quizzes/${quizId}/start`, {
+      const res = await apiRequest("POST", `/api/quizzes/${quizId}/sessions/start`, {
+        sessionName: sessionName.trim(),
         duration: quiz?.duration || 30,
       });
       return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/quizzes/${quizId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/quizzes/${quizId}/status`] });
       queryClient.invalidateQueries({ queryKey: ["/api/quizzes/teacher"] });
-      toast({ title: "Quiz Started", description: "Students can now take this quiz." });
+      toast({ title: "Live Session Started", description: "Students can now join this live batch." });
       setIsStarting(false);
+      setShowSessionDialog(false);
+      setSessionNameInput("");
     },
-    onError: (error) => {
-      toast({ title: "Failed to start quiz", description: error.message, variant: "destructive" });
+    onError: (error: any) => {
+      toast({ title: "Failed to start session", description: error.message, variant: "destructive" });
       setIsStarting(false);
     },
   });
@@ -54,17 +70,18 @@ export default function LiveQuizMonitorPage() {
   const stopMutation = useMutation({
     mutationFn: async () => {
       setIsStopping(true);
-      const res = await apiRequest("POST", `/api/quizzes/${quizId}/end`);
+      const res = await apiRequest("POST", `/api/quizzes/${quizId}/sessions/stop`);
       return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/quizzes/${quizId}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/quizzes/${quizId}/status`] });
       queryClient.invalidateQueries({ queryKey: ["/api/quizzes/teacher"] });
-      toast({ title: "Quiz Stopped", description: "The quiz is no longer active." });
+      toast({ title: "Live Session Stopped", description: "The live session is now closed." });
       setIsStopping(false);
     },
-    onError: (error) => {
-      toast({ title: "Failed to stop quiz", description: error.message, variant: "destructive" });
+    onError: (error: any) => {
+      toast({ title: "Failed to stop session", description: error.message, variant: "destructive" });
       setIsStopping(false);
     },
   });
@@ -154,6 +171,20 @@ export default function LiveQuizMonitorPage() {
             </div>
           </div>
 
+          {/* Active Batch Banner */}
+          {isActive && activeSession && (
+            <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 mb-6 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse" />
+                <div>
+                  <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest block">Active Session Batch</span>
+                  <span className="text-base font-bold text-white">{activeSession.sessionName}</span>
+                </div>
+              </div>
+              <span className="text-xs text-emerald-300 font-medium">Session ID #{activeSession.id}</span>
+            </div>
+          )}
+
           {/* Time remaining for active quizzes */}
           {isActive && timeRemaining > 0 && (
             <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-xl p-4 mb-6 flex items-center justify-between">
@@ -192,7 +223,7 @@ export default function LiveQuizMonitorPage() {
                 disabled={isStopping}
               >
                 <Square className="w-5 h-5" />
-                {isStopping ? "Stopping..." : "Stop Quiz"}
+                {isStopping ? "Stopping..." : "Stop Session"}
               </Button>
             ) : (
               <Button
@@ -201,11 +232,11 @@ export default function LiveQuizMonitorPage() {
                   background: "linear-gradient(135deg, hsl(145 63% 42%), hsl(180 70% 40%))",
                   color: "white",
                 }}
-                onClick={() => startMutation.mutate()}
+                onClick={() => setShowSessionDialog(true)}
                 disabled={isStarting}
               >
                 <Play className="w-5 h-5" />
-                {isStarting ? "Starting..." : "Start Quiz"}
+                {isStarting ? "Launching..." : "Launch Live Session"}
               </Button>
             )}
 
@@ -238,6 +269,60 @@ export default function LiveQuizMonitorPage() {
           )}
         </div>
       </div>
+
+      {/* Launch Session Dialog Modal */}
+      <Dialog open={showSessionDialog} onOpenChange={setShowSessionDialog}>
+        <DialogContent className="sm:max-w-md bg-[#1c1c21] border-indigo-500/20 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <Play className="w-5 h-5 text-indigo-400" />
+              Launch Live Session
+            </DialogTitle>
+            <DialogDescription className="text-zinc-400 text-sm">
+              Enter a Session / Batch Name for this Live Quiz event. Students joining now will be assigned to this batch.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+                Session Name (Batch Name)
+              </label>
+              <Input
+                value={sessionNameInput}
+                onChange={(e) => setSessionNameInput(e.target.value)}
+                placeholder="e.g. CE Batch A, Division B, Placement Round 1"
+                className="bg-black/50 border-white/10 text-white placeholder:text-zinc-600 focus:border-indigo-500"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && sessionNameInput.trim()) {
+                    startSessionMutation.mutate(sessionNameInput);
+                  }
+                }}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex gap-2 sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowSessionDialog(false)}
+              className="bg-transparent border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={!sessionNameInput.trim() || isStarting}
+              onClick={() => startSessionMutation.mutate(sessionNameInput)}
+              className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold"
+            >
+              {isStarting ? "Launching..." : "Launch Session"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

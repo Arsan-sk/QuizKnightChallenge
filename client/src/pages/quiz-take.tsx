@@ -160,6 +160,20 @@ export default function QuizTake() {
     queryKey: [`/api/quizzes/${id}/questions`],
   });
 
+  const { data: quizStatus } = useQuery<{
+    id: number;
+    isActive: boolean;
+    isStarted: boolean;
+    quizType: string;
+    activeSession: { id: number; sessionName: string; startedAt: string } | null;
+  }>({
+    queryKey: [`/api/quizzes/${id}/status`],
+    enabled: !!id,
+    refetchInterval: 3000,
+  });
+
+  const activeSession = quizStatus?.activeSession;
+
   const {
     data: leaderboard,
     refetch: refetchLeaderboard
@@ -1319,6 +1333,49 @@ export default function QuizTake() {
 
   if (!quizCompleted) {
     if (showRules) {
+      // Waiting Room UI for Live Quizzes when no session is active yet
+      if (typedQuiz?.quizType === "live" && !activeSession) {
+        return (
+          <div className="min-h-screen bg-[#131316] text-white flex items-center justify-center p-4 md:p-8 relative">
+            <div className="fixed top-[-20%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
+            <div className="fixed bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[150px] pointer-events-none" />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="max-w-xl w-full bg-[#1c1c21] border border-indigo-500/20 rounded-3xl p-8 text-center space-y-6 shadow-2xl relative z-10"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center mx-auto">
+                <Clock className="w-8 h-8 text-indigo-400 animate-pulse" />
+              </div>
+
+              <div>
+                <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 mb-3">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                  Live Quiz Waiting Room
+                </span>
+                <h2 className="text-2xl font-bold text-white mb-2">{typedQuiz.title}</h2>
+                <p className="text-zinc-400 text-sm leading-relaxed">{typedQuiz.description}</p>
+              </div>
+
+              <div className="p-6 bg-black/40 border border-white/5 rounded-2xl space-y-3">
+                <p className="text-sm text-indigo-300 font-bold">
+                  Waiting for your teacher to start a live session...
+                </p>
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Camera verification and quiz access will unlock automatically on this screen as soon as your teacher launches a batch session.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-center gap-2 text-xs text-zinc-500 pt-2">
+                <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
+                <span>Checking session status automatically...</span>
+              </div>
+            </motion.div>
+          </div>
+        );
+      }
+
       return (
         <div className="min-h-screen bg-[#131316] text-white overflow-x-hidden relative">
           {/* Background ambient glow */}
@@ -1347,6 +1404,31 @@ export default function QuizTake() {
 
               {/* Main Container */}
               <div className="space-y-6">
+                {/* Active Batch Session Banner */}
+                {activeSession && (
+                  <motion.div
+                    className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center shrink-0">
+                        <CheckCircle className="w-6 h-6 text-emerald-400" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                          <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Live Batch Active</span>
+                        </div>
+                        <h4 className="text-lg font-bold text-white">{activeSession.sessionName}</h4>
+                      </div>
+                    </div>
+                    <span className="text-xs text-emerald-300 font-semibold px-3 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-500/30">
+                      Assigned to Batch: {activeSession.sessionName}
+                    </span>
+                  </motion.div>
+                )}
+
                 {/* Quiz Details */}
                 <motion.div
                   className="bg-[#1c1c21] border border-indigo-500/10 rounded-2xl p-8"

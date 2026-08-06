@@ -1,4 +1,4 @@
-import { users, quizzes, questions, results, achievements, userAchievements, friendships, type User, type Quiz, type Question, type Result, type UpdateQuiz, type UpdateQuestion, type UpdateUserProfile, type Achievement, type UserAchievement, type Friendship } from "@shared/schema";
+import { users, quizzes, questions, results, achievements, userAchievements, friendships, liveSessions, type User, type Quiz, type Question, type Result, type UpdateQuiz, type UpdateQuestion, type UpdateUserProfile, type Achievement, type UserAchievement, type Friendship, type LiveSession, type InsertLiveSession } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, gt, lt, or, asc, getTableColumns } from "drizzle-orm";
 import session from "express-session";
@@ -24,6 +24,13 @@ export interface IStorage {
   getLiveQuizzes(): Promise<(Quiz & { teacherName: string })[]>;
   getQuizzesForStudent(userId: number): Promise<Quiz[]>;
 
+  // Live Session methods
+  createLiveSession(quizId: number, sessionName: string): Promise<LiveSession>;
+  getActiveLiveSession(quizId: number): Promise<LiveSession | undefined>;
+  endLiveSession(sessionId: number): Promise<LiveSession | undefined>;
+  getLiveSessionsByQuiz(quizId: number): Promise<(LiveSession & { attemptCount: number })[]>;
+  getLiveSession(sessionId: number): Promise<LiveSession | undefined>;
+
   getQuestion(id: number): Promise<Question | undefined>;
   createQuestion(question: Omit<Question, "id">): Promise<Question>;
   updateQuestion(id: number, question: UpdateQuestion): Promise<Question>;
@@ -31,9 +38,9 @@ export interface IStorage {
   getQuestionsByQuiz(quizId: number): Promise<Question[]>;
 
   createResult(result: Omit<Result, "id" | "completedAt">): Promise<Result>;
-  getResultsByQuiz(quizId: number): Promise<Result[]>;
+  getResultsByQuiz(quizId: number, sessionId?: number): Promise<Result[]>;
   getResultsByUser(userId: number): Promise<Result[]>;
-  getQuizLeaderboard(quizId: number): Promise<(Result & { username: string })[]>;
+  getQuizLeaderboard(quizId: number, sessionId?: number): Promise<(Result & { username: string })[]>;
   getGlobalLeaderboard(limit?: number): Promise<(User & { totalScore: number })[]>;
 
   updateUserPoints(userId: number, points: number): Promise<void>;
@@ -482,7 +489,88 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
-  async getResultsByQuiz(quizId: number): Promise<Result[]> {
+  // Live Session implementations
+  async createLiveSession(quizId: number, sessionName: string): Promise<LiveSession> {
+    await db
+      .update(liveSessions)
+      .set({ status: 'completed', endedAt: new Date() })
+      .where(and(eq(liveSessions.quizId, quizId), eq(liveSessions.status, 'active')));
+
+    const [session] = await db
+      .insert(liveSessions)
+      .values({
+        quizId,
+        sessionName,
+        status: 'active',
+        startedAt: new Date(),
+      })
+      .returning();
+
+    return session;
+  }
+
+  async getActiveLiveSession(quizId: number): Promise<LiveSession | undefined> {
+    const [session] = await db
+      .select()
+      .from(liveSessions)
+      .where(and(eq(liveSessions.quizId, quizId), eq(liveSessions.status, 'active')))
+      .orderBy(desc(liveSessions.startedAt))
+      .limit(1);
+
+    return session;
+  }
+
+  async endLiveSession(sessionId: number): Promise<LiveSession | undefined> {
+    const [session] = await db
+      .update(liveSessions)
+      .set({ status: 'completed', endedAt: new Date() })
+      .where(eq(liveSessions.id, sessionId))
+      .returning();
+
+    return session;
+  }
+
+  async getLiveSessionsByQuiz(quizId: number): Promise<(LiveSession & { attemptCount: number })[]> {
+    const sessions = await db
+      .select()
+      .from(liveSessions)
+      .where(eq(liveSessions.quizId, quizId))
+      .orderBy(desc(liveSessions.startedAt));
+
+    const resultList = await Promise.all(
+      sessions.map(async (sess) => {
+        const attempts = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(results)
+          .where(eq(results.sessionId, sess.id));
+
+        return {
+          ...sess,
+          attemptCount: Number(attempts[0]?.count || 0),
+        };
+      })
+    );
+
+    return resultList;
+  }
+
+  async getLiveSession(sessionId: number): Promise<LiveSession | undefined> {
+    const [session] = await db
+      .select()
+      .from(liveSessions)
+      .where(eq(liveSessions.id, sessionId));
+
+    return session;
+  }
+
+  async getResultsByQuiz(quizId: number, sessionId?: number): Promise<Result[]> {
+    if (sessionId !== undefined && sessionId !== null && !isNaN(sessionId)) {
+      return db
+        .select()
+        .from(results)
+        .where(and(eq(results.quizId, quizId), eq(results.sessionId, sessionId)))
+        .orderBy(desc(results.score), desc(results.completedAt));
+    }
     return db
       .select()
       .from(results)
@@ -498,8 +586,12 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(results.completedAt));
   }
 
-  async getQuizLeaderboard(quizId: number): Promise<(Result & { username: string })[]> {
+  async getQuizLeaderboard(quizId: number, sessionId?: number): Promise<(Result & { username: string })[]> {
     try {
+      const whereClause = (sessionId !== undefined && sessionId !== null && !isNaN(sessionId))
+        ? and(eq(results.quizId, quizId), eq(results.sessionId, sessionId))
+        : eq(results.quizId, quizId);
+
       const leaderboard = await db
         .select({
           ...getTableColumns(results),
@@ -507,7 +599,7 @@ export class DatabaseStorage implements IStorage {
         })
         .from(results)
         .leftJoin(users, eq(results.userId, users.id))
-        .where(eq(results.quizId, quizId))
+        .where(whereClause)
         .orderBy(desc(results.score), sql`${results.timeTaken} ASC`, desc(results.completedAt))
         .limit(10);
       return leaderboard as (Result & { username: string })[];

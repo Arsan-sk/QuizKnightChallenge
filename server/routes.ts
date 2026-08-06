@@ -412,7 +412,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Start a live quiz
+  // Start a live quiz session
   app.post("/api/quizzes/:id/start", async (req, res) => {
     try {
       if (!req.isAuthenticated() || req.user.role !== "teacher") {
@@ -424,7 +424,6 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Invalid quiz ID" });
       }
 
-      // Check if the quiz exists and belongs to this teacher
       const quiz = await storage.getQuiz(quizId);
       if (!quiz) {
         return res.status(404).json({ error: "Quiz not found" });
@@ -438,13 +437,13 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Only live quizzes can be started" });
       }
 
-      const duration = req.body.duration || quiz.duration;
-      if (!duration) {
-        return res.status(400).json({ error: "Duration is required for live quizzes" });
-      }
+      const duration = req.body.duration || quiz.duration || 60;
+      const sessionName = req.body.sessionName || req.body.batchName || `Batch ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+
+      const liveSession = await storage.createLiveSession(quizId, sessionName);
 
       const startTime = new Date();
-      const endTime = new Date(startTime.getTime() + duration * 60000); // convert minutes to milliseconds
+      const endTime = new Date(startTime.getTime() + duration * 60000);
 
       const updatedQuiz = await storage.updateQuiz(quizId, {
         isActive: true,
@@ -453,14 +452,100 @@ export function registerRoutes(app: Express): Server {
         endTime,
       });
 
-      res.json(updatedQuiz);
+      res.json({ quiz: updatedQuiz, session: liveSession });
     } catch (error) {
-      console.error("Error starting quiz:", error);
-      res.status(500).json({ error: "Failed to start quiz" });
+      console.error("Error starting quiz session:", error);
+      res.status(500).json({ error: "Failed to start quiz session" });
     }
   });
 
-  // End a live quiz
+  // Dedicated endpoint to start a new Live Quiz session (Batch)
+  app.post("/api/quizzes/:id/sessions/start", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== "teacher") {
+        return res.status(403).json({ error: "Teacher role required" });
+      }
+
+      const quizId = parseInt(req.params.id);
+      if (isNaN(quizId)) {
+        return res.status(400).json({ error: "Invalid quiz ID" });
+      }
+
+      const quiz = await storage.getQuiz(quizId);
+      if (!quiz) {
+        return res.status(404).json({ error: "Quiz not found" });
+      }
+
+      if (quiz.createdBy !== req.user.id) {
+        return res.status(403).json({ error: "Not authorized to start this quiz session" });
+      }
+
+      const sessionName = (req.body.sessionName || "").trim();
+      if (!sessionName) {
+        return res.status(400).json({ error: "Session name (Batch name) is required" });
+      }
+
+      const duration = req.body.duration || quiz.duration || 60;
+      const liveSession = await storage.createLiveSession(quizId, sessionName);
+
+      const startTime = new Date();
+      const endTime = new Date(startTime.getTime() + duration * 60000);
+
+      const updatedQuiz = await storage.updateQuiz(quizId, {
+        isActive: true,
+        isStarted: true,
+        startTime,
+        endTime,
+      });
+
+      res.json({ quiz: updatedQuiz, session: liveSession });
+    } catch (error) {
+      console.error("Error starting live session:", error);
+      res.status(500).json({ error: "Failed to start live session" });
+    }
+  });
+
+  // Stop active live session
+  app.post("/api/quizzes/:id/sessions/stop", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== "teacher") {
+        return res.status(403).json({ error: "Teacher role required" });
+      }
+
+      const quizId = parseInt(req.params.id);
+      if (isNaN(quizId)) {
+        return res.status(400).json({ error: "Invalid quiz ID" });
+      }
+
+      const quiz = await storage.getQuiz(quizId);
+      if (!quiz) {
+        return res.status(404).json({ error: "Quiz not found" });
+      }
+
+      if (quiz.createdBy !== req.user.id) {
+        return res.status(403).json({ error: "Not authorized to stop this quiz session" });
+      }
+
+      const activeSession = await storage.getActiveLiveSession(quizId);
+      let endedSession = null;
+      if (activeSession) {
+        endedSession = await storage.endLiveSession(activeSession.id);
+      }
+
+      const updatedQuiz = await storage.updateQuiz(quizId, {
+        isActive: false,
+        isStarted: false,
+        endTime: new Date(),
+      });
+
+      res.json({ quiz: updatedQuiz, session: endedSession });
+    } catch (error) {
+      console.error("Error stopping live session:", error);
+      res.status(500).json({ error: "Failed to stop live session" });
+    }
+  });
+
+  // End a live quiz (alias for stopping active session)
   app.post("/api/quizzes/:id/end", async (req, res) => {
     try {
       if (!req.isAuthenticated() || req.user.role !== "teacher") {
@@ -472,7 +557,6 @@ export function registerRoutes(app: Express): Server {
         return res.status(400).json({ error: "Invalid quiz ID" });
       }
 
-      // Check if the quiz exists and belongs to this teacher
       const quiz = await storage.getQuiz(quizId);
       if (!quiz) {
         return res.status(404).json({ error: "Quiz not found" });
@@ -482,8 +566,9 @@ export function registerRoutes(app: Express): Server {
         return res.status(403).json({ error: "Not authorized to end this quiz" });
       }
 
-      if (!quiz.isActive) {
-        return res.status(400).json({ error: "Quiz is not active" });
+      const activeSession = await storage.getActiveLiveSession(quizId);
+      if (activeSession) {
+        await storage.endLiveSession(activeSession.id);
       }
 
       const updatedQuiz = await storage.updateQuiz(quizId, {
@@ -499,7 +584,27 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Get quiz status (for waiting room polling)
+  // Get live sessions for a quiz
+  app.get("/api/quizzes/:id/sessions", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const quizId = parseInt(req.params.id);
+      if (isNaN(quizId)) {
+        return res.status(400).json({ error: "Invalid quiz ID" });
+      }
+
+      const sessions = await storage.getLiveSessionsByQuiz(quizId);
+      res.json(sessions);
+    } catch (error) {
+      console.error("Error fetching live sessions:", error);
+      res.status(500).json({ error: "Failed to fetch live sessions" });
+    }
+  });
+
+  // Get quiz status (including active live session for waiting room polling)
   app.get("/api/quizzes/:id/status", async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
@@ -516,6 +621,8 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Quiz not found" });
       }
 
+      const activeSession = quiz.quizType === "live" ? await storage.getActiveLiveSession(quizId) : null;
+
       res.json({
         id: quiz.id,
         isActive: quiz.isActive,
@@ -525,6 +632,7 @@ export function registerRoutes(app: Express): Server {
         quizType: quiz.quizType,
         startTime: quiz.startTime,
         endTime: quiz.endTime,
+        activeSession: activeSession || null,
       });
     } catch (error) {
       console.error("Error fetching quiz status:", error);
@@ -801,6 +909,14 @@ export function registerRoutes(app: Express): Server {
       const copyPasteAttempts: number = validatedData.copyPasteAttempts ?? 0;
       const proctoringFlags: number = validatedData.proctoringFlags ?? 0;
 
+      let targetSessionId = validatedData.sessionId || req.body.sessionId;
+      if (!targetSessionId && quiz.quizType === "live") {
+        const activeSession = await storage.getActiveLiveSession(quizId);
+        if (activeSession) {
+          targetSessionId = activeSession.id;
+        }
+      }
+
       // Fetch quiz questions so we can compute correct answers & points
       const questionsForQuiz = await storage.getQuestionsByQuiz(quizId);
       const totalQuestions = questionsForQuiz.length;
@@ -835,8 +951,9 @@ export function registerRoutes(app: Express): Server {
         answers: JSON.stringify(userAnswers || []),
         tabSwitchCount,
         copyPasteAttempts,
-        proctoringFlags
-      });
+        proctoringFlags,
+        sessionId: targetSessionId || null,
+      } as any);
 
       // Update user's total points (cumulative points)
       await storage.updateUserPoints(req.user.id, pointsEarned);
@@ -860,7 +977,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Get leaderboard for a specific quiz
+  // Get leaderboard for a specific quiz (supports session isolation)
   app.get("/api/quizzes/:quizId/leaderboard", async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
@@ -877,7 +994,8 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Quiz not found" });
       }
 
-      const leaderboard = await storage.getQuizLeaderboard(quizId);
+      const reqSessionId = req.query.sessionId ? Number(req.query.sessionId) : undefined;
+      const leaderboard = await storage.getQuizLeaderboard(quizId, reqSessionId);
       res.json(leaderboard);
     } catch (error) {
       console.error("Error fetching leaderboard:", error);
@@ -885,7 +1003,7 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
-  // Analytics endpoints
+  // Analytics endpoints (supports session isolation)
   app.get("/api/analytics/quiz/:quizId", async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
@@ -907,8 +1025,9 @@ export function registerRoutes(app: Express): Server {
         return res.status(403).json({ error: "Not authorized to access this quiz's analytics" });
       }
 
-      // Get all results for this quiz
-      const results = await storage.getResultsByQuiz(quizId);
+      // Get results for this quiz (filtered by sessionId if provided)
+      const reqSessionId = req.query.sessionId ? Number(req.query.sessionId) : undefined;
+      const results = await storage.getResultsByQuiz(quizId, reqSessionId);
 
       if (!results || results.length === 0) {
         return res.json({

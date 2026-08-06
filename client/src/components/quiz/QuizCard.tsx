@@ -10,6 +10,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 interface QuizCardProps {
   quiz: Quiz;
@@ -30,6 +32,8 @@ export function QuizCard({
 }: QuizCardProps) {
   const [isStarting, setIsStarting] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
+  const [showSessionDialog, setShowSessionDialog] = useState(false);
+  const [sessionNameInput, setSessionNameInput] = useState("");
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -53,21 +57,24 @@ export function QuizCard({
 
   const diffConf = difficultyConfig[quiz.difficulty] || difficultyConfig.medium;
 
-  const startQuizMutation = useMutation({
-    mutationFn: async () => {
+  const startSessionMutation = useMutation({
+    mutationFn: async (sessionName: string) => {
       setIsStarting(true);
-      const res = await apiRequest("POST", `/api/quizzes/${quiz.id}/start`, {
+      const res = await apiRequest("POST", `/api/quizzes/${quiz.id}/sessions/start`, {
+        sessionName: sessionName.trim(),
         duration: quiz.duration || 30,
       });
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/quizzes/teacher"] });
-      toast({ title: "Quiz started", description: "Students can now take this quiz" });
+      toast({ title: "Live Session Launched", description: `Session "${sessionNameInput}" is now active and accepting students.` });
       setIsStarting(false);
+      setShowSessionDialog(false);
+      setSessionNameInput("");
     },
-    onError: (error) => {
-      toast({ title: "Failed to start quiz", description: error.message, variant: "destructive" });
+    onError: (error: any) => {
+      toast({ title: "Failed to launch session", description: error.message, variant: "destructive" });
       setIsStarting(false);
     },
   });
@@ -75,16 +82,16 @@ export function QuizCard({
   const stopQuizMutation = useMutation({
     mutationFn: async () => {
       setIsStopping(true);
-      const res = await apiRequest("POST", `/api/quizzes/${quiz.id}/end`);
+      const res = await apiRequest("POST", `/api/quizzes/${quiz.id}/sessions/stop`);
       return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/quizzes/teacher"] });
-      toast({ title: "Quiz ended", description: "The quiz is no longer active" });
+      toast({ title: "Live Session Ended", description: "The live session has been closed." });
       setIsStopping(false);
     },
-    onError: (error) => {
-      toast({ title: "Failed to end quiz", description: error.message, variant: "destructive" });
+    onError: (error: any) => {
+      toast({ title: "Failed to end session", description: error.message, variant: "destructive" });
       setIsStopping(false);
     },
   });
@@ -229,7 +236,7 @@ export function QuizCard({
                         background: "hsl(var(--primary))",
                         boxShadow: "0 2px 8px -2px hsl(var(--primary) / 0.4)",
                       }}
-                      onClick={() => startQuizMutation.mutate()}
+                      onClick={() => setShowSessionDialog(true)}
                       disabled={isStarting}
                     >
                       <Play className="h-3 w-3 mr-1" />
@@ -275,6 +282,60 @@ export function QuizCard({
           </div>
         </div>
       </div>
+
+      {/* Start Live Session Dialog Modal */}
+      <Dialog open={showSessionDialog} onOpenChange={setShowSessionDialog}>
+        <DialogContent className="sm:max-w-md bg-[#1c1c21] border-indigo-500/20 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-white flex items-center gap-2">
+              <Play className="w-5 h-5 text-indigo-400" />
+              Launch Live Session
+            </DialogTitle>
+            <DialogDescription className="text-zinc-400 text-sm">
+              Enter a Session / Batch Name for this Live Quiz event. Students joining now will be assigned to this batch.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
+                Session Name (Batch Name)
+              </label>
+              <Input
+                value={sessionNameInput}
+                onChange={(e) => setSessionNameInput(e.target.value)}
+                placeholder="e.g. CE Batch A, Division B, Placement Round 1"
+                className="bg-black/50 border-white/10 text-white placeholder:text-zinc-600 focus:border-indigo-500"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && sessionNameInput.trim()) {
+                    startSessionMutation.mutate(sessionNameInput);
+                  }
+                }}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex gap-2 sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowSessionDialog(false)}
+              className="bg-transparent border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={!sessionNameInput.trim() || isStarting}
+              onClick={() => startSessionMutation.mutate(sessionNameInput)}
+              className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold"
+            >
+              {isStarting ? "Launching..." : "Launch Session"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 }
