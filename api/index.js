@@ -382,8 +382,8 @@ async function applySchemaChanges() {
         await client.query(`UPDATE quizzes SET access_code = $1 WHERE id = $2`, [code, row.id]);
       }
     }
-    await client.query(`UPDATE quizzes SET is_draft = false WHERE is_public = true OR is_public IS NULL;`);
-    await client.query(`UPDATE quizzes SET is_draft = true WHERE is_draft IS NULL AND is_public = false;`);
+    await client.query(`UPDATE quizzes SET is_public = true WHERE is_public IS NULL;`);
+    await client.query(`UPDATE quizzes SET is_draft = false WHERE is_public = true;`);
     client.release();
     console.log("Schema changes applied successfully");
   } catch (error) {
@@ -588,9 +588,10 @@ var DatabaseStorage = class {
         ...getTableColumns(quizzes),
         teacherName: users.username
       }).from(quizzes).leftJoin(users, eq(quizzes.createdBy, users.id)).where(
-        and(
+        or(
           eq(quizzes.isPublic, true),
-          or(eq(quizzes.isDraft, false), isNull(quizzes.isDraft))
+          isNull(quizzes.isPublic),
+          sql`${quizzes.isPublic} IS NOT FALSE`
         )
       ).orderBy(desc(quizzes.createdAt));
       const resultList = await Promise.all(
@@ -617,30 +618,11 @@ var DatabaseStorage = class {
   }
   async getQuizzesForStudent(userId) {
     try {
-      const user = await this.getUser(userId);
-      if (!user) return this.getPublicQuizzes();
       return await db.select().from(quizzes).where(
-        and(
+        or(
           eq(quizzes.isPublic, true),
-          or(eq(quizzes.isDraft, false), isNull(quizzes.isDraft)),
-          or(
-            and(
-              sql`${quizzes.targetBranch} IS NULL`,
-              sql`${quizzes.targetYear} IS NULL`
-            ),
-            and(
-              eq(quizzes.targetBranch, user.branch),
-              sql`${quizzes.targetYear} IS NULL`
-            ),
-            and(
-              eq(quizzes.targetYear, user.year),
-              sql`${quizzes.targetBranch} IS NULL`
-            ),
-            and(
-              eq(quizzes.targetBranch, user.branch),
-              eq(quizzes.targetYear, user.year)
-            )
-          )
+          isNull(quizzes.isPublic),
+          sql`${quizzes.isPublic} IS NOT FALSE`
         )
       ).orderBy(desc(quizzes.createdAt));
     } catch (error) {
