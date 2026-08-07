@@ -408,17 +408,17 @@ function QuestionTake({
   const optionImages = question?.optionImages || [];
 
   return (
-    <div className="space-y-8 flex flex-col items-center pt-4">
-      <h3 className="text-2xl md:text-3xl font-bold text-center text-white leading-tight max-w-3xl" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <div className="space-y-6 sm:space-y-8 flex flex-col items-center pt-2 sm:pt-4 w-full">
+      <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-center text-white leading-tight max-w-3xl px-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
         {questionText}
       </h3>
 
       {imageUrl && (
-        <div className="w-full max-w-2xl mx-auto rounded-2xl overflow-hidden border border-white/10 shadow-xl bg-black/40">
+        <div className="w-full max-w-2xl mx-auto rounded-2xl overflow-hidden border border-white/10 shadow-xl bg-black/40 p-2 sm:p-3 flex items-center justify-center">
           <img
             src={imageUrl}
             alt="Question reference"
-            className="w-full h-auto object-contain max-h-[300px]"
+            className="w-full h-auto object-contain max-h-[220px] sm:max-h-[320px] rounded-xl"
           />
         </div>
       )}
@@ -430,7 +430,7 @@ function QuestionTake({
       <RadioGroup
         value={userAnswer}
         onValueChange={onChange}
-        className="w-full max-w-2xl space-y-4"
+        className="w-full max-w-2xl space-y-3 sm:space-y-4"
       >
         {options.map((option, index) => {
           const isCorrect = showResult && option === correctAnswer;
@@ -445,7 +445,7 @@ function QuestionTake({
             <motion.div
               key={`take-option-${index}`}
               className={cn(
-                "w-full rounded-2xl p-5 md:p-6 transition-all cursor-pointer relative overflow-hidden flex flex-col justify-center",
+                "w-full rounded-2xl p-4 sm:p-5 md:p-6 transition-all cursor-pointer relative overflow-hidden flex flex-col justify-center",
                 isCorrect ? "bg-emerald-500/10 border-2 border-emerald-500 text-emerald-100" 
                 : isIncorrect ? "bg-red-500/10 border-2 border-red-500 text-red-100" 
                 : isSelected && !showResult ? "bg-indigo-500/10 border-2 border-indigo-400 shadow-[0_0_30px_rgba(99,102,241,0.15)] text-white" 
@@ -455,32 +455,32 @@ function QuestionTake({
               whileTap={!showResult ? { scale: 0.99 } : {}}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1, type: "spring", stiffness: 300, damping: 25 }}
+              transition={{ delay: index * 0.08, type: "spring", stiffness: 300, damping: 25 }}
               onClick={() => !showResult && onChange(option)}
             >
               {isSelected && !showResult && (
                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 rounded-full blur-[40px] pointer-events-none" />
               )}
               
-              <div className="flex items-center gap-5 relative z-10 w-full">
+              <div className="flex items-center gap-3 sm:gap-5 relative z-10 w-full">
                 {/* Selection Circle/Ring */}
                 <div className="shrink-0 flex items-center justify-center">
                    <div className={cn(
-                     "w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all",
+                     "w-6 h-6 sm:w-7 sm:h-7 rounded-full border-2 flex items-center justify-center transition-all",
                      isCorrect ? "bg-emerald-500 border-emerald-500 text-white"
                      : isIncorrect ? "bg-red-500 border-red-500 text-white"
                      : isSelected && !showResult ? "border-indigo-400"
                      : "border-zinc-600"
                    )}>
-                      {isCorrect && <CheckCircle className="w-4 h-4 text-white" />}
-                      {isIncorrect && <XCircle className="w-4 h-4 text-white" />}
-                      {isSelected && !showResult && <div className="w-3 h-3 bg-indigo-400 rounded-full" />}
+                      {isCorrect && <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />}
+                      {isIncorrect && <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />}
+                      {isSelected && !showResult && <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-indigo-400 rounded-full" />}
                    </div>
                 </div>
 
-                <div className="flex-1 flex gap-2">
+                <div className="flex-1 flex gap-2 items-baseline">
                   <span className={cn(
-                    "font-bold shrink-0", 
+                    "font-bold shrink-0 text-sm sm:text-base", 
                     isCorrect ? "text-emerald-400" : isIncorrect ? "text-red-400" : isSelected ? "text-indigo-300" : "text-zinc-500"
                   )}>{labelChar})</span>
                   
@@ -493,7 +493,7 @@ function QuestionTake({
                   <Label
                     htmlFor={`option-take-${index}`}
                     className={cn(
-                      "text-[15px] md:text-base font-medium cursor-pointer leading-relaxed",
+                      "text-sm sm:text-base font-medium cursor-pointer leading-relaxed break-words",
                       isCorrect ? "text-emerald-300" 
                       : isIncorrect ? "text-red-300" 
                       : isSelected ? "text-white" : "text-zinc-300"
@@ -505,12 +505,12 @@ function QuestionTake({
               </div>
 
               {optionImage && (
-                <div className="mt-4 ml-12">
-                  <div className="bg-black/50 rounded-xl overflow-hidden inline-block border border-white/5">
+                <div className="mt-3 sm:mt-4 ml-8 sm:ml-12 w-full">
+                  <div className="bg-black/50 rounded-xl overflow-hidden inline-block border border-white/10 p-1.5 max-w-full">
                     <img
                       src={optionImage}
                       alt={`Option ${labelChar}`}
-                      className="max-h-[150px] w-auto"
+                      className="max-h-[140px] sm:max-h-[200px] w-auto max-w-full object-contain rounded-lg"
                     />
                   </div>
                 </div>
