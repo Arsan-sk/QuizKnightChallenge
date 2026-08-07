@@ -177,18 +177,23 @@ code, kbd, pre {
   color: hsl(var(--foreground));
 }
 
-/* Scrollbar */
+/* Scrollbar styling — sleek overlay without extra width */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border) / 0.4) transparent;
+}
+
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: hsl(var(--background));
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--border));
+  background: hsl(var(--border) / 0.4);
   border-radius: 999px;
 }
 

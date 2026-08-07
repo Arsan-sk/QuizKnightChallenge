@@ -1775,7 +1775,7 @@ export default function QuizTake() {
     }
 
     return (
-      <div className="min-h-screen bg-[#131316] text-white flex flex-col font-sans relative overflow-x-hidden">
+      <div className="h-[100dvh] max-h-[100dvh] bg-[#131316] text-white flex flex-col font-sans relative overflow-hidden">
         <ProctoringWarningOverlay
           enabled={enableWebcam && proctoringActive}
           onViolation={handleWebcamViolation}
@@ -1798,22 +1798,22 @@ export default function QuizTake() {
         <div className="fixed bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[150px] pointer-events-none z-0" />
 
         {/* Top Header */}
-        <header className="flex justify-between items-center p-5 md:p-6 lg:px-12 relative z-20">
+        <header className="flex justify-between items-center p-3 sm:p-5 md:p-6 lg:px-12 relative z-20 shrink-0 border-b border-white/5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-indigo-500 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.4)] shrink-0">
+            <div className="w-9 h-9 md:w-12 md:h-12 bg-indigo-500 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.4)] shrink-0">
               <Sword className="w-5 h-5 md:w-6 md:h-6 text-white" />
             </div>
-            <span className="font-extrabold text-lg md:text-2xl tracking-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+            <span className="font-extrabold text-base md:text-2xl tracking-tight" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
               Quiz Knight <span className="text-zinc-500 font-medium hidden sm:inline">| The Challenge</span>
             </span>
           </div>
 
           <div className="flex items-center gap-4">
             {typedQuiz?.duration && typedQuiz.duration > 0 && (
-              <div className="bg-[#1c1c21] border border-white/5 rounded-full px-4 py-2 md:px-5 md:py-2.5 flex items-center gap-2 md:gap-3 shadow-lg">
+              <div className="bg-[#1c1c21] border border-white/5 rounded-full px-3 py-1.5 md:px-5 md:py-2.5 flex items-center gap-2 md:gap-3 shadow-lg">
                 <Clock className="w-4 h-4 text-indigo-400 shrink-0" />
                 <span className="text-[10px] md:text-[11px] font-bold text-zinc-500 tracking-widest uppercase hidden lg:block">Time Remaining</span>
-                <span className="font-mono font-bold text-white text-sm md:text-base whitespace-nowrap">
+                <span className="font-mono font-bold text-white text-xs sm:text-sm md:text-base whitespace-nowrap">
                   <CountdownTimer
                     duration={typedQuiz.duration * 60}
                     onTimeUp={() => {
@@ -1828,7 +1828,7 @@ export default function QuizTake() {
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 flex items-center justify-center p-4 md:p-6 relative z-10 w-full">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 relative z-10 w-full flex flex-col justify-start sm:justify-center items-center">
             {/* Hidden video required for face tracking to process frames */}
             {enableWebcam && proctoringActive && (
               <video
@@ -1840,12 +1840,12 @@ export default function QuizTake() {
               />
             )}
           {/* Central Question Card */}
-          <div className="w-full max-w-4xl mx-auto my-auto pb-12 z-20">
-            <div className="bg-[#1c1c21] rounded-[2rem] p-5 sm:p-8 md:p-12 border border-white/5 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] relative w-full pt-16">
+          <div className="w-full max-w-4xl mx-auto my-auto py-2 sm:py-6 md:pb-12 z-20">
+            <div className="bg-[#1c1c21] rounded-2xl sm:rounded-[2rem] p-4 sm:p-8 md:p-12 border border-white/5 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.7)] relative w-full pt-10 sm:pt-16">
               
               {/* Question pill header */}
-              <div className="absolute -top-5 w-full left-0 flex justify-center">
-                 <div className="bg-[#1c1c21] md:bg-indigo-500/10 backdrop-blur-xl border border-indigo-500/30 text-indigo-300 font-bold text-[10px] md:text-[11px] tracking-widest uppercase px-5 py-2 md:px-6 md:py-2.5 rounded-full shadow-[0_0_30px_rgba(99,102,241,0.2)] flex items-center gap-2">
+              <div className="absolute -top-4 sm:-top-5 w-full left-0 flex justify-center">
+                 <div className="bg-[#1c1c21] md:bg-indigo-500/10 backdrop-blur-xl border border-indigo-500/30 text-indigo-300 font-bold text-[10px] md:text-[11px] tracking-widest uppercase px-4 py-1.5 sm:px-6 sm:py-2.5 rounded-full shadow-[0_0_30px_rgba(99,102,241,0.2)] flex items-center gap-2">
                    <FileQuestion className="w-3.5 h-3.5" /> 
                    Question {currentQuestion + 1} / {typedQuestions?.length || 0}
                  </div>
@@ -1945,8 +1945,8 @@ export default function QuizTake() {
 
         </main>
 
-        {/* Bottom Action Bar (Sticky at bottom for seamless fullscreen & mobile navigation) */}
-        <footer className="sticky bottom-0 left-0 right-0 z-40 bg-[#09090b]/95 backdrop-blur-2xl border-t border-white/10 py-3.5 px-4 lg:px-12 flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-4 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+        {/* Bottom Action Bar (Fixed at bottom for seamless fullscreen & mobile navigation) */}
+        <footer className="shrink-0 z-40 bg-[#09090b]/95 backdrop-blur-2xl border-t border-white/10 py-2.5 sm:py-3.5 px-3 sm:px-6 lg:px-12 flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-4 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
           <div className="flex items-center gap-4 sm:gap-10 w-full sm:w-auto">
             <div className="hidden sm:block shrink-0">
               <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest block mb-1">Attempt Progress</span>
@@ -1978,7 +1978,7 @@ export default function QuizTake() {
             <Button 
               type="button"
               variant="ghost" 
-              className="text-zinc-400 hover:text-white hover:bg-white/5 text-xs sm:text-sm font-bold h-11 px-3"
+              className="text-zinc-400 hover:text-white hover:bg-white/5 text-xs sm:text-sm font-bold h-10 sm:h-11 px-2.5 sm:px-3"
               onClick={handleQuizSubmission}
               disabled={submitting}
             >
@@ -1991,15 +1991,15 @@ export default function QuizTake() {
                 onClick={previous}
                 disabled={currentQuestion === 0}
                 variant="outline"
-                className="bg-[#1c1c21] border-white/10 text-zinc-300 hover:bg-white/10 hover:text-white rounded-xl h-11 w-11 p-0 flex items-center justify-center shrink-0"
+                className="bg-[#1c1c21] border-white/10 text-zinc-300 hover:bg-white/10 hover:text-white rounded-xl h-10 w-10 sm:h-11 sm:w-11 p-0 flex items-center justify-center shrink-0"
               >
-                <ArrowLeft className="w-5 h-5" />
+                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
               
               {currentQuestion < (typedQuestions?.length || 0) - 1 ? (
                 <Button 
                   type="button"
-                  className="bg-indigo-400 hover:bg-indigo-500 text-indigo-950 font-bold px-5 sm:px-8 h-11 rounded-xl text-xs sm:text-sm shadow-[0_0_20px_rgba(165,180,252,0.3)] whitespace-nowrap shrink-0"
+                  className="bg-indigo-400 hover:bg-indigo-500 text-indigo-950 font-bold px-4 sm:px-8 h-10 sm:h-11 rounded-xl text-xs sm:text-sm shadow-[0_0_20px_rgba(165,180,252,0.3)] whitespace-nowrap shrink-0"
                   onClick={next}
                 >
                   Next <span className="hidden sm:inline">Question</span> <ArrowRight className="w-4 h-4 ml-1 sm:ml-2 shrink-0" />
@@ -2009,7 +2009,7 @@ export default function QuizTake() {
                   type="button"
                   onClick={handleQuizSubmission}
                   disabled={submitting}
-                  className="bg-emerald-400 hover:bg-emerald-500 text-emerald-950 font-bold px-5 sm:px-8 h-11 rounded-xl text-xs sm:text-sm shadow-[0_0_20px_rgba(52,211,153,0.3)] whitespace-nowrap shrink-0"
+                  className="bg-emerald-400 hover:bg-emerald-500 text-emerald-950 font-bold px-4 sm:px-8 h-10 sm:h-11 rounded-xl text-xs sm:text-sm shadow-[0_0_20px_rgba(52,211,153,0.3)] whitespace-nowrap shrink-0"
                 >
                   {submitting ? <><Loader2 className="w-4 h-4 animate-spin mr-1 sm:mr-2 shrink-0" /> Processing</> : <><Send className="w-4 h-4 mr-1 sm:mr-2 shrink-0" /> Finish <span className="hidden sm:inline">Quiz</span></>}
                 </Button>

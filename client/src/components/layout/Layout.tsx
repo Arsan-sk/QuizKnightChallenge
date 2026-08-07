@@ -50,7 +50,7 @@ const Layout: React.FC<Props> = ({ children }) => {
         />
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[hsl(var(--background))]">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[hsl(var(--background))] pb-16 md:pb-0">
           <div className="min-h-full">
             {children}
           </div>

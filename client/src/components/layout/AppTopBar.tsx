@@ -61,15 +61,8 @@ const AppTopBar: React.FC<Props> = ({ onMenuClick }) => {
         'bg-[hsl(var(--card)/0.85)] backdrop-blur-xl'
       )}
     >
-      {/* Left: hamburger (mobile) + page title */}
+      {/* Left: logo (mobile) / page title */}
       <div className="flex items-center gap-3">
-        {/* Mobile menu button */}
-        <button
-          onClick={onMenuClick}
-          className="md:hidden p-2 rounded-lg hover:bg-[hsl(var(--muted))] transition-colors"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
 
         {/* Logo (visible on mobile) */}
         <div className="md:hidden flex items-center gap-2">

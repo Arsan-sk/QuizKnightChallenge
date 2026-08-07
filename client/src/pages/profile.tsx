@@ -10,7 +10,7 @@ import { StudentProfile } from "@/components/profile/StudentProfile";
 import { TeacherProfile } from "@/components/profile/TeacherProfile";
 import {
   Edit, Mail, Calendar, MapPin, GraduationCap,
-  Briefcase, RefreshCw, Shield, AlertCircle
+  Briefcase, RefreshCw, Shield, AlertCircle, LogOut
 } from "lucide-react";
 
 const fadeUp = {
@@ -21,7 +21,7 @@ const fadeUp = {
 
 export default function ProfilePage() {
   const { profile, isLoading, error } = useProfile();
-  const { user } = useAuth();
+  const { user, logoutMutation } = useAuth();
 
   const isTeacher = profile?.role === "teacher" || user?.role === "teacher";
 
@@ -88,7 +88,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--background))]">
+    <div className="min-h-screen bg-[hsl(var(--background))] pb-28 md:pb-12">
       <motion.div {...fadeUp} className="max-w-4xl mx-auto px-6 py-8 space-y-6">
 
         {/* Hero Card */}
@@ -210,6 +210,19 @@ export default function ProfilePage() {
         ) : profile ? (
           <StudentProfile profile={profile as any} />
         ) : null}
+
+        {/* Mobile Log Out Button */}
+        <div className="pt-6 pb-4 flex justify-center">
+          <Button
+            onClick={() => !logoutMutation.isPending && logoutMutation.mutate()}
+            disabled={logoutMutation.isPending}
+            variant="destructive"
+            className="w-full max-w-xs bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 rounded-2xl py-6 text-sm sm:text-base font-bold flex items-center justify-center gap-2 shadow-lg transition-all"
+          >
+            <LogOut className="w-5 h-5" />
+            {logoutMutation.isPending ? 'Signing out...' : 'Sign Out'}
+          </Button>
+        </div>
       </motion.div>
     </div>
   );

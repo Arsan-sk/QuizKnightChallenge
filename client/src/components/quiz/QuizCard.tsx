@@ -132,7 +132,7 @@ export function QuizCard({
               </h3>
 
               <div className="flex items-center gap-1.5 flex-wrap shrink-0">
-                {quiz.accessCode && (
+                {isTeacher && quiz.accessCode && (
                   <button
                     type="button"
                     onClick={(e) => {

@@ -3,12 +3,12 @@ import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Share2, CheckCircle2, Star, BarChart2, Trophy, Flame, ChevronRight, Rocket, Award } from "lucide-react";
+import { Share2, CheckCircle2, Star, BarChart2, Trophy, Flame, ChevronRight, Rocket, Award, LogOut } from "lucide-react";
 import { Link } from "wouter";
 
 export default function ProfilePage() {
   const { profile, isLoading: profileLoading, error } = useProfile();
-  const { user } = useAuth();
+  const { user, logoutMutation } = useAuth();
 
   const isStudent = user?.role === "student";
 
@@ -57,7 +57,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#131316] p-4 md:p-8">
+    <div className="min-h-screen bg-[#131316] p-4 md:p-8 pb-28 md:pb-12">
       <div className="max-w-5xl mx-auto space-y-6">
         
         {/* Main Profile Header Card */}
@@ -239,6 +239,19 @@ export default function ProfilePage() {
             </div>
           </div>
 
+        </div>
+
+        {/* Mobile Log Out Button */}
+        <div className="pt-6 pb-4 flex justify-center">
+          <Button
+            onClick={() => !logoutMutation.isPending && logoutMutation.mutate()}
+            disabled={logoutMutation.isPending}
+            variant="destructive"
+            className="w-full max-w-xs bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 rounded-2xl py-6 text-sm sm:text-base font-bold flex items-center justify-center gap-2 shadow-lg transition-all"
+          >
+            <LogOut className="w-5 h-5" />
+            {logoutMutation.isPending ? 'Signing out...' : 'Sign Out'}
+          </Button>
         </div>
       </div>
     </div>
