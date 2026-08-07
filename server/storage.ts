@@ -613,6 +613,17 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(results.score), desc(results.completedAt));
   }
 
+  async getResultByUserAndQuiz(userId: number, quizId: number): Promise<Result | undefined> {
+    const [result] = await db
+      .select()
+      .from(results)
+      .where(and(eq(results.userId, userId), eq(results.quizId, quizId)))
+      .orderBy(desc(results.completedAt))
+      .limit(1);
+
+    return result;
+  }
+
   async getResultsByUser(userId: number): Promise<(Result & { quizTitle: string; maxScore: number })[]> {
     const userResults = await db
       .select({

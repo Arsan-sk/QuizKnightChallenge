@@ -10,7 +10,7 @@ import { QuizProgress } from "@/components/ui/quiz-progress";
 import { CountdownTimer } from "@/components/ui/countdown-timer";
 import { QuestionTransition } from "@/components/ui/question-transition";
 import { apiRequest } from "@/lib/queryClient";
-import { Loader2, Trophy, Clock, CheckCircle, XCircle, Search, FileQuestion, ArrowLeft, ArrowRight, Send, HelpCircle, Keyboard, Award, ClipboardCheck, ListChecks, Medal, Home, X, Circle, Sun, Moon, AlertTriangle, Sword } from "lucide-react";
+import { Loader2, Trophy, Clock, CheckCircle, XCircle, Search, FileQuestion, ArrowLeft, ArrowRight, Send, HelpCircle, Keyboard, Award, ClipboardCheck, ListChecks, Medal, Home, X, Circle, Sun, Moon, AlertTriangle, Sword, Users } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 // NavBar removed per request
 import { useToast } from "@/hooks/use-toast";
@@ -136,6 +136,13 @@ export default function QuizTake() {
   // Floating webcam refs for active quiz proctoring
   const floatingWebcamRef = useRef<HTMLVideoElement>(null);
   const floatingWebcamStreamRef = useRef<MediaStream | null>(null);
+
+  // Real-time WebSocket connection for live waiting room & FSM state synchronization
+  const socketRef = useRef<WebSocket | null>(null);
+  const [waitingParticipants, setWaitingParticipants] = useState<any[]>([]);
+  const [liveLeaderboard, setLiveLeaderboard] = useState<any[]>([]);
+  const [sessionBatchName, setSessionBatchName] = useState<string>('');
+  const [isSessionLaunched, setIsSessionLaunched] = useState<boolean>(false);
   
   // Use face proctoring hook for camera test
   const { isInitialized: cameraIsInitialized, currentConfidence } = useFaceProctoring(cameraVideoRef, {
@@ -190,33 +197,37 @@ export default function QuizTake() {
     queryKey: ["/api/results/user"],
   });
 
+  const { data: attemptCheck } = useQuery<any>({
+    queryKey: [`/api/quizzes/${id}/user-attempt`],
+    enabled: !!id && !!user,
+  });
+
   useEffect(() => {
-    if (userResults && !quizCompleted) {
-      const pastResult = userResults.find((r) => r.quizId === Number(id));
-      if (pastResult) {
-        setQuizResult({
-          score: pastResult.score,
-          timeTaken: pastResult.timeTaken,
-          totalQuestions: pastResult.totalQuestions,
-          correctAnswers: pastResult.correctAnswers || 0,
-          wrongAnswers: pastResult.wrongAnswers || 0,
-          pointsEarned: pastResult.pointsEarned || 0,
-          tabSwitchCount: pastResult.tabSwitchCount || 0,
-          copyPasteAttempts: pastResult.copyPasteAttempts || 0,
-          proctoringFlags: pastResult.proctoringFlags || 0
-        });
+    const pastResult = attemptCheck?.attempted ? attemptCheck.result : userResults?.find((r) => r.quizId === Number(id));
+    if (pastResult && !quizCompleted) {
+      setQuizResult({
+        score: pastResult.score,
+        timeTaken: pastResult.timeTaken,
+        totalQuestions: pastResult.totalQuestions,
+        correctAnswers: pastResult.correctAnswers || 0,
+        wrongAnswers: pastResult.wrongAnswers || 0,
+        pointsEarned: pastResult.pointsEarned || 0,
+        tabSwitchCount: pastResult.tabSwitchCount || 0,
+        copyPasteAttempts: pastResult.copyPasteAttempts || 0,
+        proctoringFlags: pastResult.proctoringFlags || 0
+      });
 
-        let parsedAnswers = parseAnswersSafe(pastResult.answers);
-        setAnswers(parsedAnswers);
-        setTabSwitchCount(pastResult.tabSwitchCount || 0);
-        setCopyPasteAttempts(pastResult.copyPasteAttempts || 0);
-        setOtherViolations(pastResult.proctoringFlags || 0);
+      let parsedAnswers = parseAnswersSafe(pastResult.answers);
+      setAnswers(parsedAnswers);
+      setTabSwitchCount(pastResult.tabSwitchCount || 0);
+      setCopyPasteAttempts(pastResult.copyPasteAttempts || 0);
+      setOtherViolations(pastResult.proctoringFlags || 0);
 
-        setQuizCompleted(true);
-        setShowRules(false);
-      }
+      setQuizCompleted(true);
+      setShowRules(false);
+      setWaitingForStart(false);
     }
-  }, [userResults, id, quizCompleted]);
+  }, [attemptCheck, userResults, id, quizCompleted]);
 
   const typedUser = user as User;
   const typedQuiz = quiz as Quiz;
@@ -274,14 +285,105 @@ export default function QuizTake() {
     }
   }, [user, id, toast]);
 
+  // Connect to WebSocket room for real-time live quiz FSM state synchronization
+  useEffect(() => {
+    if (!id || !user || !('id' in user)) return;
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const ws = new WebSocket(wsUrl);
+    socketRef.current = ws;
+
+    ws.onopen = () => {
+      ws.send(
+        JSON.stringify({
+          type: 'JOIN_ROOM',
+          quizId: Number(id),
+          role: 'student',
+          userId: (user as User).id,
+          username: (user as User).username,
+        })
+      );
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        if (msg.type === 'ROOM_SNAPSHOT' || msg.type === 'PARTICIPANTS_UPDATED' || msg.type === 'PARTICIPANT_STATUS_CHANGED') {
+          if (msg.participants) setWaitingParticipants(msg.participants);
+          if (msg.batchName) setSessionBatchName(msg.batchName);
+          if (msg.leaderboard) setLiveLeaderboard(msg.leaderboard);
+
+          if (msg.state === 'active' || activeSession) {
+            setIsSessionLaunched(true);
+          } else if (msg.state === 'waiting' && quizStatus?.quizType === 'live' && !quizStarted) {
+            setWaitingForStart(true);
+            setIsSessionLaunched(false);
+          }
+        } else if (msg.type === 'SESSION_LAUNCHED') {
+          setIsSessionLaunched(true);
+          if (msg.batchName) setSessionBatchName(msg.batchName);
+          toast({
+            title: "Live Session Launched!",
+            description: "The teacher has launched the session. Click 'Proceed to Camera Verification' below to continue.",
+          });
+          // Update status to verifying
+          ws.send(
+            JSON.stringify({
+              type: 'UPDATE_STATUS',
+              quizId: Number(id),
+              userId: (user as User).id,
+              status: 'verifying',
+            })
+          );
+        } else if (msg.type === 'SUBMISSION_RECEIVED' || msg.type === 'SESSION_ENDED') {
+          if (msg.participants) setWaitingParticipants(msg.participants);
+          if (msg.leaderboard) setLiveLeaderboard(msg.leaderboard);
+        }
+      } catch (err) {
+        console.error('QuizTake WS message error:', err);
+      }
+    };
+
+    return () => {
+      if (ws.readyState === WebSocket.OPEN && user && 'id' in user) {
+        try {
+          ws.send(
+            JSON.stringify({
+              type: 'LEAVE_ROOM',
+              quizId: Number(id),
+              userId: (user as User).id,
+              role: 'student',
+            })
+          );
+        } catch (e) {
+          // Socket closing
+        }
+      }
+      ws.close();
+    };
+  }, [id, user, quizStatus?.quizType, quizStarted, toast]);
+
   useEffect(() => {
     if (!timeStarted && questions && Array.isArray(questions) && questions.length > 0 && !showRules) {
       console.log('Quiz started at:', new Date());
       setTimeStarted(new Date());
       // mark quizStarted once the rules are dismissed and questions are ready
       setQuizStarted(true);
+
+      // Broadcast in_quiz status to room
+      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN && user && 'id' in user) {
+        socketRef.current.send(
+          JSON.stringify({
+            type: 'UPDATE_STATUS',
+            quizId: Number(id),
+            userId: (user as User).id,
+            status: 'in_quiz',
+          })
+        );
+      }
     }
-  }, [timeStarted, questions, showRules]);
+  }, [timeStarted, questions, showRules, id, user]);
 
   // Sync proctoring active state to context to prevent navigation during quiz
   useEffect(() => {
@@ -321,13 +423,12 @@ export default function QuizTake() {
     // stop proctoring immediately when submission starts
     setProctoringActive(false);
 
+    const startTimeToUse = timeStarted || new Date();
     try {
-      if (!questions || !Array.isArray(questions) || questions.length === 0 || !timeStarted || !user || !('id' in user)) {
+      if (!questions || !Array.isArray(questions) || questions.length === 0 || !user || !('id' in user)) {
         console.error("Missing required data for quiz submission", {
           hasQuestions: !!questions && Array.isArray(questions),
           questionsLength: (questions as any[])?.length || 0,
-          hasTimeStarted: !!timeStarted,
-          timeStarted: timeStarted?.toISOString(),
           hasUser: !!user
         });
         return;
@@ -353,7 +454,7 @@ export default function QuizTake() {
       const totalQuestions = questionsArray.length;
 
       const endTime = new Date();
-      const timeTaken = Math.max(1, Math.floor((endTime.getTime() - (timeStarted?.getTime() || 0)) / 1000));
+      const timeTaken = Math.max(1, Math.floor((endTime.getTime() - startTimeToUse.getTime()) / 1000));
       console.log('Quiz completed at:', endTime);
       console.log('Time taken (seconds):', timeTaken);
 
@@ -388,6 +489,21 @@ export default function QuizTake() {
 
         if (id) {
           completeAttempt(parseInt(id), (user as User).id);
+        }
+
+        // Broadcast submission to WebSocket room for real-time live leaderboard updates
+        if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN && user && 'id' in user) {
+          socketRef.current.send(
+            JSON.stringify({
+              type: 'SUBMIT_QUIZ',
+              quizId: Number(id),
+              userId: (user as User).id,
+              username: (user as User).username,
+              score: created.score,
+              totalQuestions: created.totalQuestions,
+              durationSeconds: created.timeTaken,
+            })
+          );
         }
 
         await safeRefetchLeaderboard();
@@ -977,20 +1093,20 @@ export default function QuizTake() {
     );
   }
 
-  // Waiting room for live quizzes that haven't started
+  // Waiting room for live quizzes that haven't started (Phase 3)
   if (waitingForStart && typedQuiz) {
     return (
-      <div className="min-h-screen bg-[#09090b] text-white flex flex-col items-center justify-center font-sans relative overflow-x-hidden">
+      <div className="min-h-screen bg-[#09090b] text-white flex flex-col items-center justify-center font-sans relative overflow-x-hidden p-4">
         <div className="fixed top-[-20%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none z-0" />
         <div className="fixed bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[150px] pointer-events-none z-0" />
         
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative z-10 max-w-lg mx-auto text-center px-6"
+          className="relative z-10 max-w-xl w-full mx-auto text-center space-y-6"
         >
           {/* Animated waiting indicator */}
-          <div className="relative w-24 h-24 mx-auto mb-8">
+          <div className="relative w-24 h-24 mx-auto">
             <motion.div
               animate={{ rotate: 360 }}
               transition={{ repeat: Infinity, duration: 3, ease: "linear" }}
@@ -1002,41 +1118,105 @@ export default function QuizTake() {
               className="absolute inset-2 rounded-full border-2 border-purple-500/20 border-b-purple-400"
             />
             <div className="absolute inset-0 flex items-center justify-center">
-              <Clock className="w-8 h-8 text-indigo-300" />
+              <Clock className="w-8 h-8 text-indigo-300 animate-pulse" />
             </div>
           </div>
 
-          <h1
-            className="text-2xl sm:text-3xl font-extrabold text-white mb-3"
-            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
-          >
-            Waiting Room
-          </h1>
-          
-          <div className="bg-[#1c1c21] rounded-2xl p-6 border border-white/5 mb-6">
-            <h2 className="text-lg font-bold text-white mb-2">{typedQuiz.title}</h2>
-            <p className="text-sm text-zinc-400 mb-4">{typedQuiz.description}</p>
-            <div className="flex items-center justify-center gap-4 text-xs text-zinc-500">
-              <span className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5" />
-                {typedQuiz.duration || 30} min
+          <div>
+            <h1
+              className="text-2xl sm:text-3xl font-extrabold text-white mb-2"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+            >
+              Live Quiz Waiting Room
+            </h1>
+            {sessionBatchName && (
+              <span className="inline-block bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
+                Batch: {sessionBatchName}
               </span>
-              <span className="capitalize">{typedQuiz.difficulty}</span>
+            )}
+          </div>
+          
+          <div className="bg-[#1c1c21] rounded-2xl p-6 border border-white/5 space-y-4 text-left">
+            <div>
+              <h2 className="text-lg font-bold text-white mb-1">{typedQuiz.title}</h2>
+              <p className="text-sm text-zinc-400">{typedQuiz.description}</p>
+            </div>
+
+            <div className="flex items-center gap-4 text-xs text-zinc-400 border-t border-white/5 pt-3">
+              <span className="flex items-center gap-1 font-medium">
+                <Clock className="w-3.5 h-3.5 text-indigo-400" />
+                {typedQuiz.duration || 30} mins
+              </span>
+              <span className="capitalize font-medium">{typedQuiz.difficulty}</span>
+              <span className="ml-auto text-emerald-400 font-bold flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                Live Session
+              </span>
             </div>
           </div>
 
-          <motion.p
-            animate={{ opacity: [0.5, 1, 0.5] }}
-            transition={{ repeat: Infinity, duration: 2 }}
-            className="text-indigo-300 text-sm font-medium mb-2"
-          >
-            Waiting for teacher to start the quiz...
-          </motion.p>
-          <p className="text-zinc-500 text-xs">This page will automatically update when the quiz begins.</p>
+          {/* Real-time Waiting Students Component (Phase 3 Spec) */}
+          <div className="bg-[#1c1c21] rounded-2xl p-5 border border-white/5 text-left space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-2">
+                <Users className="w-4 h-4 text-indigo-400" />
+                Students Waiting ({waitingParticipants.length})
+              </h3>
+              <span className="text-[10px] text-zinc-500 font-mono">Live WebSocket Sync</span>
+            </div>
+
+            {waitingParticipants.length === 0 ? (
+              <div className="text-center py-6 text-xs text-zinc-500">
+                You are the first to join this waiting room!
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-48 overflow-y-auto pr-1">
+                {waitingParticipants.map((p) => (
+                  <div
+                    key={p.userId}
+                    className="bg-[#131316] rounded-xl p-2.5 border border-white/5 flex items-center gap-2"
+                  >
+                    <div className="w-6 h-6 rounded-full bg-indigo-500/20 text-indigo-300 font-bold text-[10px] flex items-center justify-center shrink-0">
+                      {p.username.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="text-xs text-zinc-200 font-medium truncate">{p.username}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Phase 3 Proceed Button */}
+          <div className="space-y-3 pt-2">
+            {isSessionLaunched ? (
+              <Button
+                type="button"
+                onClick={() => {
+                  setWaitingForStart(false);
+                  setShowRules(true);
+                }}
+                className="w-full h-14 text-base font-extrabold rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white shadow-[0_0_30px_rgba(16,185,129,0.3)] transition-all animate-bounce flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>Proceed to Camera Verification</span>
+                <ArrowRight className="w-5 h-5" />
+              </Button>
+            ) : (
+              <div className="space-y-3">
+                <Button
+                  disabled
+                  className="w-full h-14 text-sm font-bold rounded-2xl bg-[#1c1c21] border border-white/10 text-zinc-500 cursor-not-allowed flex items-center justify-center gap-2 opacity-75"
+                >
+                  <Loader2 className="w-4 h-4 animate-spin text-zinc-500" />
+                  <span>Waiting for teacher to launch session...</span>
+                </Button>
+                <p className="text-zinc-500 text-xs text-center">This button will unlock automatically once your teacher starts the session.</p>
+              </div>
+            )}
+          </div>
 
           <Button
             variant="ghost"
-            className="mt-8 text-zinc-400 hover:text-white"
+            className="text-zinc-400 hover:text-white"
             onClick={() => setLocation(typedUser?.role === 'teacher' ? '/teacher' : '/student')}
           >
             ← Back to Dashboard
@@ -1294,87 +1474,8 @@ export default function QuizTake() {
     );
   }
 
-  if (typedQuiz.quizType === "live" && typedQuiz.isActive) {
-    const userAnswersRecord: Record<number, string> = {};
-    if (typedQuestions) {
-      typedQuestions.forEach((q, idx) => {
-        if (answers[idx]) userAnswersRecord[q.id] = answers[idx];
-      });
-    }
-
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-background/95">
-        <div className="container max-w-5xl mx-auto px-4 py-6">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="max-w-3xl mx-auto"
-          >
-            <div className="mb-6">
-              <h1 className="text-3xl font-bold">{typedQuiz.title}</h1>
-              <p className="text-muted-foreground">{typedQuiz.description}</p>
-            </div>
-
-            <div className="bg-card rounded-lg shadow-sm p-6 border">
-              <LiveQuizController
-                questions={typedQuestions}
-                duration={typedQuiz.duration || 30}
-                onAnswer={(_qId, ans) => handleAnswer(ans)}
-                onComplete={submitQuiz}
-                userAnswers={userAnswersRecord}
-              />
-            </div>
-          </motion.div>
-        </div>
-      </div>
-    );
-  }
-
   if (!quizCompleted) {
     if (showRules) {
-      // Waiting Room UI for Live Quizzes when no session is active yet
-      if (typedQuiz?.quizType === "live" && !activeSession) {
-        return (
-          <div className="min-h-screen bg-[#131316] text-white flex items-center justify-center p-4 md:p-8 relative">
-            <div className="fixed top-[-20%] left-[-10%] w-[500px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px] pointer-events-none" />
-            <div className="fixed bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[150px] pointer-events-none" />
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="max-w-xl w-full bg-[#1c1c21] border border-indigo-500/20 rounded-3xl p-8 text-center space-y-6 shadow-2xl relative z-10"
-            >
-              <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center mx-auto">
-                <Clock className="w-8 h-8 text-indigo-400 animate-pulse" />
-              </div>
-
-              <div>
-                <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30 mb-3">
-                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                  Live Quiz Waiting Room
-                </span>
-                <h2 className="text-2xl font-bold text-white mb-2">{typedQuiz.title}</h2>
-                <p className="text-zinc-400 text-sm leading-relaxed">{typedQuiz.description}</p>
-              </div>
-
-              <div className="p-6 bg-black/40 border border-white/5 rounded-2xl space-y-3">
-                <p className="text-sm text-indigo-300 font-bold">
-                  Waiting for your teacher to start a live session...
-                </p>
-                <p className="text-xs text-zinc-400 leading-relaxed">
-                  Camera verification and quiz access will unlock automatically on this screen as soon as your teacher launches a batch session.
-                </p>
-              </div>
-
-              <div className="flex items-center justify-center gap-2 text-xs text-zinc-500 pt-2">
-                <Loader2 className="w-4 h-4 animate-spin text-indigo-400" />
-                <span>Checking session status automatically...</span>
-              </div>
-            </motion.div>
-          </div>
-        );
-      }
 
       return (
         <div className="min-h-screen bg-[#131316] text-white overflow-x-hidden relative">

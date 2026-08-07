@@ -217,54 +217,23 @@ export function QuizCard({
 
           {/* Footer Metadata & Actions */}
           <div className="pt-3 border-t border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            {/* Left side of footer: Live Quiz Start/Monitor controls OR Instructor name */}
+            {/* Left side of footer: Pure Navigation to Live Quiz Monitor for teachers */}
             <div className="flex items-center gap-2 text-xs text-[hsl(var(--muted-foreground))] min-w-0">
               {isTeacher && quiz.quizType === "live" ? (
-                <>
-                  {quiz.isActive ? (
-                    <div className="flex items-center gap-1.5">
-                      <Link href={`/teacher/monitor/${quiz.id}`}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 px-2.5 text-xs text-[hsl(var(--muted-foreground))] hover:text-white hover:bg-white/5 rounded-lg"
-                          title="Monitor Live Session"
-                        >
-                          <Eye className="h-4 w-4 mr-1" />
-                          <span>Monitor</span>
-                        </Button>
-                      </Link>
-                      <Button
-                        size="sm"
-                        className="h-8 px-3 text-xs font-semibold rounded-lg"
-                        style={{ background: "hsl(var(--danger-h) var(--danger-s) var(--danger-l))", color: "white" }}
-                        onClick={() => stopQuizMutation.mutate()}
-                        disabled={isStopping}
-                      >
-                        <Square className="h-3.5 w-3.5 mr-1" />
-                        {isStopping ? "..." : "Stop"}
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      size="sm"
-                      className="h-8 px-3.5 text-xs font-semibold rounded-lg"
-                      style={{
-                        background: "hsl(var(--primary))",
-                        boxShadow: "0 2px 8px -2px hsl(var(--primary) / 0.4)",
-                      }}
-                      onClick={() => setShowSessionDialog(true)}
-                      disabled={isStarting}
-                    >
-                      <Play className="h-3.5 w-3.5 mr-1" />
-                      {isStarting ? "Launching..." : "Start Live Quiz"}
-                    </Button>
-                  )}
-                </>
+                <Link href={`/teacher/monitor/${quiz.id}`}>
+                  <Button
+                    size="sm"
+                    className="h-8 px-3 text-xs font-bold rounded-lg gap-1.5 text-white shadow-sm hover:opacity-90 transition-opacity"
+                    style={{ background: "linear-gradient(135deg, hsl(var(--primary-h) 80% 55%), hsl(270 80% 55%))" }}
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    <span>{quiz.isActive ? "Monitor Live" : "Open Monitor"}</span>
+                  </Button>
+                </Link>
               ) : (
                 teacherName && (
-                  <div className="flex items-center gap-1 font-medium">
-                    <User className="h-3.5 w-3.5 shrink-0 text-indigo-400" />
+                  <div className="flex items-center gap-1.5 truncate">
+                    <User className="h-3.5 w-3.5 text-[hsl(var(--primary))] shrink-0" />
                     <span className="truncate">{teacherName}</span>
                   </div>
                 )

@@ -2,6 +2,7 @@ import type { Express, Request, Response } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { pool } from "./db";
 import { setupAuth } from "./auth";
 import {
   insertQuizSchema,
@@ -18,6 +19,7 @@ import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { createClient } from '@supabase/supabase-js';
+import { setupWebSockets } from "./ws";
 
 // ES Module equivalent for __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -585,6 +587,23 @@ export function registerRoutes(app: Express): Server {
     }
   });
 
+  // Manually reset all active live sessions across all quizzes
+  app.post("/api/quizzes/reset-all-sessions", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== "teacher") {
+        return res.status(403).json({ error: "Teacher role required" });
+      }
+
+      await pool.query(`UPDATE quizzes SET is_active = false, is_started = false WHERE quiz_type = 'live';`);
+      await pool.query(`UPDATE live_sessions SET status = 'completed', ended_at = NOW() WHERE status = 'active';`);
+
+      res.json({ message: "All active live sessions successfully reset." });
+    } catch (error) {
+      console.error("Error resetting all live sessions:", error);
+      res.status(500).json({ error: "Failed to reset live sessions" });
+    }
+  });
+
   // End a live quiz (alias for stopping active session)
   app.post("/api/quizzes/:id/end", async (req, res) => {
     try {
@@ -677,6 +696,26 @@ export function registerRoutes(app: Express): Server {
     } catch (error) {
       console.error("Error fetching quiz status:", error);
       res.status(500).json({ error: "Failed to fetch quiz status" });
+    }
+  });
+
+  // Get user attempt for a specific quiz directly from DB
+  app.get("/api/quizzes/:id/user-attempt", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const quizId = parseInt(req.params.id);
+      if (isNaN(quizId)) {
+        return res.status(400).json({ error: "Invalid quiz ID" });
+      }
+
+      const result = await storage.getResultByUserAndQuiz(req.user.id, quizId);
+      res.json({ attempted: !!result, result: result || null });
+    } catch (error) {
+      console.error("Error checking user attempt:", error);
+      res.status(500).json({ error: "Failed to check user attempt" });
     }
   });
 
@@ -938,6 +977,12 @@ export function registerRoutes(app: Express): Server {
       const quiz = await storage.getQuiz(quizId);
       if (!quiz) {
         return res.status(404).json({ error: "Quiz not found" });
+      }
+
+      // Check if user has already attempted this quiz in DB to enforce single attempt
+      const existingResult = await storage.getResultByUserAndQuiz(req.user.id, quizId);
+      if (existingResult) {
+        return res.status(200).json(existingResult);
       }
 
       // Parse submitted answers; server will compute authoritative scoring
@@ -1367,5 +1412,6 @@ export function registerRoutes(app: Express): Server {
 
   registerStatsRoutes(app);
   const httpServer = createServer(app);
+  setupWebSockets(httpServer);
   return httpServer;
 }

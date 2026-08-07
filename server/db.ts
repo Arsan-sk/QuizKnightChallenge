@@ -188,8 +188,12 @@ async function applySchemaChanges() {
     await client.query(`UPDATE quizzes SET is_public = true WHERE is_public IS NULL;`);
     await client.query(`UPDATE quizzes SET is_draft = false WHERE is_public = true;`);
 
+    // Reset any currently active/waiting live sessions to ensure a completely clean start
+    await client.query(`UPDATE quizzes SET is_active = false, is_started = false WHERE quiz_type = 'live';`);
+    await client.query(`UPDATE live_sessions SET status = 'completed', ended_at = NOW() WHERE status = 'active';`);
+
     client.release();
-    console.log('Schema changes applied successfully');
+    console.log('Schema changes and live session resets applied successfully');
   } catch (error) {
     console.error('Error applying schema changes:', error);
   }
