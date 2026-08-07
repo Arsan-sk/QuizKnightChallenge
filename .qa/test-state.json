@@ -1,0 +1,16 @@
+{
+  "last_run": "2026-08-07T20:40:00Z",
+  "codebase_fingerprint": "98037f7",
+  "modules": {
+    "auth/session": { "status": "pass", "last_tested": "2026-08-07T20:40:00Z", "technique": ["exploratory", "integration"], "notes": "Passport session authentication verified" },
+    "teacher/dashboard": { "status": "pass", "last_tested": "2026-08-07T20:40:00Z", "technique": ["black-box", "integration"], "notes": "Dashboard cards, live start navigation verified" },
+    "teacher/live-monitor": { "status": "pass", "last_tested": "2026-08-07T20:40:00Z", "technique": ["state-transition", "integration"], "notes": "Waiting queue pre-session, Launch Session freeze, Live Leaderboard transition verified" },
+    "student/waiting-room": { "status": "pass", "last_tested": "2026-08-07T20:40:00Z", "technique": ["state-transition", "boundary"], "notes": "Dynamic Proceed button unlock on SESSION_LAUNCHED, instant LEAVE_ROOM disconnect cleanup verified" },
+    "student/camera-proctoring": { "status": "pass", "last_tested": "2026-08-07T20:40:00Z", "technique": ["negative", "security-sanity"], "notes": "Face detection, full-screen enforcement, window focus, keypress restrictions verified" },
+    "student/question-flow": { "status": "pass", "last_tested": "2026-08-07T20:40:00Z", "technique": ["boundary", "black-box"], "notes": "Fixed bottom action bar, image fitting for question and option images, option selection across all questions verified" },
+    "student/single-attempt": { "status": "pass", "last_tested": "2026-08-07T20:40:00Z", "technique": ["equivalence-partitioning", "integration"], "notes": "Unsubmitted visits allowed, submitted attempts DB check (/api/quizzes/:id/user-attempt) redirects to results" },
+    "server/websocket-fsm": { "status": "pass", "last_tested": "2026-08-07T20:40:00Z", "technique": ["state-transition", "negative"], "notes": "WebSocket room management (/ws), JOIN_ROOM, LEAVE_ROOM, SESSION_LAUNCHED, SUBMIT_QUIZ, END_SESSION verified" }
+  },
+  "open_issues": [],
+  "resolved_issues": ["QA-001", "QA-002", "QA-003", "QA-004"]
+}

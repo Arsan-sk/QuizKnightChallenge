@@ -384,8 +384,10 @@ async function applySchemaChanges() {
     }
     await client.query(`UPDATE quizzes SET is_public = true WHERE is_public IS NULL;`);
     await client.query(`UPDATE quizzes SET is_draft = false WHERE is_public = true;`);
+    await client.query(`UPDATE quizzes SET is_active = false, is_started = false WHERE quiz_type = 'live';`);
+    await client.query(`UPDATE live_sessions SET status = 'completed', ended_at = NOW() WHERE status = 'active';`);
     client.release();
-    console.log("Schema changes applied successfully");
+    console.log("Schema changes and live session resets applied successfully");
   } catch (error) {
     console.error("Error applying schema changes:", error);
   }
@@ -393,7 +395,7 @@ async function applySchemaChanges() {
 applySchemaChanges();
 
 // server/storage.ts
-import { eq, and, desc, sql, or, asc, getTableColumns, isNull } from "drizzle-orm";
+import { eq, and, desc, sql, or, asc, getTableColumns } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 var PostgresSessionStore = connectPg(session);
@@ -588,10 +590,9 @@ var DatabaseStorage = class {
         ...getTableColumns(quizzes),
         teacherName: users.username
       }).from(quizzes).leftJoin(users, eq(quizzes.createdBy, users.id)).where(
-        or(
-          eq(quizzes.isPublic, true),
-          isNull(quizzes.isPublic),
-          sql`${quizzes.isPublic} IS NOT FALSE`
+        and(
+          eq(quizzes.isDraft, false),
+          eq(quizzes.isPublic, true)
         )
       ).orderBy(desc(quizzes.createdAt));
       const resultList = await Promise.all(
@@ -619,10 +620,9 @@ var DatabaseStorage = class {
   async getQuizzesForStudent(userId) {
     try {
       return await db.select().from(quizzes).where(
-        or(
-          eq(quizzes.isPublic, true),
-          isNull(quizzes.isPublic),
-          sql`${quizzes.isPublic} IS NOT FALSE`
+        and(
+          eq(quizzes.isDraft, false),
+          eq(quizzes.isPublic, true)
         )
       ).orderBy(desc(quizzes.createdAt));
     } catch (error) {
@@ -752,6 +752,10 @@ var DatabaseStorage = class {
       }
     }
     return db.select().from(results).where(eq(results.quizId, quizId)).orderBy(desc(results.score), desc(results.completedAt));
+  }
+  async getResultByUserAndQuiz(userId, quizId) {
+    const [result] = await db.select().from(results).where(and(eq(results.userId, userId), eq(results.quizId, quizId))).orderBy(desc(results.completedAt)).limit(1);
+    return result;
   }
   async getResultsByUser(userId) {
     const userResults = await db.select({
@@ -1241,6 +1245,245 @@ import path2 from "path";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import { createClient } from "@supabase/supabase-js";
+
+// server/ws.ts
+import { WebSocketServer, WebSocket } from "ws";
+var sessionRegistry = /* @__PURE__ */ new Map();
+var roomSockets = /* @__PURE__ */ new Map();
+var socketMetadata = /* @__PURE__ */ new Map();
+function getOrCreateSession(quizId) {
+  let session3 = sessionRegistry.get(quizId);
+  if (!session3) {
+    session3 = {
+      quizId,
+      state: "waiting",
+      participants: /* @__PURE__ */ new Map()
+    };
+    sessionRegistry.set(quizId, session3);
+  }
+  return session3;
+}
+function getRoomSockets(quizId) {
+  let sockets = roomSockets.get(quizId);
+  if (!sockets) {
+    sockets = /* @__PURE__ */ new Set();
+    roomSockets.set(quizId, sockets);
+  }
+  return sockets;
+}
+function broadcastToRoom(quizId, message) {
+  const sockets = roomSockets.get(quizId);
+  if (!sockets || sockets.size === 0) return;
+  const data = JSON.stringify(message);
+  for (const socket of sockets) {
+    if (socket.readyState === WebSocket.OPEN) {
+      socket.send(data);
+    }
+  }
+}
+function buildParticipantList(session3) {
+  return Array.from(session3.participants.values()).sort(
+    (a, b) => new Date(a.joinedAt).getTime() - new Date(b.joinedAt).getTime()
+  );
+}
+function buildLeaderboard(session3) {
+  const submitted = Array.from(session3.participants.values()).filter((p) => p.status === "submitted" && p.score !== void 0).sort((a, b) => {
+    if ((b.score || 0) !== (a.score || 0)) {
+      return (b.score || 0) - (a.score || 0);
+    }
+    return (a.durationSeconds || 0) - (b.durationSeconds || 0);
+  });
+  return submitted.map((p, index) => ({
+    ...p,
+    rank: index + 1
+  }));
+}
+function setupWebSockets(server) {
+  const wss = new WebSocketServer({ server, path: "/ws" });
+  wss.on("connection", (ws) => {
+    ws.on("message", (rawMessage) => {
+      try {
+        const data = JSON.parse(rawMessage.toString());
+        const { type, quizId, userId, username, role, status, sessionId, batchName, score, totalQuestions, durationSeconds } = data;
+        if (!quizId) return;
+        const session3 = getOrCreateSession(quizId);
+        const sockets = getRoomSockets(quizId);
+        switch (type) {
+          case "JOIN_ROOM": {
+            sockets.add(ws);
+            socketMetadata.set(ws, { quizId, userId, role, username });
+            if (role === "student" && userId) {
+              const existing = session3.participants.get(userId);
+              const participant = {
+                userId,
+                username: username || `Student #${userId}`,
+                joinedAt: existing?.joinedAt || (/* @__PURE__ */ new Date()).toISOString(),
+                status: existing?.status || (session3.state === "active" ? "in_quiz" : "waiting"),
+                score: existing?.score,
+                totalQuestions: existing?.totalQuestions,
+                durationSeconds: existing?.durationSeconds,
+                completedAt: existing?.completedAt
+              };
+              session3.participants.set(userId, participant);
+            }
+            ws.send(
+              JSON.stringify({
+                type: "ROOM_SNAPSHOT",
+                quizId,
+                state: session3.state,
+                sessionId: session3.sessionId,
+                batchName: session3.batchName,
+                participants: buildParticipantList(session3),
+                leaderboard: buildLeaderboard(session3)
+              })
+            );
+            broadcastToRoom(quizId, {
+              type: "PARTICIPANTS_UPDATED",
+              quizId,
+              state: session3.state,
+              participants: buildParticipantList(session3)
+            });
+            break;
+          }
+          case "LEAVE_ROOM": {
+            sockets.delete(ws);
+            socketMetadata.delete(ws);
+            if (role === "student" && userId && session3.state === "waiting") {
+              const p = session3.participants.get(userId);
+              if (p && p.status === "waiting") {
+                session3.participants.delete(userId);
+                broadcastToRoom(quizId, {
+                  type: "PARTICIPANTS_UPDATED",
+                  quizId,
+                  state: session3.state,
+                  participants: buildParticipantList(session3)
+                });
+              }
+            }
+            break;
+          }
+          case "UPDATE_STATUS": {
+            if (userId && status) {
+              const participant = session3.participants.get(userId);
+              if (participant) {
+                participant.status = status;
+                session3.participants.set(userId, participant);
+                broadcastToRoom(quizId, {
+                  type: "PARTICIPANT_STATUS_CHANGED",
+                  quizId,
+                  userId,
+                  username: participant.username,
+                  status,
+                  participants: buildParticipantList(session3)
+                });
+              }
+            }
+            break;
+          }
+          case "LAUNCH_SESSION": {
+            session3.state = "active";
+            if (sessionId) session3.sessionId = sessionId;
+            if (batchName) session3.batchName = batchName;
+            for (const [pId, p] of session3.participants.entries()) {
+              if (p.status === "waiting") {
+                p.status = "verifying";
+                session3.participants.set(pId, p);
+              }
+            }
+            broadcastToRoom(quizId, {
+              type: "SESSION_LAUNCHED",
+              quizId,
+              sessionId: session3.sessionId,
+              batchName: session3.batchName,
+              participants: buildParticipantList(session3),
+              leaderboard: buildLeaderboard(session3)
+            });
+            break;
+          }
+          case "SUBMIT_QUIZ": {
+            if (userId) {
+              const existing = session3.participants.get(userId);
+              const participant = {
+                userId,
+                username: username || existing?.username || `Student #${userId}`,
+                joinedAt: existing?.joinedAt || (/* @__PURE__ */ new Date()).toISOString(),
+                status: "submitted",
+                score: Number(score || 0),
+                totalQuestions: Number(totalQuestions || 0),
+                durationSeconds: Number(durationSeconds || 0),
+                completedAt: (/* @__PURE__ */ new Date()).toISOString()
+              };
+              session3.participants.set(userId, participant);
+              const leaderboard = buildLeaderboard(session3);
+              broadcastToRoom(quizId, {
+                type: "SUBMISSION_RECEIVED",
+                quizId,
+                userId,
+                username: participant.username,
+                score: participant.score,
+                durationSeconds: participant.durationSeconds,
+                participants: buildParticipantList(session3),
+                leaderboard
+              });
+            }
+            break;
+          }
+          case "END_SESSION": {
+            session3.state = "completed";
+            broadcastToRoom(quizId, {
+              type: "SESSION_ENDED",
+              quizId,
+              sessionId: session3.sessionId,
+              participants: buildParticipantList(session3),
+              leaderboard: buildLeaderboard(session3)
+            });
+            sessionRegistry.delete(quizId);
+            break;
+          }
+          default:
+            break;
+        }
+      } catch (err) {
+        console.error("WebSocket message parsing error:", err);
+      }
+    });
+    ws.on("close", () => {
+      const meta = socketMetadata.get(ws);
+      if (meta) {
+        const { quizId, userId, role } = meta;
+        const sockets = roomSockets.get(quizId);
+        if (sockets) {
+          sockets.delete(ws);
+          if (sockets.size === 0) {
+            roomSockets.delete(quizId);
+          }
+        }
+        socketMetadata.delete(ws);
+        if (role === "student" && userId) {
+          const session3 = sessionRegistry.get(quizId);
+          if (session3 && session3.state === "waiting") {
+            const p = session3.participants.get(userId);
+            if (p && p.status === "waiting") {
+              session3.participants.delete(userId);
+              broadcastToRoom(quizId, {
+                type: "PARTICIPANTS_UPDATED",
+                quizId,
+                state: session3.state,
+                participants: buildParticipantList(session3)
+              });
+            }
+          }
+        }
+      }
+    });
+    ws.on("error", (err) => {
+      console.error("WebSocket error:", err);
+    });
+  });
+  return wss;
+}
+
+// server/routes.ts
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = path2.dirname(__filename);
 var supabaseUrl = process.env.SUPABASE_URL;
@@ -1678,6 +1921,19 @@ function registerRoutes(app2) {
       res.status(500).json({ error: "Failed to stop live session" });
     }
   });
+  app2.post("/api/quizzes/reset-all-sessions", async (req, res) => {
+    try {
+      if (!req.isAuthenticated() || req.user.role !== "teacher") {
+        return res.status(403).json({ error: "Teacher role required" });
+      }
+      await pool.query(`UPDATE quizzes SET is_active = false, is_started = false WHERE quiz_type = 'live';`);
+      await pool.query(`UPDATE live_sessions SET status = 'completed', ended_at = NOW() WHERE status = 'active';`);
+      res.json({ message: "All active live sessions successfully reset." });
+    } catch (error) {
+      console.error("Error resetting all live sessions:", error);
+      res.status(500).json({ error: "Failed to reset live sessions" });
+    }
+  });
   app2.post("/api/quizzes/:id/end", async (req, res) => {
     try {
       if (!req.isAuthenticated() || req.user.role !== "teacher") {
@@ -1753,6 +2009,22 @@ function registerRoutes(app2) {
     } catch (error) {
       console.error("Error fetching quiz status:", error);
       res.status(500).json({ error: "Failed to fetch quiz status" });
+    }
+  });
+  app2.get("/api/quizzes/:id/user-attempt", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      const quizId = parseInt(req.params.id);
+      if (isNaN(quizId)) {
+        return res.status(400).json({ error: "Invalid quiz ID" });
+      }
+      const result = await storage.getResultByUserAndQuiz(req.user.id, quizId);
+      res.json({ attempted: !!result, result: result || null });
+    } catch (error) {
+      console.error("Error checking user attempt:", error);
+      res.status(500).json({ error: "Failed to check user attempt" });
     }
   });
   app2.post("/api/quizzes/:id/publish", async (req, res) => {
@@ -1955,6 +2227,10 @@ function registerRoutes(app2) {
       const quiz = await storage.getQuiz(quizId);
       if (!quiz) {
         return res.status(404).json({ error: "Quiz not found" });
+      }
+      const existingResult = await storage.getResultByUserAndQuiz(req.user.id, quizId);
+      if (existingResult) {
+        return res.status(200).json(existingResult);
       }
       const validatedData = submitResultSchema.parse(req.body);
       const userAnswers = validatedData.userAnswers || [];
@@ -2316,6 +2592,7 @@ function registerRoutes(app2) {
   });
   registerStatsRoutes(app2);
   const httpServer = createServer(app2);
+  setupWebSockets(httpServer);
   return httpServer;
 }
 
