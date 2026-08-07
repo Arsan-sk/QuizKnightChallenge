@@ -220,7 +220,8 @@ export function ImageUpload({
             <Image className="h-4 w-4 text-emerald-500" />
           ) : (
             <>
-              <Upload className="h-4 w-4" /> {label}
+              <Upload className="h-4 w-4" />
+              <span className="hidden sm:inline">{label}</span>
             </>
           )}
         </Button>

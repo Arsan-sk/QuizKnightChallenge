@@ -350,10 +350,9 @@ export class DatabaseStorage implements IStorage {
         .from(quizzes)
         .leftJoin(users, eq(quizzes.createdBy, users.id))
         .where(
-          or(
-            eq(quizzes.isPublic, true),
-            isNull(quizzes.isPublic),
-            sql`${quizzes.isPublic} IS NOT FALSE`
+          and(
+            eq(quizzes.isDraft, false),
+            eq(quizzes.isPublic, true)
           )
         )
         .orderBy(desc(quizzes.createdAt));
@@ -392,10 +391,9 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(quizzes)
         .where(
-          or(
-            eq(quizzes.isPublic, true),
-            isNull(quizzes.isPublic),
-            sql`${quizzes.isPublic} IS NOT FALSE`
+          and(
+            eq(quizzes.isDraft, false),
+            eq(quizzes.isPublic, true)
           )
         )
         .orderBy(desc(quizzes.createdAt));

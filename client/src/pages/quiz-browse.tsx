@@ -100,6 +100,8 @@ export default function QuizBrowse() {
   const availableQuizzes = sortedQuizzes.filter((quiz) => !attemptedQuizIds.has(quiz.id));
 
   const filteredQuizzes = availableQuizzes.filter((quiz) => {
+    const isPublicQuiz = quiz.isPublic !== false;
+
     const matchesSearch =
       quiz.title.toLowerCase().includes(search.toLowerCase()) ||
       quiz.description.toLowerCase().includes(search.toLowerCase());
@@ -110,7 +112,7 @@ export default function QuizBrowse() {
     const matchesQuizType =
       quizTypeFilter === "all" || quiz.quizType === quizTypeFilter;
 
-    return matchesSearch && matchesDifficulty && matchesQuizType;
+    return isPublicQuiz && matchesSearch && matchesDifficulty && matchesQuizType;
   });
 
   return (

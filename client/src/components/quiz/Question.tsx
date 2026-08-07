@@ -191,15 +191,15 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
 
         {/* Question Type & Points Section */}
         <motion.div
-          className="border-t pt-4 flex flex-wrap gap-6 justify-between items-start"
+          className="border-t border-white/5 pt-4 flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.1 }}
           layout="position"
         >
-          <div className="space-y-2">
-            <Label className="text-sm font-medium flex items-center gap-1.5">
-              <Edit3 className="h-4 w-4" />
+          <div className="space-y-2 w-full sm:w-auto">
+            <Label className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
+              <Edit3 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-indigo-400" />
               Question Type
             </Label>
             <RadioGroup
@@ -207,22 +207,27 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
               onValueChange={(value) =>
                 handleQuestionTypeChange(value as "mcq" | "true_false")
               }
-              className="flex space-x-4"
+              className="flex space-x-2 sm:space-x-4 w-full"
             >
-              <div className="flex items-center space-x-2 border border-white/5 bg-[#1c1c21] rounded-xl px-4 py-3 hover:bg-white/5 transition-colors cursor-pointer text-white">
+              <div className="flex-1 sm:flex-initial flex items-center justify-center space-x-2 border border-white/5 bg-[#1c1c21] rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-white/5 transition-colors cursor-pointer text-white">
                 <RadioGroupItem value="mcq" id={`mcq-${questionId}`} />
-                <Label htmlFor={`mcq-${questionId}`} className="cursor-pointer">Multiple Choice</Label>
+                <Label htmlFor={`mcq-${questionId}`} className="cursor-pointer text-xs sm:text-sm font-semibold">
+                  <span className="sm:hidden">MCQ</span>
+                  <span className="hidden sm:inline">Multiple Choice</span>
+                </Label>
               </div>
-              <div className="flex items-center space-x-2 border border-white/5 bg-[#1c1c21] rounded-xl px-4 py-3 hover:bg-white/5 transition-colors cursor-pointer text-white">
+              <div className="flex-1 sm:flex-initial flex items-center justify-center space-x-2 border border-white/5 bg-[#1c1c21] rounded-xl px-3 sm:px-4 py-2.5 sm:py-3 hover:bg-white/5 transition-colors cursor-pointer text-white">
                 <RadioGroupItem value="true_false" id={`true_false-${questionId}`} />
-                <Label htmlFor={`true_false-${questionId}`} className="cursor-pointer">True/False</Label>
+                <Label htmlFor={`true_false-${questionId}`} className="cursor-pointer text-xs sm:text-sm font-semibold">
+                  True/False
+                </Label>
               </div>
             </RadioGroup>
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-sm font-medium flex items-center gap-1.5">
-              <CheckCircle className="h-4 w-4" />
+          <div className="space-y-2 w-full sm:w-auto flex flex-row sm:flex-col justify-between items-center sm:items-start pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
+            <Label className="text-xs sm:text-sm font-medium flex items-center gap-1.5">
+              <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-400" />
               Points
             </Label>
             <div className="flex items-center gap-2">
@@ -232,7 +237,7 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
                 max="100"
                 value={points}
                 onChange={(e) => setPoints(parseInt(e.target.value) || 0)}
-                className="w-24 transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-[#1c1c21] border-white/5 text-white h-11 rounded-xl"
+                className="w-20 sm:w-24 transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 bg-[#1c1c21] border-white/5 text-white h-10 sm:h-11 rounded-xl text-xs sm:text-sm"
               />
               <span className="text-xs text-muted-foreground">pts</span>
             </div>
@@ -300,9 +305,9 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
                       </motion.div>
                     )}
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1.5 sm:gap-3">
                       <div className={cn(
-                        "font-medium text-sm w-7 h-7 flex items-center justify-center rounded-full transition-colors shrink-0",
+                        "font-bold text-xs sm:text-sm w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-full transition-colors shrink-0",
                         isCorrect
                           ? "bg-emerald-500/20 text-emerald-400"
                           : "bg-white/5 text-zinc-500"
@@ -312,7 +317,7 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
 
                       <Input
                         className={cn(
-                          "flex-1 transition-all bg-[#131316] border-white/5 text-white h-11 rounded-lg",
+                          "flex-1 transition-all bg-[#131316] border-white/5 text-white h-10 sm:h-11 rounded-lg text-xs sm:text-sm px-2.5 sm:px-3",
                           isCorrect && "border-emerald-500/30 focus:border-emerald-500 focus:ring-emerald-500/20"
                         )}
                         value={option}
@@ -320,7 +325,7 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
                         placeholder={`Option ${index + 1}`}
                         id={optionInputId}
                       />
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                           <motion.div
                             whileHover={option.trim() !== "" ? { scale: 1.1 } : {}}
                             whileTap={option.trim() !== "" ? { scale: 0.95 } : {}}
@@ -331,7 +336,7 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
                               size="icon"
                               variant={isCorrect ? "default" : "outline"}
                               className={cn(
-                                "h-9 w-9 transition-all rounded-lg shrink-0",
+                                "h-8 w-8 sm:h-9 sm:w-9 transition-all rounded-lg shrink-0",
                                 isCorrect 
                                   ? "bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-500" 
                                   : "bg-transparent border-white/10 text-zinc-500 hover:text-white hover:bg-white/5"
@@ -351,7 +356,7 @@ function QuestionEdit({ question, onChange, onRemove }: QuestionEditProps) {
                                 }}
                                 transition={{ duration: 0.3 }}
                               >
-                                <CheckIcon className="h-4 w-4" />
+                                <CheckIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                               </motion.div>
                             </Button>
                           </motion.div>

@@ -23,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Plus,
   ArrowRight,
+  ArrowLeft,
   Lightbulb,
   Info,
   ListChecks,
@@ -36,6 +37,8 @@ import {
   Circle,
   Lock,
   Save,
+  Globe,
+  Check,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Quiz, Question as QuestionType } from "@shared/schema";
@@ -608,16 +611,72 @@ export default function QuizCreate() {
                </div>
              )}
 
-             <div className="bg-[#131316] border border-white/5 rounded-2xl p-6 flex items-start gap-4">
-                <Checkbox
-                  id="public"
-                  checked={watchIsPublic}
-                  onCheckedChange={(c) => setValue("isPublic", c === true)}
-                  className="mt-1"
-                />
-                <div>
-                   <label htmlFor="public" className="font-bold text-white block mb-1">Make Quiz Public</label>
-                   <p className="text-sm text-zinc-500">Allow any student to discover and attempt this quiz. Private quizzes are hidden from all students.</p>
+             <div className="space-y-3">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest pl-1">
+                  QUIZ VISIBILITY
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Option 1: Create Public Quiz */}
+                  <button
+                    type="button"
+                    onClick={() => setValue("isPublic", true)}
+                    className={`relative p-5 sm:p-6 rounded-2xl border text-left transition-all flex flex-col justify-between gap-4 ${
+                      watchIsPublic === true
+                        ? "bg-indigo-500/10 border-2 border-indigo-400 shadow-[0_0_25px_rgba(99,102,241,0.15)] text-white"
+                        : "bg-[#131316] border-2 border-white/5 hover:border-white/10 text-zinc-400"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3 w-full">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${watchIsPublic === true ? 'bg-indigo-500/20 text-indigo-300' : 'bg-white/5 text-zinc-500'}`}>
+                          <Globe className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className={`font-bold text-base ${watchIsPublic === true ? 'text-white' : 'text-zinc-300'}`}>
+                            Create Public Quiz
+                          </h4>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Discoverable</span>
+                        </div>
+                      </div>
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-1 ${watchIsPublic === true ? 'bg-indigo-400 text-indigo-950 font-bold' : 'border-2 border-zinc-600'}`}>
+                        {watchIsPublic === true && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                      </div>
+                    </div>
+                    <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
+                      The quiz is publicly visible. Students can discover it from the Browse Quiz section and anyone with access can attempt it.
+                    </p>
+                  </button>
+
+                  {/* Option 2: Create Private Quiz */}
+                  <button
+                    type="button"
+                    onClick={() => setValue("isPublic", false)}
+                    className={`relative p-5 sm:p-6 rounded-2xl border text-left transition-all flex flex-col justify-between gap-4 ${
+                      watchIsPublic === false
+                        ? "bg-purple-500/10 border-2 border-purple-400 shadow-[0_0_25px_rgba(168,85,247,0.15)] text-white"
+                        : "bg-[#131316] border-2 border-white/5 hover:border-white/10 text-zinc-400"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3 w-full">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${watchIsPublic === false ? 'bg-purple-500/20 text-purple-300' : 'bg-white/5 text-zinc-500'}`}>
+                          <Lock className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className={`font-bold text-base ${watchIsPublic === false ? 'text-white' : 'text-zinc-300'}`}>
+                            Create Private Quiz
+                          </h4>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">Join Code Only</span>
+                        </div>
+                      </div>
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-1 ${watchIsPublic === false ? 'bg-purple-400 text-purple-950 font-bold' : 'border-2 border-zinc-600'}`}>
+                        {watchIsPublic === false && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                      </div>
+                    </div>
+                    <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
+                      The quiz is hidden from the Browse Quiz section. It is intended for selected students only and can be accessed only using your shared Join Code.
+                    </p>
+                  </button>
                 </div>
              </div>
           </div>
@@ -625,7 +684,6 @@ export default function QuizCreate() {
     </div>
   );
 
-  // Show loading state while fetching quiz data in edit mode
   if (isEditMode && !dataLoaded) {
     return (
       <div className="min-h-screen bg-[#131316] flex items-center justify-center">
@@ -649,8 +707,17 @@ export default function QuizCreate() {
           {/* Header section */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6">
             <div>
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white mb-2" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
-                {isEditMode ? "Edit Quiz" : "Quiz Creation Wizard"}
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white mb-2 flex items-center gap-2.5" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+                <button
+                  type="button"
+                  onClick={() => setLocation("/teacher")}
+                  className="md:hidden p-2 rounded-xl bg-[#1c1c21] hover:bg-white/10 text-zinc-300 hover:text-white border border-white/10 transition-all shrink-0 active:scale-95 shadow-md flex items-center justify-center"
+                  title="Back to Dashboard"
+                  aria-label="Back to Dashboard"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <span>{isEditMode ? "Edit Quiz" : "Quiz Creation Wizard"}</span>
               </h1>
               <p className="text-zinc-400 text-sm md:text-base max-w-xl">{getStepText(currentStep)}</p>
             </div>
@@ -713,29 +780,36 @@ export default function QuizCreate() {
           </div>
         </div>
         
-        {/* Fixed bottom bar */}
-        <div className="fixed bottom-0 left-0 right-0 bg-[#09090b]/80 backdrop-blur-xl border-t border-white/5 py-3 sm:py-4 px-4 sm:px-6 md:px-12 flex justify-between items-center z-50">
-          <Button variant="ghost" className="text-zinc-400 hover:text-white text-xs sm:text-sm" onClick={() => setLocation("/teacher")}>
+        {/* Fixed bottom bar — 3 main form action buttons */}
+        <div className="fixed bottom-0 left-0 right-0 bg-[#09090b]/95 backdrop-blur-xl border-t border-white/10 py-3 sm:py-4 px-2.5 sm:px-6 md:px-12 flex justify-between items-center z-50 gap-1.5 sm:gap-4 shadow-2xl">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-zinc-400 hover:text-white text-xs sm:text-sm px-2 sm:px-4 h-10 sm:h-11 rounded-xl shrink-0 gap-1"
+            onClick={() => setLocation("/teacher")}
+          >
             {isEditMode ? (
-              <><ArrowRight className="w-4 h-4 mr-2 rotate-180" /> Back</>
+              <><ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 rotate-180 shrink-0" /> <span>Back</span></>
             ) : (
-              <><Trash2 className="w-4 h-4 mr-2" /> Discard Draft</>
+              <><Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /> <span>Discard Draft</span></>
             )}
           </Button>
           
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-4 shrink-0">
             <Button
               variant="outline"
-              className="hidden sm:flex bg-[#1c1c21] border-white/5 text-zinc-300 hover:bg-white/5 hover:text-white rounded-xl gap-2"
+              size="sm"
+              className="bg-[#1c1c21] border-white/10 text-zinc-300 hover:bg-white/10 hover:text-white rounded-xl gap-1 text-xs sm:text-sm h-10 sm:h-11 px-2.5 sm:px-5"
               onClick={handleSaveDraft}
               disabled={isPending || !formValid}
             >
-              <Save className="w-4 h-4" />
-              Save as Draft
+              <Save className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+              <span>Save Draft</span>
             </Button>
+
             <Button 
               type="button"
-              className={`font-bold px-4 sm:px-8 h-10 sm:h-12 rounded-xl flex items-center shadow-lg transition-all text-xs sm:text-sm ${
+              className={`font-bold px-3 sm:px-8 h-10 sm:h-12 rounded-xl flex items-center gap-1 shadow-lg transition-all text-xs sm:text-sm ${
                 (!formValid) || isPending
                   ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed shadow-none'
                   : 'bg-indigo-300 hover:bg-indigo-400 text-indigo-950 hover:shadow-[0_0_20px_rgba(165,180,252,0.5)]'
@@ -744,7 +818,7 @@ export default function QuizCreate() {
               disabled={(!formValid) || isPending}
             >
               {currentStep < 3 ? (
-                <>Next Step <ArrowRight className="w-4 h-4 ml-2" /></>
+                <>Next Step <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" /></>
               ) : (
                 isPending ? "Saving..." : (isEditMode ? "Save Changes" : "Launch Quiz")
               )}

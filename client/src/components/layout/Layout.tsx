@@ -17,7 +17,9 @@ const Layout: React.FC<Props> = ({ children }) => {
   // Hide sidebar/topbar/mobilenav on public routes or during quiz-taking
   const isPublicRoute = location === '/' || location.startsWith('/auth');
   const isQuizTakePage = location.startsWith('/student/quiz/') || location.startsWith('/quiz-take');
+  const isQuizCreatePage = location.startsWith('/teacher/quiz/create') || location.startsWith('/quiz-create');
   const showNav = !!user && !isPublicRoute && !isQuizTakePage;
+  const showMobileNav = showNav && !isQuizCreatePage;
 
   // Close sidebar when route changes on mobile
   useEffect(() => {
@@ -50,7 +52,7 @@ const Layout: React.FC<Props> = ({ children }) => {
         />
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden bg-[hsl(var(--background))] pb-16 md:pb-0">
+        <main className={`flex-1 overflow-y-auto overflow-x-hidden bg-[hsl(var(--background))] ${showMobileNav ? 'pb-16 md:pb-0' : 'md:pb-0'}`}>
           <div className="min-h-full">
             {children}
           </div>
@@ -58,7 +60,7 @@ const Layout: React.FC<Props> = ({ children }) => {
       </div>
 
       {/* Mobile bottom nav */}
-      <MobileNav />
+      {showMobileNav && <MobileNav />}
     </div>
   );
 };

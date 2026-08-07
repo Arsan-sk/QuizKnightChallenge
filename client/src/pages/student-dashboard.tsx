@@ -184,8 +184,8 @@ export default function StudentDashboard() {
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-               {liveQuizzes && liveQuizzes.length > 0 ? (
-                 liveQuizzes.slice(0, 2).map((quiz, i) => {
+               {liveQuizzes && liveQuizzes.filter(q => q.isPublic !== false).length > 0 ? (
+                 liveQuizzes.filter(q => q.isPublic !== false).slice(0, 2).map((quiz, i) => {
                     const alreadyAttempted = results?.some(r => r.quizId === quiz.id);
                     const actionPath = alreadyAttempted ? `/student/quiz/${quiz.id}?view=results` : `/student/quiz/${quiz.id}`;
 
