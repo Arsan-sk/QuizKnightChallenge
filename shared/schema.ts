@@ -155,6 +155,7 @@ export const insertQuizSchema = createInsertSchema(quizzes).pick({
   description: true,
   difficulty: true,
   isPublic: true,
+  isDraft: true,
   quizType: true,
   duration: true,
   targetBranch: true,

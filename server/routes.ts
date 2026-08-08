@@ -343,6 +343,7 @@ export function registerRoutes(app: Express): Server {
         ...validatedData,
         createdBy: req.user.id,
         isPublic: validatedData.isPublic ?? false,
+        isDraft: validatedData.isDraft ?? true,
       } as any);
       res.status(201).json(quiz);
     } catch (error: any) {
@@ -810,13 +811,13 @@ export function registerRoutes(app: Express): Server {
         return res.status(404).json({ error: "Quiz not found" });
       }
 
-      // Students cannot access draft quizzes if they are non-public
-      if (req.user.role === "student" && quiz.isDraft === true && !quiz.isPublic) {
+      // Students cannot access draft quizzes
+      if (req.user.role === "student" && quiz.isDraft === true) {
         return res.status(403).json({ error: "This quiz is not available" });
       }
 
-      // Check if user has access to this quiz
-      if (!quiz.isPublic && quiz.createdBy !== req.user.id) {
+      // Draft quizzes can only be accessed by their creator
+      if (quiz.isDraft && quiz.createdBy !== req.user.id) {
         return res.status(403).json({ error: "Not authorized to access this quiz" });
       }
 
@@ -944,8 +945,8 @@ export function registerRoutes(app: Express): Server {
         return res.status(403).json({ error: "This quiz is not available" });
       }
 
-      // Check if user has access to this quiz
-      if (!quiz.isPublic && quiz.createdBy !== req.user.id) {
+      // Draft quizzes can only be accessed by their creator
+      if (quiz.isDraft && quiz.createdBy !== req.user.id) {
         return res.status(403).json({ error: "Not authorized to access this quiz" });
       }
 

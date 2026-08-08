@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BadgeCheck, Clock, Eye, FileEdit, ListChecks, BarChart3, BookOpen, AlertCircle, List, LayoutGrid, Copy } from "lucide-react";
+import { BadgeCheck, Clock, Eye, FileEdit, ListChecks, BarChart3, BookOpen, AlertCircle, List, LayoutGrid, Copy, Lock } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -229,7 +229,8 @@ export default function HistoryPage() {
       );
     }
 
-    const publishedQuizzes = createdQuizzes?.filter(q => !(q as any).isDraft) || [];
+    const publishedQuizzes = createdQuizzes?.filter(q => !(q as any).isDraft && (q as any).isPublic) || [];
+    const privateQuizzes = createdQuizzes?.filter(q => !(q as any).isDraft && !(q as any).isPublic) || [];
     const draftQuizzes = createdQuizzes?.filter(q => (q as any).isDraft) || [];
 
     return (
@@ -260,6 +261,9 @@ export default function HistoryPage() {
             >
               <TabsTrigger value="published" className="rounded-lg text-xs sm:text-sm font-medium">
                 Published ({publishedQuizzes.length})
+              </TabsTrigger>
+              <TabsTrigger value="private" className="rounded-lg text-xs sm:text-sm font-medium">
+                Private ({privateQuizzes.length})
               </TabsTrigger>
               <TabsTrigger value="drafts" className="rounded-lg text-xs sm:text-sm font-medium">
                 Drafts ({draftQuizzes.length})
@@ -301,6 +305,7 @@ export default function HistoryPage() {
 
           {[
             { value: "published", data: publishedQuizzes },
+            { value: "private", data: privateQuizzes },
             { value: "drafts", data: draftQuizzes },
           ].map(({ value, data }) => (
             <TabsContent key={value} value={value}>

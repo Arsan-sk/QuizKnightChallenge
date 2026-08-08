@@ -186,7 +186,8 @@ async function applySchemaChanges() {
 
     // Backfill is_public and is_draft for all quizzes to guarantee visibility
     await client.query(`UPDATE quizzes SET is_public = true WHERE is_public IS NULL;`);
-    await client.query(`UPDATE quizzes SET is_draft = false WHERE is_public = true;`);
+    // All pre-existing quizzes should be treated as non-draft (published or private, not draft)
+    await client.query(`UPDATE quizzes SET is_draft = false WHERE is_draft IS NULL OR (is_draft = true AND created_at < NOW() - INTERVAL '1 minute');`);
 
     // Reset any currently active/waiting live sessions to ensure a completely clean start
     await client.query(`UPDATE quizzes SET is_active = false, is_started = false WHERE quiz_type = 'live';`);

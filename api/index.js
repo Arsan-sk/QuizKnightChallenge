@@ -185,6 +185,7 @@ var insertQuizSchema = createInsertSchema(quizzes).pick({
   description: true,
   difficulty: true,
   isPublic: true,
+  isDraft: true,
   quizType: true,
   duration: true,
   targetBranch: true,
@@ -383,7 +384,7 @@ async function applySchemaChanges() {
       }
     }
     await client.query(`UPDATE quizzes SET is_public = true WHERE is_public IS NULL;`);
-    await client.query(`UPDATE quizzes SET is_draft = false WHERE is_public = true;`);
+    await client.query(`UPDATE quizzes SET is_draft = false WHERE is_draft IS NULL OR (is_draft = true AND created_at < NOW() - INTERVAL '1 minute');`);
     await client.query(`UPDATE quizzes SET is_active = false, is_started = false WHERE quiz_type = 'live';`);
     await client.query(`UPDATE live_sessions SET status = 'completed', ended_at = NOW() WHERE status = 'active';`);
     client.release();
@@ -1728,7 +1729,8 @@ function registerRoutes(app2) {
       const quiz = await storage.createQuiz({
         ...validatedData,
         createdBy: req.user.id,
-        isPublic: validatedData.isPublic ?? false
+        isPublic: validatedData.isPublic ?? false,
+        isDraft: validatedData.isDraft ?? true
       });
       res.status(201).json(quiz);
     } catch (error) {
@@ -2101,10 +2103,10 @@ function registerRoutes(app2) {
       if (!quiz) {
         return res.status(404).json({ error: "Quiz not found" });
       }
-      if (req.user.role === "student" && quiz.isDraft === true && !quiz.isPublic) {
+      if (req.user.role === "student" && quiz.isDraft === true) {
         return res.status(403).json({ error: "This quiz is not available" });
       }
-      if (!quiz.isPublic && quiz.createdBy !== req.user.id) {
+      if (quiz.isDraft && quiz.createdBy !== req.user.id) {
         return res.status(403).json({ error: "Not authorized to access this quiz" });
       }
       res.json(quiz);
@@ -2202,7 +2204,7 @@ function registerRoutes(app2) {
       if (req.user.role === "student" && quiz.isDraft) {
         return res.status(403).json({ error: "This quiz is not available" });
       }
-      if (!quiz.isPublic && quiz.createdBy !== req.user.id) {
+      if (quiz.isDraft && quiz.createdBy !== req.user.id) {
         return res.status(403).json({ error: "Not authorized to access this quiz" });
       }
       if (quiz.quizType === "live" && !quiz.isStarted && req.user.role === "student") {

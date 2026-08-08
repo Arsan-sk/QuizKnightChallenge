@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import {
   BarChart2, Plus, Users, Shield, Loader2, BookOpen,
   Tv, LayoutGrid, ChevronRight, TrendingUp, Zap, Award,
-  FileCheck, FileText, List, Copy, Eye, Play, Square
+  FileCheck, FileText, List, Copy, Eye, Play, Square, Lock
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
@@ -51,7 +51,8 @@ export default function TeacherDashboard() {
     },
   });
 
-  const publishedQuizzes = quizzes?.filter((q) => !q.isDraft) || [];
+  const publishedQuizzes = quizzes?.filter((q) => !q.isDraft && q.isPublic) || [];
+  const privateQuizzes = quizzes?.filter((q) => !q.isDraft && !q.isPublic) || [];
   const draftQuizzes = quizzes?.filter((q) => q.isDraft) || [];
   const activeQuizzes = quizzes?.filter((q) => q.isActive) || [];
   const totalQuizzes = quizzes?.length || 0;
@@ -67,12 +68,11 @@ export default function TeacherDashboard() {
       bg: "hsl(var(--primary) / 0.12)",
     },
     {
-      label: "Live Now",
-      value: liveNow,
-      icon: Zap,
-      color: "hsl(0 72% 60%)",
-      bg: "hsl(0 72% 51% / 0.12)",
-      pulse: liveNow > 0,
+      label: "Private Quizzes",
+      value: privateQuizzes.length,
+      icon: Lock,
+      color: "hsl(270 80% 65%)",
+      bg: "hsl(270 80% 55% / 0.12)",
     },
     {
       label: "Active Students",
@@ -103,14 +103,14 @@ export default function TeacherDashboard() {
       icon: Tv,
       label: "Monitor Live",
       desc: "Watch students take quizzes in real time",
-      route: activeQuizzes[0] ? `/teacher/monitor/${activeQuizzes[0].id}` : "/teacher",
+      route: "/history",
       gradient: "linear-gradient(135deg, hsl(0 72% 51% / 0.6), hsl(20 90% 50% / 0.5))",
     },
     {
       icon: BarChart2,
       label: "Analytics",
       desc: "View detailed performance & participation data",
-      route: "/quiz-analytics",
+      route: "/history",
       gradient: "linear-gradient(135deg, hsl(145 63% 42% / 0.6), hsl(180 70% 40% / 0.5))",
     },
   ];
@@ -198,7 +198,7 @@ export default function TeacherDashboard() {
                   className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center self-start"
                   style={{ background: stat.bg }}
                 >
-                  {stat.pulse ? (
+                  {(stat as any).pulse ? (
                     <div className="relative">
                       <stat.icon className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: stat.color }} strokeWidth={2} />
                       <span className="absolute -top-1 -right-1 live-dot w-2 h-2" />
@@ -325,6 +325,10 @@ export default function TeacherDashboard() {
                   <FileCheck className="w-3.5 h-3.5" />
                   Published ({publishedQuizzes.length})
                 </TabsTrigger>
+                <TabsTrigger value="private" className="rounded-lg text-xs sm:text-sm font-medium gap-1.5">
+                  <Lock className="w-3.5 h-3.5" />
+                  Private ({privateQuizzes.length})
+                </TabsTrigger>
                 <TabsTrigger value="drafts" className="rounded-lg text-xs sm:text-sm font-medium gap-1.5">
                   <FileText className="w-3.5 h-3.5" />
                   Drafts ({draftQuizzes.length})
@@ -342,6 +346,29 @@ export default function TeacherDashboard() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     {publishedQuizzes.map((quiz) => (
+                      <QuizCard
+                        key={quiz.id}
+                        quiz={quiz}
+                        actionLabel="Edit"
+                        actionPath={`/teacher/quiz/create?id=${quiz.id}`}
+                        isTeacher={true}
+                      />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="private">
+                {privateQuizzes.length === 0 ? (
+                  <div className="clay-card p-10 text-center">
+                    <Lock className="w-10 h-10 mx-auto mb-3" style={{ color: "hsl(var(--muted-foreground))" }} />
+                    <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                      No private quizzes. Private quizzes are accessible only via join code.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                    {privateQuizzes.map((quiz) => (
                       <QuizCard
                         key={quiz.id}
                         quiz={quiz}
