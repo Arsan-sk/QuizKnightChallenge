@@ -1624,36 +1624,6 @@ export default function QuizTake() {
                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                             <span className="text-xs text-emerald-300 font-bold uppercase">LIVE</span>
                           </div>
-
-                          {/* Confidence Display */}
-                          <motion.div
-                            className="absolute bottom-4 left-1/2 -translate-x-1/2"
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                          >
-                            {currentConfidence >= 70 ? (
-                              <div className="bg-emerald-500/90 backdrop-blur-md px-4 py-2 rounded-full border border-emerald-400/50">
-                                <div className="flex items-center gap-2 text-white">
-                                  <CheckCircle className="h-4 w-4" />
-                                  <span className="text-sm font-bold">Verified - {Math.round(currentConfidence)}%</span>
-                                </div>
-                              </div>
-                            ) : currentConfidence > 0 ? (
-                              <div className="bg-yellow-500/90 backdrop-blur-md px-4 py-2 rounded-full border border-yellow-400/50">
-                                <div className="flex items-center gap-2 text-white">
-                                  <AlertTriangle className="h-4 w-4" />
-                                  <span className="text-sm font-bold">Look at screen - {Math.round(currentConfidence)}%</span>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="bg-red-500/90 backdrop-blur-md px-4 py-2 rounded-full border border-red-400/50">
-                                <div className="flex items-center gap-2 text-white">
-                                  <AlertTriangle className="h-4 w-4" />
-                                  <span className="text-sm font-bold">Detecting face...</span>
-                                </div>
-                              </div>
-                            )}
-                          </motion.div>
                         </>
                       )}
 
@@ -1702,31 +1672,84 @@ export default function QuizTake() {
                     </motion.div>
                   )}
 
-                  {/* Camera Test Buttons */}
+                  {/* Camera Test / Verification Action Buttons */}
                   <div className="flex gap-3 mb-6">
                     {!checkingCamera ? (
                       <motion.button
+                        type="button"
                         onClick={testCamera}
                         disabled={!cameraPermissionGranted}
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        className="flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-bold py-3 px-6 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        className="flex-1 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-extrabold py-3.5 px-6 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 text-sm sm:text-base uppercase tracking-wider cursor-pointer"
                       >
-                        <span className="flex items-center justify-center gap-2">
-                          <CheckCircle className="w-4 h-4" />
-                          Test Camera
-                        </span>
+                        <CheckCircle className="w-5 h-5" />
+                        <span>Start Camera Test</span>
                       </motion.button>
                     ) : (
-                      <motion.button
-                        onClick={stopCamera}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className="flex-1 bg-gradient-to-r from-zinc-600 to-zinc-700 hover:from-zinc-700 hover:to-zinc-800 text-white font-bold py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2"
-                      >
-                        <XCircle className="w-4 h-4" />
-                        Stop Test
-                      </motion.button>
+                      <div className="flex-1 flex flex-col sm:flex-row gap-3">
+                        <motion.button
+                          type="button"
+                          onClick={() => {
+                            if (readyToStart && currentConfidence >= 70) {
+                              enterFullScreen();
+                              setShowRules(false);
+                            }
+                          }}
+                          disabled={!readyToStart || currentConfidence < 70}
+                          whileHover={readyToStart && currentConfidence >= 70 ? { scale: 1.02 } : {}}
+                          whileTap={readyToStart && currentConfidence >= 70 ? { scale: 0.98 } : {}}
+                          className={`flex-1 py-3.5 px-6 rounded-xl font-extrabold text-sm sm:text-base uppercase tracking-wider transition-all relative overflow-hidden flex items-center justify-center gap-2.5 ${
+                            !readyToStart
+                              ? 'bg-zinc-800 text-zinc-400 border border-white/10 cursor-not-allowed opacity-80'
+                              : currentConfidence < 70
+                              ? currentConfidence === 0
+                                ? 'bg-red-500/10 border border-red-500/30 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.15)] cursor-not-allowed'
+                                : 'bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.15)] cursor-not-allowed'
+                              : 'bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-500 hover:from-emerald-600 hover:to-indigo-600 text-white shadow-[0_0_30px_rgba(16,185,129,0.4)] cursor-pointer'
+                          }`}
+                        >
+                          {readyToStart && currentConfidence >= 70 && (
+                            <motion.div
+                              className="absolute inset-0 bg-white/10"
+                              initial={{ x: '-100%' }}
+                              animate={{ x: '100%' }}
+                              transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                            />
+                          )}
+                          <span className="relative flex items-center justify-center gap-2">
+                            {!readyToStart ? (
+                              <>
+                                <Clock className="w-5 h-5 text-indigo-400 animate-pulse" />
+                                <span>Please Wait... ({rulesTimer}s)</span>
+                              </>
+                            ) : currentConfidence < 70 ? (
+                              <>
+                                <AlertTriangle className={`w-5 h-5 ${currentConfidence === 0 ? 'text-red-400 animate-bounce' : 'text-yellow-400 animate-pulse'}`} />
+                                <span>Verify Camera ({Math.round(currentConfidence)}% / 70%)</span>
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="w-5 h-5 text-white" />
+                                <span>Start Quiz</span>
+                                <ArrowRight className="w-5 h-5 text-white" />
+                              </>
+                            )}
+                          </span>
+                        </motion.button>
+
+                        <motion.button
+                          type="button"
+                          onClick={stopCamera}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          title="Stop camera test"
+                          className="px-4 py-3.5 rounded-xl bg-zinc-800/80 hover:bg-zinc-700 text-zinc-400 hover:text-white border border-white/10 text-xs font-semibold transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                        >
+                          <XCircle className="w-4 h-4" />
+                          <span>Stop</span>
+                        </motion.button>
+                      </div>
                     )}
                   </div>
 
@@ -1831,17 +1854,27 @@ export default function QuizTake() {
 
                   <motion.button
                     onClick={() => {
-                      if (readyToStart && currentConfidence >= 70) {
+                      if (!checkingCamera) {
+                        testCamera();
+                      } else if (readyToStart && currentConfidence >= 70) {
                         enterFullScreen();
+                        setShowRules(false);
                       }
-                      setShowRules(false);
                     }}
-                    disabled={!readyToStart || currentConfidence < 70}
-                    whileHover={readyToStart && currentConfidence >= 70 ? { scale: 1.05 } : {}}
-                    whileTap={readyToStart && currentConfidence >= 70 ? { scale: 0.95 } : {}}
+                    disabled={checkingCamera ? (!readyToStart || currentConfidence < 70) : !cameraPermissionGranted}
+                    whileHover={(checkingCamera ? (readyToStart && currentConfidence >= 70) : cameraPermissionGranted) ? { scale: 1.05 } : {}}
+                    whileTap={(checkingCamera ? (readyToStart && currentConfidence >= 70) : cameraPermissionGranted) ? { scale: 0.95 } : {}}
                     className={`px-8 py-3 rounded-xl font-bold uppercase tracking-wider text-sm transition-all relative overflow-hidden group ${
-                      readyToStart && currentConfidence >= 70
-                        ? 'bg-gradient-to-r from-indigo-500 to-purple-500 text-white shadow-lg shadow-indigo-500/50 hover:shadow-xl hover:shadow-indigo-500/60'
+                      !checkingCamera
+                        ? cameraPermissionGranted
+                          ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30 cursor-pointer'
+                          : 'bg-zinc-700 text-zinc-400 cursor-not-allowed opacity-70'
+                        : readyToStart && currentConfidence >= 70
+                        ? 'bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-500 text-white shadow-lg shadow-emerald-500/50 hover:shadow-xl hover:shadow-emerald-500/60 cursor-pointer'
+                        : currentConfidence < 70
+                        ? currentConfidence === 0
+                          ? 'bg-red-500/10 border border-red-500/30 text-red-400 cursor-not-allowed'
+                          : 'bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 cursor-not-allowed'
                         : 'bg-zinc-700 text-zinc-400 cursor-not-allowed opacity-70'
                     }`}
                   >
@@ -1854,7 +1887,7 @@ export default function QuizTake() {
                       />
                     )}
                     <span className="relative">
-                      {!readyToStart ? "Please Wait..." : currentConfidence < 70 ? `Verify Camera (${Math.round(currentConfidence)}% / 70%)` : "Start Quiz"}
+                      {!checkingCamera ? "Start Camera Test" : !readyToStart ? `Please Wait... (${rulesTimer}s)` : currentConfidence < 70 ? `Verify Camera (${Math.round(currentConfidence)}% / 70%)` : "Start Quiz"}
                     </span>
                   </motion.button>
                 </div>
