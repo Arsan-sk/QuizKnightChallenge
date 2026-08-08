@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useLocation } from "wouter";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BadgeCheck, Clock, Eye, FileEdit, ListChecks, BarChart3, BookOpen, AlertCircle, List, LayoutGrid, Copy, Lock } from "lucide-react";
+import { BadgeCheck, Clock, Eye, FileEdit, ListChecks, BarChart3, BookOpen, AlertCircle, List, LayoutGrid, Copy, Lock, Tv } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -373,6 +373,17 @@ export default function HistoryPage() {
                         </div>
                       </div>
                       <div className="flex gap-2 self-end sm:self-center shrink-0">
+                        {quiz.quizType === "live" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-3 text-xs bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 border border-indigo-500/30 font-semibold"
+                            onClick={() => navigate(`/teacher/monitor/${quiz.id}`)}
+                          >
+                            <Tv className="w-3.5 h-3.5 mr-1 text-indigo-400" />
+                            Monitor
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
